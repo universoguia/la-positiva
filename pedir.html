@@ -920,7 +920,22 @@ document.addEventListener('DOMContentLoaded', function () {
     var delay = metodo === 'Tarjeta' ? 1200 : 0;   // simula la pasarela
     setTimeout(function () {
       if (!sb) { fallo(null); return; }
-      sb.from(LP.TABLE).insert(payload).select().single().then(function (res) {
+
+      /* El pedido se suma a la cuenta abierta de la mesa. Si la mesa no tenia
+         cuenta, se abre; si ya venia pidiendo, esta ronda se agrega a la
+         misma.
+
+         Que esto falle NO frena el pedido: el pedido entra igual, sin sesion.
+         Perder la agrupacion de la cuenta es molesto; perder el pedido de un
+         cliente sentado en la mesa es mucho peor.                       */
+      LP.sesionDeMesa(sb, payload.mesa).then(function (ses) {
+        if (ses) payload.sesion_id = ses.id;
+        else console.warn('[La Positiva] el pedido entra sin cuenta de mesa');
+        return insertar();
+      });
+
+      function insertar() {
+      return sb.from(LP.TABLE).insert(payload).select().single().then(function (res) {
         if (res.error || !res.data) { fallo(res.error); return; }
         submitting = false;
         btn.disabled = false;
@@ -991,6 +1006,7 @@ document.addEventListener('DOMContentLoaded', function () {
           }
         });
       }, function (e) { fallo(e); });
+      }
     }, delay);
 
     function fallo(err) {

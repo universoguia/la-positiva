@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3ece2">
+<meta name="description" content="Las mesas con la cuenta abierta en La Positiva, con todas sus rondas.">
+<title>La Positiva - Mesas abiertas</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .wrap{max-width:1000px;padding-top:calc(26px + var(--sa-t))}
+  header.top{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    gap:12px;flex-wrap:wrap;margin-bottom:8px;
+  }
+  header.top h1{margin:0;font-size:30px}
+  header.top .sub{color:var(--muted);font-size:15px;margin:2px 0 0}
+  .head-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+  .resumen{
+    display:flex;gap:22px;flex-wrap:wrap;margin:16px 0 20px;
+    padding:14px 18px;background:var(--card);
+    border:1px solid var(--border);border-radius:var(--r-md);
+  }
+  .resumen div span{display:block;font-size:13px;color:var(--muted)}
+  .resumen div b{font-size:22px;color:var(--ink)}
+
+  .mesas{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+  @media (min-width:760px){.mesas{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+  .mesa{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--r-lg);padding:16px 18px 18px;
+  }
+  .mesa.debe{border-color:#e0bc7a}
+  .mesa-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .mesa-top h2{margin:0;font-size:23px}
+  .mesa-top .desde{font-size:13px;color:var(--muted);margin-top:2px}
+  .chip{
+    flex:none;font-size:12px;font-weight:600;letter-spacing:.05em;
+    text-transform:uppercase;border-radius:var(--r-pill);padding:4px 11px;
+  }
+  .chip.ok{background:var(--ok-soft);color:var(--ok);border:1px solid #bfe0ce}
+  .chip.debe{background:var(--warn-soft);color:var(--warn);border:1px solid #e8d3a8}
+
+  .rondas{list-style:none;margin:14px 0 0;padding:0}
+  .ronda{
+    padding:9px 0;border-top:1px dashed var(--border);
+    display:flex;justify-content:space-between;gap:12px;align-items:baseline;
+  }
+  .ronda .que{flex:1;min-width:0;font-size:15px;line-height:1.45}
+  .ronda .que b{display:block;font-size:13px;color:var(--muted);font-weight:500}
+  .ronda .cuanto{flex:none;font-weight:600}
+  .ronda .badge{font-size:11px;padding:2px 8px;margin-left:6px}
+
+  .totales{
+    margin-top:14px;padding-top:13px;border-top:1px solid var(--border-strong);
+    display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  }
+  .totales .etq{font-size:14px;color:var(--muted-strong)}
+  .totales .num{font-size:25px;font-weight:600}
+  .totales .num.debe{color:var(--warn)}
+
+  .acciones{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .acciones .btn{padding:10px 18px;font-size:15px}
+
+  .estado-vacio{
+    text-align:center;color:var(--muted);padding:48px 20px;
+    background:var(--card);border:1px dashed var(--border-strong);
+    border-radius:var(--r-lg);
+  }
+  .estado-vacio h3{color:var(--ink);font-size:20px;margin:0 0 6px}
+  .estado-vacio p{margin:0;line-height:1.55}
+
+  .back-link{
+    display:inline-flex;align-items:center;min-height:var(--tap);margin-top:24px;
+    color:var(--muted-strong);font-size:15px;text-decoration:underline;
+  }
+  .back-link:hover{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Mesas abiertas</h1>
+      <p class="sub">Una cuenta por mesa, con todas las rondas que haya pedido.</p>
+    </div>
+    <div class="head-right">
+      <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
+        <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
+      </span>
+      <a class="btn btn-secondary" href="cocina.html" style="padding:8px 16px;font-size:15px">
+        Panel de cocina
+      </a>
+    </div>
+  </header>
+
+  <div class="resumen" id="resumen" hidden>
+    <div><span>Mesas abiertas</span><b id="rMesas">0</b></div>
+    <div><span>Rondas servidas</span><b id="rRondas">0</b></div>
+    <div><span>Facturado sin cerrar</span><b id="rTotal">$0</b></div>
+    <div><span>Falta cobrar</span><b id="rDebe">$0</b></div>
+  </div>
+
+  <ul class="mesas" id="lista"></ul>
+  <div id="estado"></div>
+
+  <a class="back-link" href="./">Volver al inicio</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+<script src="config.js" defer></script>
+<script src="app.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var esc = LP.esc, money = LP.money;
+  var sb = LP.client();
+
+  var lista = document.getElementById('lista');
+  var estado = document.getElementById('estado');
+  var resumen = document.getElementById('resumen');
+  var conn = new LP.ConnBadge(document.getElementById('conn'));
+
+  var BADGE = { Nuevo: 'b-nuevo', Cocinando: 'b-cocinando', Listo: 'b-listo',
+                Entregado: 'b-entregado' };
+
+  var mesas = [];
+  var cargado = false;
+  var cerrando = Object.create(null);
+
+  /* ---------------------------------------------------------- pintado -- */
+  function pintar() {
+    if (!mesas.length) {
+      lista.innerHTML = '';
+      resumen.hidden = true;
+      estado.innerHTML = '<div class="estado-vacio"><h3>No hay mesas abiertas</h3>' +
+        '<p>Cuando alguien pida desde una mesa, la cuenta se abre sola y aparece aca.</p></div>';
+      return;
+    }
+    estado.innerHTML = '';
+    resumen.hidden = false;
+
+    var tRondas = 0, tTotal = 0, tDebe = 0;
+    mesas.forEach(function (m) { tRondas += m.rondas; tTotal += m.total; tDebe += m.debe; });
+
+    document.getElementById('rMesas').textContent = mesas.length;
+    document.getElementById('rRondas').textContent = tRondas;
+    document.getElementById('rTotal').textContent = money(tTotal);
+    document.getElementById('rDebe').textContent = money(tDebe);
+
+    lista.innerHTML = mesas.map(mesaHTML).join('');
+  }
+
+  function mesaHTML(m) {
+    var debe = m.debe > 0;
+    var rondas = m.pedidos.map(function (p, i) {
+      var items = (p.lines || []).map(function (l) {
+        return l.qty + '× ' + l.name;
+      }).join(', ');
+      return '<li class="ronda">' +
+          '<span class="que"><b>Ronda ' + (i + 1) + ' · ' + esc(LP.timeAgo(p.created_at)) +
+            '</b>' + esc(items || 'Sin detalle') +
+            '<span class="badge ' + (BADGE[p.estado] || '') + '">' + esc(p.estado) + '</span>' +
+          '</span>' +
+          '<span class="cuanto">' + money(p.total) + '</span>' +
+        '</li>';
+    }).join('');
+
+    return '<li class="mesa' + (debe ? ' debe' : '') + '" data-sesion="' + m.sesion.id + '">' +
+        '<div class="mesa-top">' +
+          '<div>' +
+            '<h2>' + esc(m.mesa) + '</h2>' +
+            '<div class="desde">Abierta ' + esc(LP.timeAgo(m.sesion.abierta_en)) +
+              ' · ' + m.rondas + (m.rondas === 1 ? ' ronda' : ' rondas') + '</div>' +
+          '</div>' +
+          '<span class="chip ' + (debe ? 'debe' : 'ok') + '">' +
+            (debe ? 'Falta cobrar' : 'Todo pago') + '</span>' +
+        '</div>' +
+        '<ul class="rondas">' + rondas + '</ul>' +
+        '<div class="totales">' +
+          '<span class="etq">Total de la mesa' +
+            (m.pagado > 0 && debe ? ' · pago ' + money(m.pagado) : '') + '</span>' +
+          '<span class="num' + (debe ? ' debe' : '') + '">' +
+            money(debe ? m.debe : m.total) + '</span>' +
+        '</div>' +
+        '<div class="acciones">' +
+          '<button type="button" class="btn btn-primary" data-cerrar="' + m.sesion.id + '">' +
+            'Cerrar la mesa</button>' +
+          '<a class="btn btn-secondary" href="cobrar.html">Cobrar con QR</a>' +
+        '</div>' +
+      '</li>';
+  }
+
+  /* ----------------------------------------------------------- cerrar -- */
+  lista.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-cerrar]');
+    if (!b) return;
+    var id = b.dataset.cerrar;
+    if (cerrando[id]) return;
+
+    var m = mesas.filter(function (x) { return String(x.sesion.id) === String(id); })[0];
+    if (!m) return;
+
+    /* Cerrar con saldo pendiente es una decision del local -a veces se cobra
+       en efectivo y no se marco-, pero no puede pasar de largo sin querer. */
+    if (m.debe > 0) {
+      var ok = window.confirm('A ' + m.mesa + ' le falta cobrar ' + money(m.debe) +
+        '.\n\nSi la cerras igual, la cuenta queda cerrada con ese saldo. Continuar?');
+      if (!ok) return;
+    }
+
+    cerrando[id] = true;
+    b.disabled = true;
+    b.textContent = 'Cerrando...';
+
+    LP.cerrarSesion(sb, id, 'Salon').then(function (hecho) {
+      delete cerrando[id];
+      if (!hecho) {
+        b.disabled = false;
+        b.textContent = 'Cerrar la mesa';
+        LP.toast('No pudimos cerrarla. Puede que ya la haya cerrado otro.', 'err');
+        cargar(true);
+        return;
+      }
+      LP.toast(m.mesa + ' cerrada. El proximo pedido abre una cuenta nueva.', 'ok');
+      cargar(true);
+    });
+  });
+
+  /* ------------------------------------------------------------ carga -- */
+  var enVuelo = false;
+  function cargar(silencioso) {
+    if (enVuelo) return Promise.resolve();
+    if (!sb) {
+      estado.innerHTML = '<div class="estado-vacio"><h3>No hay conexion con el sistema</h3></div>';
+      return Promise.resolve();
+    }
+    enVuelo = true;
+    return LP.mesasAbiertas(sb).then(function (datos) {
+      enVuelo = false;
+      if (datos === null) {
+        conn.set(navigator.onLine ? 'retry' : 'off');
+        if (!cargado) {
+          estado.innerHTML = '<div class="estado-vacio"><h3>No pudimos cargar las mesas</h3>' +
+            '<p>Revisa la conexion del local.</p></div>';
+        } else if (!silencioso) {
+          LP.toast('No pudimos actualizar. Seguimos intentando.', 'err');
+        }
+        return;
+      }
+      conn.set(navigator.onLine ? 'live' : 'off');
+      mesas = datos;
+      cargado = true;
+      pintar();
+    });
+  }
+
+  /* Realtime sobre pedidos y sesiones: una ronda nueva cambia el total de la
+     mesa, y otro empleado puede cerrarla desde su telefono.             */
+  var canal = null;
+  function suscribir() {
+    if (!sb) return;
+    var mio = sb.channel('mesas-' + Date.now())
+      .on('postgres_changes', { event: '*', schema: 'public', table: LP.TABLE },
+          function () { cargar(true); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: LP.SESIONES_TABLE },
+          function () { cargar(true); });
+    canal = mio;
+    mio.subscribe(function (st) {
+      if (canal !== mio) return;
+      if (st === 'SUBSCRIBED') conn.set(navigator.onLine ? 'live' : 'off');
+    });
+  }
+
+  LP.onCleanup(function () {
+    if (canal && sb) { try { sb.removeChannel(canal); } catch (e) {} }
+  });
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) cargar(true);
+  });
+
+  cargar().then(suscribir);
+  // Refresca los "hace X min" sin volver a consultar.
+  setInterval(function () { if (cargado && !document.hidden) pintar(); }, 30000);
+});
+</script>
+</body>
+</html>

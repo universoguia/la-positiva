@@ -22,6 +22,7 @@
   var COBROS_TABLE = CFG.COBROS_TABLE;
   var WA_TABLE = CFG.WA_TABLE || 'la_positiva_whatsapp';
   var FOTOS_TABLE = CFG.FOTOS_TABLE || 'la_positiva_fotos';
+  var SESIONES_TABLE = CFG.SESIONES_TABLE || 'la_positiva_sesiones';
   var BUCKET = CFG.BUCKET;
   var IMG_BASE = CFG.IMG_BASE;
 
@@ -631,6 +632,123 @@
       .catch(function (e) { console.warn('[La Positiva] SW no registrado', e); return null; });
   }
 
+  /* --- Sesiones de mesa ---------------------------------------------------
+     Una sesion = una cuenta = muchas rondas. Se abre con el primer pedido de
+     la mesa y se cierra cuando paga y se levanta. Sin esto, una mesa que pide
+     tres veces son tres pedidos sueltos y nadie sabe que es la misma cuenta.
+
+     La base garantiza una sola sesion abierta por mesa con un indice unico
+     parcial; aca solo hay que contemplar la carrera.                     */
+
+  /* Devuelve la sesion abierta de la mesa; si no hay, la abre.
+     Resuelve con la fila, o null si no se pudo.                          */
+  function sesionDeMesa(sb, mesa) {
+    if (!sb || !mesa) return Promise.resolve(null);
+
+    return buscarAbierta(sb, mesa).then(function (existente) {
+      if (existente) return existente;
+
+      return sb.from(SESIONES_TABLE).insert({ mesa: mesa }).select().single()
+        .then(function (res) {
+          if (!res.error) return res.data;
+          /* 23505 = otro comensal de la misma mesa abrio la sesion entre
+             nuestra busqueda y nuestro insert. No es un error: es justo lo
+             que el indice tiene que impedir. Se reusa la de el.        */
+          if (res.error.code === '23505') return buscarAbierta(sb, mesa);
+          humanError(res.error);
+          return null;
+        });
+    });
+  }
+
+  function buscarAbierta(sb, mesa) {
+    return sb.from(SESIONES_TABLE).select('*')
+      .eq('mesa', mesa).is('cerrada_en', null)
+      .order('abierta_en', { ascending: false })
+      .limit(1).maybeSingle()
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return null; }
+        return res.data || null;
+      }, function (e) { humanError(e); return null; });
+  }
+
+  /* Todos los pedidos de una sesion, con el total acumulado. */
+  function cuentaDeSesion(sb, sesionId) {
+    if (!sb || !sesionId) return Promise.resolve(null);
+    return sb.from(TABLE).select('*')
+      .eq('sesion_id', sesionId)
+      .order('created_at', { ascending: true })
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return null; }
+        return resumirCuenta(res.data || []);
+      }, function (e) { humanError(e); return null; });
+  }
+
+  /* El resumen se calcula en un solo lugar para que la mesa, la caja y el
+     cliente muestren SIEMPRE el mismo numero.                            */
+  function resumirCuenta(pedidos) {
+    var total = 0, pagado = 0, sinEntregar = 0;
+    pedidos.forEach(function (p) {
+      var t = Number(p.total) || 0;
+      total += t;
+      if (p.pagado) pagado += t;
+      if (p.estado !== 'Entregado') sinEntregar++;
+    });
+    return {
+      pedidos: pedidos,
+      rondas: pedidos.length,
+      total: total,
+      pagado: pagado,
+      debe: Math.max(0, total - pagado),
+      sinEntregar: sinEntregar
+    };
+  }
+
+  /* Las mesas con la cuenta abierta, con su resumen. Una sola consulta de
+     pedidos para todas: pedir una por mesa no escala en un servicio.    */
+  function mesasAbiertas(sb) {
+    if (!sb) return Promise.resolve(null);
+    return sb.from(SESIONES_TABLE).select('*')
+      .is('cerrada_en', null)
+      .order('abierta_en', { ascending: true })
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return null; }
+        var sesiones = res.data || [];
+        if (!sesiones.length) return [];
+
+        var ids = sesiones.map(function (x) { return x.id; });
+        return sb.from(TABLE).select('*').in('sesion_id', ids)
+          .order('created_at', { ascending: true })
+          .then(function (r2) {
+            if (r2.error) { humanError(r2.error); return null; }
+            var porSesion = {};
+            (r2.data || []).forEach(function (p) {
+              (porSesion[p.sesion_id] = porSesion[p.sesion_id] || []).push(p);
+            });
+            return sesiones.map(function (ses) {
+              var resumen = resumirCuenta(porSesion[ses.id] || []);
+              resumen.sesion = ses;
+              resumen.mesa = ses.mesa;
+              return resumen;
+            });
+          });
+      }, function (e) { humanError(e); return null; });
+  }
+
+  /* Cierra la cuenta. La mesa queda libre y el proximo pedido abre una nueva. */
+  function cerrarSesion(sb, id, quien) {
+    if (!sb || !id) return Promise.resolve(false);
+    return sb.from(SESIONES_TABLE)
+      .update({ cerrada_en: new Date().toISOString(),
+                cerrada_por: (quien || '').slice(0, 40) || null })
+      .eq('id', id).is('cerrada_en', null)      // no se cierra dos veces
+      .select()
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return false; }
+        return !!(res.data && res.data.length);
+      }, function (e) { humanError(e); return false; });
+  }
+
   /* --- Fotos de los platos ------------------------------------------------
      La carta trae una foto por plato en menu-data.js, pero apunta a OTRO
      deploy: cambiarla obligaba a publicar ese otro sitio, cosa que desde un
@@ -981,6 +1099,12 @@
     borrarSub: borrarSub,
     WA_TABLE: WA_TABLE,
     FOTOS_TABLE: FOTOS_TABLE,
+    SESIONES_TABLE: SESIONES_TABLE,
+    sesionDeMesa: sesionDeMesa,
+    cuentaDeSesion: cuentaDeSesion,
+    resumirCuenta: resumirCuenta,
+    mesasAbiertas: mesasAbiertas,
+    cerrarSesion: cerrarSesion,
     fotosDePlatos: fotosDePlatos,
     fotoDePlato: fotoDePlato,
     subirFotoPlato: subirFotoPlato,
