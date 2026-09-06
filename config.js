@@ -35,5 +35,5 @@ window.LP_CONFIG = {
      Tiene que ser el par de la VAPID_PRIVATE_KEY cargada como secreto de
      la Edge Function. Si se rota una, hay que rotar la otra y volver a
      suscribir todos los dispositivos.                                   */
-  VAPID_PUBLIC: 'BNgN_0JBHeZH_kGqjSNBELQXFYOkgOjFjS3SxCG5AwuBaC12q2sPqyKRTp3UMnjEnS2H6m0TX7PjtZrxMqeF4Sk'
+  VAPID_PUBLIC: 'BF793wsCXiQIDOu2xZZ6sewadKJgCSs6OV0r5eK0hynIsZoW0VZubR4BBqBY_Lzk4dD54Ok8WzP9d-SOFkZQF0o'
 };
