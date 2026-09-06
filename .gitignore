@@ -2,7 +2,8 @@ node_modules/
 .vercel/
 .DS_Store
 
-.vercel
-
-# Claves VAPID generadas: nunca al repo.
+# Claves y configuracion generada: nunca al repo.
+.env
+.env.local
+config.js
 VAPID-NUEVAS.txt

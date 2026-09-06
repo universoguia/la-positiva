@@ -1,7 +1,12 @@
-# Herramientas de desarrollo: no tienen por que viajar al sitio publico.
-# No contienen secretos, pero tampoco aportan nada al deploy.
-scripts/
-.claude/
-CLAVES.md
+# Nada de esto tiene por que viajar al sitio publico.
+# Ojo: .gitignore NO protege un deploy por CLI. Este archivo si.
+.env
+.env.local
+.env.example
 VAPID-NUEVAS.txt
 *.txt
+CLAVES.md
+.claude/
+scripts/serve.js
+scripts/generar-vapid.js
+scripts/make-icons.js

@@ -1,0 +1,12 @@
+{
+  "name": "la-positiva",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pedidos en la mesa, cocina, caja y cobro con QR.",
+  "scripts": {
+    "build": "node scripts/build-config.js",
+    "vercel-build": "node scripts/build-config.js",
+    "dev": "node scripts/serve.js 5173",
+    "deploy": "node scripts/build-config.js && vercel deploy --prod --archive=tgz"
+  }
+}
