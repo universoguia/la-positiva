@@ -2,3 +2,4 @@
 # No contienen secretos, pero tampoco aportan nada al deploy.
 scripts/
 .claude/
+CLAVES.md

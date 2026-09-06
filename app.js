@@ -5,17 +5,23 @@
 (function (global) {
   'use strict';
 
-  /* --- Supabase -----------------------------------------------------------
-     La clave anon es publica por diseno: viaja al navegador en cualquier app
-     de Supabase y esta protegida por RLS. Nunca poner aca la service_role.  */
-  var SUPABASE_URL = 'https://abjonztvstyieukmrikx.supabase.co';
-  var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiam9uenR2c3R5aWV1a21yaWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NzUyNDksImV4cCI6MjEwMzM1MTI0OX0.bGpeGAFtBvy_I-np7N8mBmK59Yk_t60UEboei7QZ4rY';
+  /* --- Configuracion ------------------------------------------------------
+     Todos los valores vienen de config.js, que se carga antes que este
+     archivo. Aca no se escribe ninguna clave.                            */
+  var CFG = global.LP_CONFIG;
+  if (!CFG) {
+    // Falla ruidosa y temprana: es un error de instalacion, no del usuario.
+    throw new Error('Falta config.js: cargalo antes que app.js.');
+  }
 
-  var TABLE = 'la_positiva_pedidos';
-  var PUSH_TABLE = 'la_positiva_push_subs';
-  var COBROS_TABLE = 'la_positiva_cobros';
-  var BUCKET = 'la-positiva';
-  var IMG_BASE = 'https://la-positiva-phi.vercel.app/';
+  var SUPABASE_URL = CFG.SUPABASE_URL;
+  var SUPABASE_ANON = CFG.SUPABASE_ANON;
+
+  var TABLE = CFG.TABLE;
+  var PUSH_TABLE = CFG.PUSH_TABLE;
+  var COBROS_TABLE = CFG.COBROS_TABLE;
+  var BUCKET = CFG.BUCKET;
+  var IMG_BASE = CFG.IMG_BASE;
 
   function client() {
     if (!global.supabase || !global.supabase.createClient) return null;
@@ -206,10 +212,7 @@
   /* --- Web Push -----------------------------------------------------------
      La clave publica VAPID es publica por definicion: identifica al emisor
      y viaja al navegador. La privada vive solo en la Edge Function.      */
-  // Tiene que ser el par de la VAPID_PRIVATE_KEY cargada como secreto de la
-  // Edge Function. Si se rota una, hay que rotar la otra y volver a
-  // suscribir los dispositivos.
-  var VAPID_PUBLIC = 'BNgN_0JBHeZH_kGqjSNBELQXFYOkgOjFjS3SxCG5AwuBaC12q2sPqyKRTp3UMnjEnS2H6m0TX7PjtZrxMqeF4Sk';
+  var VAPID_PUBLIC = CFG.VAPID_PUBLIC;
 
   function urlBase64ToUint8Array(base64String) {
     var padding = '='.repeat((4 - base64String.length % 4) % 4);
