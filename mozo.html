@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14100e">
+<meta name="description" content="Panel del mozo: aprueba los pedidos de las mesas y los manda a cocina.">
+<title>La Positiva - Mozo</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="La Positiva">
+<link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<style>
+  body{background:var(--ink)}
+  .wrap{max-width:820px;padding-top:calc(16px + var(--sa-t))}
+
+  header.top{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    gap:12px;flex-wrap:wrap;margin-bottom:14px;
+  }
+  header.top h1{color:#fff;margin:0;font-size:26px}
+  header.top .sub{color:var(--dark-muted);font-size:14px;margin-top:2px}
+  .head-right{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .back-link{
+    color:var(--dark-muted);font-size:15px;min-height:var(--tap);
+    display:inline-flex;align-items:center;padding:0 4px;
+  }
+  .back-link:hover{color:#fff;text-decoration:underline}
+  #avisosBtn.on{border-color:var(--gold);color:var(--gold);background:#2c221d}
+  #avisosBtn.off{border-color:#e0855f;color:#ffc9b3;background:#3a221a}
+
+  .alerta-barra{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    margin:0 0 14px;padding:13px 16px;border-radius:var(--r-md);
+    background:#3a221a;border:1px solid #7a4530;color:#ffd9c9;font-size:15px;line-height:1.45;
+  }
+  .alerta-barra.warn{background:#3a3020;border-color:#7a6430;color:#ffe9b8}
+  .alerta-barra p{margin:0;flex:1;min-width:210px}
+  .alerta-barra strong{display:block;color:#fff;margin-bottom:2px}
+  .alerta-barra[hidden]{display:none}
+
+  h2.seccion{
+    color:#fff;font-family:'Jost',sans-serif;font-style:normal;
+    font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
+    margin:22px 0 10px;display:flex;align-items:center;gap:9px;
+  }
+  h2.seccion .n{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:22px;height:22px;padding:0 6px;border-radius:var(--r-pill);
+    background:var(--gold);color:var(--ink);font-size:13px;font-weight:700;
+  }
+
+  .lista{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+
+  .ped{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--r-md);padding:14px 15px;
+  }
+  .ped.urge{border-color:var(--gold);box-shadow:0 0 0 2px rgba(200,150,62,.28)}
+  .ped-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .ped-top .mesa{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:24px;color:var(--ink)}
+  .ped-top .meta{font-size:13px;color:var(--muted);margin-top:1px}
+  .items{margin:11px 0 0;font-size:15px;line-height:1.6;color:var(--ink)}
+  .items .q{display:inline-block;min-width:26px;color:var(--muted-strong);font-weight:600}
+  .total{margin-top:9px;font-size:19px;font-weight:600}
+
+  .campo{margin-top:12px}
+  .campo label{display:block;font-size:13px;color:var(--muted-strong);margin-bottom:5px}
+  .campo textarea,.campo input{
+    width:100%;min-height:46px;padding:9px 12px;font-size:16px;
+    border:1px solid var(--border-strong);border-radius:var(--r-md);
+    background:var(--bg);color:var(--ink);font-family:inherit;resize:vertical;
+  }
+  .campo textarea:focus,.campo input:focus{outline:2px solid var(--accent);outline-offset:1px}
+
+  .acciones{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .acciones .btn{flex:1 1 auto;min-height:var(--tap);padding:0 18px;font-size:15px}
+  .btn-rechazar{
+    flex:0 0 auto;min-height:var(--tap);padding:0 16px;border-radius:var(--r-pill);
+    border:1px solid var(--border-strong);background:transparent;color:var(--err-ink);font-size:15px;
+  }
+  .btn-rechazar:hover{background:var(--err-bg);border-color:#f0cfc9}
+
+  /* ------------------------------------------------------------- notas -- */
+  .notas{margin-top:12px;border-top:1px dashed var(--border);padding-top:10px}
+  .notas h3{
+    font-family:'Jost',sans-serif;font-style:normal;font-size:12px;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--muted-strong);
+    font-weight:600;margin:0 0 8px;
+  }
+  .nota{
+    font-size:14px;line-height:1.5;padding:7px 11px;border-radius:var(--r-md);
+    margin-bottom:6px;background:var(--bg);border:1px solid var(--border);
+  }
+  .nota.cocina{background:var(--warn-soft);border-color:#e8d3a8}
+  .nota b{display:block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
+          color:var(--muted-strong);margin-bottom:2px}
+  .nota-alta{display:flex;gap:7px;margin-top:8px}
+  .nota-alta input{flex:1;min-width:0}
+  .nota-alta button{flex:none;min-height:var(--tap);padding:0 16px;font-size:14px}
+
+  .detalle-fijo{
+    margin-top:10px;padding:9px 12px;border-radius:var(--r-md);
+    background:var(--warn-soft);border:1px solid #e8d3a8;
+    font-size:14px;line-height:1.5;color:var(--warn);
+  }
+  .detalle-fijo b{display:block;font-size:11px;letter-spacing:.05em;
+                  text-transform:uppercase;margin-bottom:2px}
+
+  .vacio{
+    color:var(--dark-muted);text-align:center;padding:26px 16px;font-size:15px;
+    border:1px dashed #3a2f28;border-radius:var(--r-md);
+  }
+
+  /* Dialogo de avisos, igual que en cocina. */
+  .aviso-bloque{padding:16px 0;border-bottom:1px solid var(--border)}
+  .aviso-bloque:last-child{border-bottom:none}
+  .aviso-bloque h3{margin:0 0 6px;font-size:18px}
+  .aviso-bloque p{margin:0 0 10px;color:var(--muted);font-size:15px;line-height:1.5}
+  .aviso-estado{
+    padding:10px 13px;border-radius:var(--r-md);font-size:14px;line-height:1.5;
+    background:var(--ok-soft);color:var(--ok);border:1px solid #bfe0ce;margin:0 0 10px;
+  }
+  .aviso-estado.off{background:var(--bg);color:var(--muted-strong);border-color:var(--border-strong)}
+  .aviso-estado.warn{background:var(--warn-soft);color:var(--warn);border-color:#e8d3a8}
+  .aviso-estado.err{background:var(--err-bg);color:var(--err-ink);border-color:#f0cfc9}
+</style>
+</head>
+<body class="dark">
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Mozo</h1>
+      <p class="sub">Aproba lo que piden las mesas y manda la comanda</p>
+    </div>
+    <div class="head-right">
+      <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
+        <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
+      </span>
+      <button type="button" class="btn btn-secondary" id="avisosBtn"
+              style="padding:8px 15px;font-size:15px">Avisos</button>
+      <a class="back-link" href="./">Inicio</a>
+    </div>
+  </header>
+
+  <div class="alerta-barra" id="alertaBarra" role="status" aria-live="polite" hidden>
+    <p><strong id="alertaTitulo"></strong><span id="alertaTexto"></span></p>
+    <button type="button" class="btn btn-primary" id="alertaBtn"></button>
+  </div>
+
+  <h2 class="seccion">Para aprobar <span class="n" id="nPorAprobar">0</span></h2>
+  <ul class="lista" id="porAprobar"></ul>
+
+  <h2 class="seccion">En curso <span class="n" id="nEnCurso">0</span></h2>
+  <ul class="lista" id="enCurso"></ul>
+</div>
+
+<div class="sheet" id="avisosSheet" role="dialog" aria-modal="true" aria-labelledby="avisosTitle" hidden>
+  <div class="sheet-panel">
+    <div class="sheet-head">
+      <h2 id="avisosTitle">Avisos del mozo</h2>
+      <button type="button" class="close-x" id="avisosClose" aria-label="Cerrar">&#10005;</button>
+    </div>
+    <section class="aviso-bloque">
+      <h3>Sonido en esta pantalla</h3>
+      <p>Suena cada vez que una mesa pide algo o la cocina responde.</p>
+      <p class="aviso-estado" id="sonidoEstado"></p>
+      <button type="button" class="btn btn-primary btn-block" id="sonidoBtn">Activar sonido</button>
+      <button type="button" class="btn btn-secondary btn-block" id="sonidoProbar"
+              style="margin-top:8px" hidden>Probar el sonido</button>
+    </section>
+    <section class="aviso-bloque">
+      <h3>Avisos al celular</h3>
+      <p>Llegan aunque tengas el panel cerrado. Es lo que te avisa mientras andas por el salon.</p>
+      <p class="aviso-estado" id="pushEstado"></p>
+      <button type="button" class="btn btn-primary btn-block" id="pushBtn" disabled>Comprobando...</button>
+      <p class="aviso-estado" id="pushDestinos" style="margin-top:10px"></p>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+<script src="config.js" defer></script>
+<script src="app.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var esc = LP.esc, money = LP.money;
+  var sb = LP.client();
+  var YO = 'Mozo';
+
+  var elAprobar = document.getElementById('porAprobar');
+  var elCurso = document.getElementById('enCurso');
+  var conn = new LP.ConnBadge(document.getElementById('conn'));
+
+  var pedidos = [];
+  var notas = {};                       // { pedido_id: [notas] }
+  var ocupado = Object.create(null);
+  var borradores = Object.create(null); // lo tipeado, para no perderlo al repintar
+  var conocidos = null;
+  var cargado = false;
+
+  var EN_CURSO = ['En cocina', 'Cocinando', 'Listo'];
+  var ETIQUETA = {
+    'En cocina': 'Comanda enviada, la cocina todavia no la tomo',
+    'Cocinando': 'La cocina la esta haciendo',
+    'Listo': 'Listo para llevar a la mesa'
+  };
+
+  /* ---------------------------------------------------------- pintado -- */
+  function render() {
+    var aprobar = pedidos.filter(function (p) { return p.estado === 'Por aprobar'; });
+    var curso = pedidos.filter(function (p) { return EN_CURSO.indexOf(p.estado) !== -1; });
+
+    document.getElementById('nPorAprobar').textContent = aprobar.length;
+    document.getElementById('nEnCurso').textContent = curso.length;
+
+    elAprobar.innerHTML = aprobar.length
+      ? aprobar.map(tarjetaAprobar).join('')
+      : '<li class="vacio">No hay pedidos esperando. Cuando una mesa pida, aparece aca.</li>';
+
+    elCurso.innerHTML = curso.length
+      ? curso.map(tarjetaCurso).join('')
+      : '<li class="vacio">Nada en curso.</li>';
+
+    // Devuelve lo que el mozo estaba escribiendo antes del repintado.
+    Object.keys(borradores).forEach(function (k) {
+      var el = document.querySelector('[data-borrador="' + k + '"]');
+      if (el) el.value = borradores[k];
+    });
+  }
+
+  function itemsHTML(p) {
+    return (p.lines || []).map(function (l) {
+      return '<div><span class="q">' + esc(l.qty) + '&times;</span>' + esc(l.name) + '</div>';
+    }).join('');
+  }
+
+  function tarjetaAprobar(p) {
+    var mins = Math.round((Date.now() - new Date(p.created_at).getTime()) / 60000);
+    return '<li class="ped' + (mins >= 3 ? ' urge' : '') + '" data-ped="' + p.id + '">' +
+        '<div class="ped-top"><div>' +
+          '<div class="mesa">' + esc(p.mesa) + '</div>' +
+          '<div class="meta">' + esc(LP.timeAgo(p.created_at)) +
+            (p.cliente ? ' &middot; ' + esc(p.cliente) : '') +
+            (mins >= 3 ? ' &middot; esperando hace rato' : '') + '</div>' +
+        '</div></div>' +
+        '<div class="items">' + itemsHTML(p) + '</div>' +
+        '<div class="total">' + money(p.total) + '</div>' +
+        '<div class="campo">' +
+          '<label for="det-' + p.id + '">Algo que dijo el comensal y no esta en la carta</label>' +
+          '<textarea id="det-' + p.id + '" data-borrador="det-' + p.id + '" ' +
+            'placeholder="Sin sal, la carne bien cocida, alergia al mani..."></textarea>' +
+        '</div>' +
+        '<div class="acciones">' +
+          '<button type="button" class="btn btn-primary" data-aprobar="' + p.id + '">' +
+            'Enviar a cocina</button>' +
+          '<button type="button" class="btn-rechazar" data-rechazar="' + p.id + '">Rechazar</button>' +
+        '</div>' +
+      '</li>';
+  }
+
+  function tarjetaCurso(p) {
+    var listo = p.estado === 'Listo';
+    return '<li class="ped' + (listo ? ' urge' : '') + '" data-ped="' + p.id + '">' +
+        '<div class="ped-top"><div>' +
+          '<div class="mesa">' + esc(p.mesa) + '</div>' +
+          '<div class="meta">' + esc(ETIQUETA[p.estado] || p.estado) +
+            ' &middot; ' + esc(LP.timeAgo(p.created_at)) + '</div>' +
+        '</div>' +
+        '<span class="badge ' + (listo ? 'b-listo' : 'b-cocinando') + '">' +
+          esc(p.estado) + '</span></div>' +
+        '<div class="items">' + itemsHTML(p) + '</div>' +
+        '<div class="total">' + money(p.total) + '</div>' +
+        (p.detalle_comensal
+          ? '<div class="detalle-fijo"><b>Detalle del comensal</b>' +
+            esc(p.detalle_comensal) + '</div>' : '') +
+        (listo ? '<div class="acciones"><button type="button" class="btn btn-primary" ' +
+                 'data-entregar="' + p.id + '">Lo lleve a la mesa</button></div>' : '') +
+        notasHTML(p) +
+      '</li>';
+  }
+
+  function notasHTML(p) {
+    var lista = notas[p.id] || [];
+    return '<div class="notas"><h3>Con la cocina</h3>' +
+      lista.map(function (n) {
+        return '<div class="nota' + (n.autor === 'Cocina' ? ' cocina' : '') + '">' +
+          '<b>' + esc(n.autor) + ' &middot; ' + esc(LP.timeAgo(n.created_at)) + '</b>' +
+          esc(n.texto) + '</div>';
+      }).join('') +
+      '<div class="nota-alta">' +
+        '<input type="text" data-borrador="nota-' + p.id + '" ' +
+          'aria-label="Mensaje para la cocina" placeholder="Avisarle algo a la cocina...">' +
+        '<button type="button" class="btn btn-secondary" data-nota="' + p.id + '">Mandar</button>' +
+      '</div></div>';
+  }
+
+  /* ------------------------------------------------------------ acciones -- */
+  function buscar(id) {
+    for (var i = 0; i < pedidos.length; i++) {
+      if (String(pedidos[i].id) === String(id)) return pedidos[i];
+    }
+    return null;
+  }
+
+  document.addEventListener('input', function (ev) {
+    var el = ev.target.closest('[data-borrador]');
+    if (el) borradores[el.dataset.borrador] = el.value;
+  });
+
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest('button');
+    if (!b || !sb) return;
+
+    if (b.dataset.aprobar) {
+      var id = b.dataset.aprobar;
+      if (ocupado[id]) return;
+      ocupado[id] = true;
+      b.disabled = true; b.textContent = 'Enviando...';
+      var det = (borradores['det-' + id] || '').trim();
+      LP.aprobarPedido(sb, id, YO, det).then(function (r) {
+        delete ocupado[id];
+        delete borradores['det-' + id];
+        if (!r.ok) { b.disabled = false; b.textContent = 'Enviar a cocina';
+                     LP.toast(r.motivo, 'err'); return; }
+        LP.toast('Comanda enviada a la cocina.', 'ok');
+        cargar(true);
+      });
+      return;
+    }
+
+    if (b.dataset.rechazar) {
+      var idR = b.dataset.rechazar;
+      if (ocupado[idR]) return;
+      var motivo = window.prompt('Por que se rechaza? (queda anotado)');
+      if (motivo === null) return;
+      ocupado[idR] = true;
+      b.disabled = true;
+      LP.rechazarPedido(sb, idR, YO, motivo).then(function (r) {
+        delete ocupado[idR];
+        if (!r.ok) { b.disabled = false; LP.toast(r.motivo, 'err'); return; }
+        LP.toast('Pedido rechazado.', 'ok');
+        cargar(true);
+      });
+      return;
+    }
+
+    if (b.dataset.entregar) {
+      var idE = b.dataset.entregar;
+      if (ocupado[idE]) return;
+      ocupado[idE] = true;
+      b.disabled = true; b.textContent = 'Guardando...';
+      LP.cambiarEstado(sb, idE, 'Entregado').then(function (r) {
+        delete ocupado[idE];
+        if (!r.ok) { b.disabled = false; b.textContent = 'Lo lleve a la mesa';
+                     LP.toast(r.motivo, 'err'); return; }
+        cargar(true);
+      });
+      return;
+    }
+
+    if (b.dataset.nota) {
+      var idN = b.dataset.nota;
+      var texto = (borradores['nota-' + idN] || '').trim();
+      var ped = buscar(idN);
+      if (!ped) return;
+      b.disabled = true;
+      LP.agregarNota(sb, ped, YO, texto).then(function (r) {
+        b.disabled = false;
+        if (!r.ok) { LP.toast(r.motivo, 'err'); return; }
+        delete borradores['nota-' + idN];
+        LP.toast('Mensaje enviado a la cocina.', 'ok');
+        cargar(true);
+      });
+      return;
+    }
+  });
+
+  /* --------------------------------------------------------------- carga -- */
+  var enVuelo = false, otraPendiente = false;
+
+  function cargar(silencioso) {
+    if (enVuelo) { otraPendiente = true; return Promise.resolve(); }
+    if (!sb) return Promise.resolve();
+    enVuelo = true;
+
+    return sb.from(LP.TABLE).select('*')
+      .in('estado', ['Por aprobar'].concat(EN_CURSO))
+      .order('created_at', { ascending: true })
+      .then(function (res) {
+        enVuelo = false;
+        if (res.error) {
+          conn.set(navigator.onLine ? 'retry' : 'off');
+          if (!silencioso && cargado) LP.toast('No pudimos actualizar.', 'err');
+          reintentar(silencioso);
+          return;
+        }
+        conn.set(navigator.onLine ? 'live' : 'off');
+        var data = res.data || [];
+
+        var nuevos = [];
+        if (conocidos) {
+          data.forEach(function (p) {
+            if (!conocidos[p.id] && p.estado === 'Por aprobar') nuevos.push(p);
+          });
+        }
+        conocidos = Object.create(null);
+        data.forEach(function (p) { conocidos[p.id] = true; });
+
+        pedidos = data;
+        cargado = true;
+        if (nuevos.length) alertar(nuevos.length);
+        render();
+        repasar();
+
+        var ids = data.map(function (p) { return p.id; });
+        if (ids.length) {
+          sb.from(LP.NOTAS_TABLE).select('*').in('pedido_id', ids)
+            .order('created_at', { ascending: true })
+            .then(function (r2) {
+              if (r2.error) return;
+              notas = {};
+              (r2.data || []).forEach(function (n) {
+                (notas[n.pedido_id] = notas[n.pedido_id] || []).push(n);
+              });
+              render();
+            });
+        }
+        reintentar(silencioso);
+      }, function () { enVuelo = false; reintentar(silencioso); });
+  }
+
+  function reintentar(s) {
+    if (!otraPendiente) return;
+    otraPendiente = false;
+    cargar(s);
+  }
+
+  /* ================================ AVISOS ================================
+     Mismo criterio que la cocina: el sonido viene puesto, insiste mientras
+     haya algo esperando, y se ve en pantalla si esta pantalla no puede
+     avisar. El que no lo quiera, apaga el sonido o silencia el celular.  */
+  var SONIDO_KEY = 'lp_mozo_sonido';
+  var sonidoOn = true, audioCtx = null, insistTimer = null, insistCount = 0;
+  var INSIST_CADA = 45000, INSIST_TOPE = 30;
+  try { sonidoOn = localStorage.getItem(SONIDO_KEY) !== '0'; } catch (e) {}
+
+  function armarAudio() {
+    if (!audioCtx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return 'no-soportado';
+      try { audioCtx = new AC(); } catch (e) { return 'no-soportado'; }
+      try { audioCtx.onstatechange = function () { pintarSonido(); }; } catch (e) {}
+    }
+    if (audioCtx.state === 'suspended') {
+      try {
+        var pr = audioCtx.resume();
+        if (pr && pr.then) pr.then(function () {
+          if (audioCtx.state === 'running') pintarSonido();
+        }, function () {});
+      } catch (e) {}
+    }
+    return audioCtx.state === 'running' ? 'listo' : 'falta-toque';
+  }
+
+  function sonar(fuerte) {
+    if (!sonidoOn) return false;
+    if (armarAudio() !== 'listo') { pintarAlerta(); return false; }
+    try {
+      var t0 = audioCtx.currentTime;
+      var notas2 = fuerte ? [660, 880, 660, 880] : [660, 880];
+      notas2.forEach(function (hz, i) {
+        var t = t0 + i * 0.16;
+        var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'sine'; o.frequency.value = hz;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(fuerte ? 0.45 : 0.3, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(t); o.stop(t + 0.32);
+      });
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function alertar(cuantos) {
+    insistCount = 0;
+    clearTimeout(insistTimer); insistTimer = null;
+    sonar(false);
+    document.title = '(' + cuantos + ') La Positiva - Mozo';
+    if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+      navigator.serviceWorker.getRegistration().then(function (reg) {
+        if (!reg) return;
+        reg.showNotification(cuantos === 1 ? 'Pedido para aprobar'
+                                           : cuantos + ' pedidos para aprobar', {
+          body: 'Una mesa esta esperando que mandes la comanda.',
+          icon: 'icons/icon-192.png', badge: 'icons/icon-192.png',
+          tag: 'mozo-por-aprobar', renotify: true, requireInteraction: true,
+          vibrate: [200, 100, 200],
+          data: { url: new URL('mozo.html', location.href).href }
+        });
+      }).catch(function () {});
+    }
+    repasar();
+  }
+
+  function hayEsperando() {
+    for (var i = 0; i < pedidos.length; i++) {
+      if (pedidos[i].estado === 'Por aprobar' || pedidos[i].estado === 'Listo') return true;
+    }
+    return false;
+  }
+
+  function repasar() {
+    if (!hayEsperando()) {
+      clearTimeout(insistTimer); insistTimer = null; insistCount = 0;
+      document.title = 'La Positiva - Mozo';
+      pintarAlerta();
+      return;
+    }
+    if (insistTimer) return;
+    insistTimer = setTimeout(function () {
+      insistTimer = null;
+      if (!hayEsperando()) { insistCount = 0; return; }
+      if (insistCount >= INSIST_TOPE) { pintarAlerta(); return; }
+      if (sonar(insistCount >= 3)) insistCount++;
+      pintarAlerta();
+      repasar();
+    }, INSIST_CADA);
+  }
+
+  LP.onCleanup(function () { clearTimeout(insistTimer); });
+
+  /* ---------------------------------------------------- dialogo y barra -- */
+  var sheet = document.getElementById('avisosSheet');
+  var avisosBtn = document.getElementById('avisosBtn');
+  var sonidoEstado = document.getElementById('sonidoEstado');
+  var sonidoBtn = document.getElementById('sonidoBtn');
+  var sonidoProbar = document.getElementById('sonidoProbar');
+  var pushEstado = document.getElementById('pushEstado');
+  var pushBtn = document.getElementById('pushBtn');
+  var pushDestinos = document.getElementById('pushDestinos');
+  var barra = document.getElementById('alertaBarra');
+  var barraBtn = document.getElementById('alertaBtn');
+  var accion = null, pushOk = false;
+
+  avisosBtn.addEventListener('click', function () {
+    pintarSonido(); pintarPush(); LP.openDialog(sheet);
+  });
+  document.getElementById('avisosClose').addEventListener('click', function () {
+    LP.closeDialog(sheet);
+  });
+
+  function pintarSonido() {
+    var st = sonidoOn ? armarAudio() : 'apagado';
+    if (!sonidoOn) {
+      sonidoEstado.textContent = 'Sonido apagado. No vas a escuchar los pedidos.';
+      sonidoEstado.className = 'aviso-estado off';
+    } else if (st === 'falta-toque') {
+      sonidoEstado.textContent = 'Falta que toques la pantalla una vez para que el navegador deje sonar.';
+      sonidoEstado.className = 'aviso-estado warn';
+    } else if (st === 'no-soportado') {
+      sonidoEstado.textContent = 'Este navegador no puede reproducir el aviso.';
+      sonidoEstado.className = 'aviso-estado err';
+    } else {
+      sonidoEstado.textContent = 'Sonido activado y funcionando.';
+      sonidoEstado.className = 'aviso-estado';
+    }
+    sonidoBtn.textContent = sonidoOn ? 'Apagar el sonido' : 'Activar sonido';
+    sonidoProbar.hidden = !sonidoOn;
+    avisosBtn.classList.toggle('on', sonidoOn && st === 'listo');
+    avisosBtn.classList.toggle('off', !sonidoOn || st === 'falta-toque');
+    pintarAlerta();
+  }
+
+  sonidoBtn.addEventListener('click', function () {
+    sonidoOn = !sonidoOn;
+    try { localStorage.setItem(SONIDO_KEY, sonidoOn ? '1' : '0'); } catch (e) {}
+    if (sonidoOn) sonar(false);
+    pintarSonido();
+  });
+  sonidoProbar.addEventListener('click', function () {
+    if (!sonar(false)) LP.toast('Toca la pantalla y proba de nuevo.', 'err');
+    pintarSonido();
+  });
+
+  function pintarPush() {
+    return LP.estadoPush().then(function (st) {
+      var cls = 'aviso-estado', txt, label, off = false;
+      if (st === 'activo') {
+        return LP.pushRegistrado(sb, YO).then(function (reg) {
+          if (reg === null) {
+            pintar2('aviso-estado warn', 'No pudimos comprobar el registro. Revisa la conexion.',
+                    'Volver a registrar', false);
+          } else {
+            pushOk = reg;
+            pintar2(reg ? 'aviso-estado' : 'aviso-estado warn',
+                    reg ? 'Avisos activados y registrados.'
+                        : 'Diste permiso, pero este aparato no figura registrado.',
+                    reg ? 'Volver a registrar' : 'Registrar este dispositivo', false);
+          }
+          return destinos();
+        });
+      }
+      if (st === 'no-soportado') { cls += ' err'; off = true;
+        txt = 'Este navegador no puede recibir avisos.'; label = 'No disponible'; }
+      else if (st === 'ios-sin-instalar') { cls += ' warn'; off = true;
+        txt = 'En iPhone hay que agregar la app a la pantalla de inicio primero.';
+        label = 'Falta instalar la app'; }
+      else if (st === 'denegado') { cls += ' err'; off = true;
+        txt = 'Bloqueaste los avisos en este dispositivo.'; label = 'Permiso bloqueado'; }
+      else { cls += ' off'; txt = 'Los avisos al celular estan apagados.';
+        label = 'Activar avisos al celular'; }
+      pushOk = false;
+      pintar2(cls, txt, label, off);
+      return destinos();
+    });
+  }
+
+  function pintar2(cls, txt, label, off) {
+    pushEstado.className = cls; pushEstado.textContent = txt;
+    pushBtn.textContent = label; pushBtn.disabled = !!off;
+    pintarAlerta();
+  }
+
+  function destinos() {
+    return LP.contarSubs(sb, YO).then(function (n) {
+      if (n === null) { pushDestinos.textContent = ''; return; }
+      pushDestinos.textContent = n === 0
+        ? 'Ningun dispositivo recibe los avisos del mozo: hoy no le llega a nadie.'
+        : (n === 1 ? '1 dispositivo recibe los avisos del mozo.'
+                   : n + ' dispositivos reciben los avisos del mozo.');
+      pushDestinos.className = 'aviso-estado' + (n === 0 ? ' err' : '');
+    });
+  }
+
+  pushBtn.addEventListener('click', function () {
+    if (pushBtn.disabled) return;
+    pushBtn.disabled = true; pushBtn.textContent = 'Activando...';
+    LP.suscribirPush(sb, YO).then(function (st) {
+      if (st === 'activo') LP.toast('Avisos activados para el mozo.', 'ok');
+      else if (st === 'denegado') LP.toast('No diste permiso.', 'err');
+      else if (st === 'no-guardado') LP.toast('El permiso quedo dado, pero no se registro. Proba de nuevo.', 'err');
+      else LP.toast('No se pudo activar.', 'err');
+      pintarPush();
+    });
+  });
+
+  function pintarAlerta() {
+    var st = sonidoOn ? armarAudio() : 'apagado';
+    if (sonidoOn && st === 'falta-toque') {
+      mostrar('warn', 'Falta un toque para que suene',
+        'El navegador no deja sonar hasta que alguien toque la pantalla.',
+        'Activar el sonido', function () { sonar(false); pintarSonido(); });
+      return;
+    }
+    if (!sonidoOn && !pushOk) {
+      mostrar('', 'Esta pantalla no te va a avisar',
+        'El sonido esta apagado y este aparato no tiene avisos al celular. Un pedido puede quedar esperando.',
+        'Activar avisos', function () { pintarSonido(); pintarPush(); LP.openDialog(sheet); });
+      return;
+    }
+    barra.hidden = true; accion = null;
+  }
+
+  function mostrar(clase, titulo, texto, etq, fn) {
+    barra.className = 'alerta-barra' + (clase ? ' ' + clase : '');
+    document.getElementById('alertaTitulo').textContent = titulo;
+    document.getElementById('alertaTexto').textContent = texto;
+    barraBtn.textContent = etq; accion = fn; barra.hidden = false;
+  }
+  barraBtn.addEventListener('click', function () { if (accion) accion(); });
+
+  function destrabar() {
+    var st = armarAudio();
+    if (st === 'listo' || st === 'no-soportado') {
+      document.removeEventListener('pointerdown', destrabar, true);
+      document.removeEventListener('keydown', destrabar, true);
+    }
+    pintarSonido();
+  }
+  document.addEventListener('pointerdown', destrabar, true);
+  document.addEventListener('keydown', destrabar, true);
+
+  /* ------------------------------------------------------------ realtime -- */
+  var canal = null;
+  function suscribir() {
+    if (!sb) return;
+    var mio = sb.channel('mozo-' + Date.now())
+      .on('postgres_changes', { event: '*', schema: 'public', table: LP.TABLE },
+          function () { cargar(true); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: LP.NOTAS_TABLE },
+          function () { cargar(true); });
+    canal = mio;
+    mio.subscribe(function (st) {
+      if (canal !== mio) return;
+      if (st === 'SUBSCRIBED') conn.set(navigator.onLine ? 'live' : 'off');
+      else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT' || st === 'CLOSED') {
+        conn.set(navigator.onLine ? 'retry' : 'off');
+      }
+    });
+  }
+  LP.onCleanup(function () {
+    if (canal && sb) { try { sb.removeChannel(canal); } catch (e) {} }
+  });
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { document.title = 'La Positiva - Mozo'; cargar(true); }
+  });
+  setInterval(function () { if (!document.hidden) cargar(true); }, 15000);
+
+  pintarSonido();
+  pintarPush();
+  cargar().then(suscribir);
+});
+</script>
+</body>
+</html>

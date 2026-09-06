@@ -23,6 +23,7 @@
   var WA_TABLE = CFG.WA_TABLE || 'la_positiva_whatsapp';
   var FOTOS_TABLE = CFG.FOTOS_TABLE || 'la_positiva_fotos';
   var SESIONES_TABLE = CFG.SESIONES_TABLE || 'la_positiva_sesiones';
+  var NOTAS_TABLE = CFG.NOTAS_TABLE || 'la_positiva_notas';
   var BUCKET = CFG.BUCKET;
   var IMG_BASE = CFG.IMG_BASE;
 
@@ -632,6 +633,154 @@
       .catch(function (e) { console.warn('[La Positiva] SW no registrado', e); return null; });
   }
 
+  /* --- Flujo del pedido ---------------------------------------------------
+     El pedido del comensal NO va derecho a la cocina: primero lo aprueba el
+     mozo. Asi el mozo puede agregar lo que el comensal dijo de palabra y no
+     cargo en la carta, y frenar lo que no corresponda.
+
+       Por aprobar -> En cocina -> Cocinando -> Listo -> Entregado
+            \-> Rechazado
+
+     'En cocina' es "la comanda llego"; 'Cocinando' es "la estan haciendo".
+     Son cosas distintas y es justo lo que el mozo necesita distinguir.   */
+
+  var ESTADOS = ['Por aprobar', 'En cocina', 'Cocinando', 'Listo', 'Entregado'];
+
+  /* Quien se entera de cada paso. Esta tabla es la UNICA fuente: si un estado
+     esta aca, avisa; si no, no. Antes cada pantalla decidia por su cuenta y
+     por eso habia pasos mudos.                                           */
+  var AVISOS = {
+    'Por aprobar': { a: 'Mozo',   titulo: 'Pedido para aprobar',
+                     url: 'mozo.html',   insistir: true },
+    'En cocina':   { a: 'Cocina', titulo: 'Comanda nueva',
+                     url: 'cocina.html', insistir: true },
+    'Cocinando':   { a: 'Mozo',   titulo: 'La cocina lo esta cocinando',
+                     url: 'mozo.html',   insistir: false },
+    'Listo':       { a: 'Mozo',   titulo: 'Listo para llevar a la mesa',
+                     url: 'mozo.html',   insistir: true },
+    'Entregado':   { a: 'Mozo',   titulo: 'Pedido entregado',
+                     url: 'mozo.html',   insistir: false },
+    'Rechazado':   { a: null }
+  };
+
+  /* Manda el aviso que corresponde al estado en que quedo el pedido.
+     No bloquea a quien la llama y nunca rompe la operacion.              */
+  function avisarEstado(sb, pedido, extra) {
+    if (!pedido) return Promise.resolve(null);
+    var cfg = AVISOS[pedido.estado];
+    if (!cfg || !cfg.a) return Promise.resolve(null);
+
+    var cuerpo = pedido.mesa + ' - ' + money(pedido.total) +
+                 (pedido.cliente ? ' - ' + pedido.cliente : '') +
+                 (extra ? '\n' + extra : '');
+
+    /* La comanda tambien sale por WhatsApp, si el local cargo un numero.
+       Va aparte del push a proposito: que Twilio falle no puede tocar el
+       aviso que ya funciona.                                             */
+    if (pedido.estado === 'En cocina') {
+      var detalle = (pedido.lines || []).map(function (l) {
+        return l.qty + 'x ' + l.name;
+      }).join(', ');
+      avisarWhatsapp(sb, {
+        rol: 'Cocina',
+        texto: 'Comanda de ' + pedido.mesa + '\n' + detalle +
+               '\nTotal: ' + money(pedido.total) +
+               (pedido.detalle_comensal ? '\nOJO: ' + pedido.detalle_comensal : '')
+      });
+    }
+
+    return avisar(sb, cfg.a, cfg.titulo, cuerpo, pedido.id, cfg.url, cfg.insistir)
+      .then(function (r) {
+        if (!r.ok && r.codigo !== 'sin-destinos') {
+          console.warn('[La Positiva] aviso de "' + pedido.estado + '" no llego a ' +
+                       cfg.a + ': ' + (r.motivo || 'motivo desconocido'));
+        }
+        return r;
+      });
+  }
+
+  /* Cambia el estado y avisa. Todas las pantallas pasan por aca para que
+     ninguna transicion quede sin su notificacion.                        */
+  function cambiarEstado(sb, id, nuevo, campos) {
+    if (!sb || !id) {
+      return Promise.resolve({ ok: false, motivo: 'No hay conexion con el sistema.' });
+    }
+    var parche = { estado: nuevo, updated_at: new Date().toISOString() };
+    for (var k in (campos || {})) {
+      if (Object.prototype.hasOwnProperty.call(campos, k)) parche[k] = campos[k];
+    }
+
+    return sb.from(TABLE).update(parche).eq('id', id).select().single()
+      .then(function (res) {
+        if (res.error || !res.data) {
+          humanError(res.error);
+          return { ok: false, motivo: 'No se pudo cambiar el estado. Proba de nuevo.' };
+        }
+        avisarEstado(sb, res.data);          // sin await: no frena la pantalla
+        return { ok: true, pedido: res.data };
+      }, function (e) {
+        humanError(e);
+        return { ok: false, motivo: 'No se pudo cambiar el estado. Proba de nuevo.' };
+      });
+  }
+
+  /* El mozo manda la comanda a la cocina. */
+  function aprobarPedido(sb, id, quien, detalle) {
+    return cambiarEstado(sb, id, 'En cocina', {
+      aprobado_por: (quien || 'Mozo').slice(0, 40),
+      aprobado_en: new Date().toISOString(),
+      detalle_comensal: (detalle || '').slice(0, 500) || null
+    });
+  }
+
+  function rechazarPedido(sb, id, quien, motivo) {
+    return cambiarEstado(sb, id, 'Rechazado', {
+      aprobado_por: (quien || 'Mozo').slice(0, 40),
+      rechazado_motivo: (motivo || '').slice(0, 200) || null
+    });
+  }
+
+  /* Un solo boton en la cocina: la recibieron Y la estan haciendo. */
+  function tomarPedido(sb, id) {
+    return cambiarEstado(sb, id, 'Cocinando', { tomado_en: new Date().toISOString() });
+  }
+
+  /* --- Notas entre el mozo y la cocina ------------------------------------ */
+  function notasDePedido(sb, pedidoId) {
+    if (!sb || !pedidoId) return Promise.resolve([]);
+    return sb.from(NOTAS_TABLE).select('*')
+      .eq('pedido_id', pedidoId).order('created_at', { ascending: true })
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return []; }
+        return res.data || [];
+      }, function (e) { humanError(e); return []; });
+  }
+
+  /* Una nota tambien avisa: si la cocina pregunta algo y el mozo no se
+     entera, la pregunta no sirve de nada.                                */
+  function agregarNota(sb, pedido, autor, texto) {
+    var limpio = String(texto || '').trim().slice(0, 500);
+    if (!sb || !pedido || !limpio) {
+      return Promise.resolve({ ok: false, motivo: 'Escribi algo antes de mandar.' });
+    }
+    return sb.from(NOTAS_TABLE)
+      .insert({ pedido_id: pedido.id, autor: autor, texto: limpio })
+      .select().single()
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return { ok: false, motivo: 'No se pudo mandar.' }; }
+        var para = (autor === 'Cocina') ? 'Mozo' : 'Cocina';
+        avisar(sb, para,
+               (autor === 'Cocina' ? 'La cocina pregunta' : 'El mozo avisa') +
+               ' - ' + pedido.mesa,
+               limpio, pedido.id,
+               para === 'Cocina' ? 'cocina.html' : 'mozo.html', true);
+        return { ok: true, nota: res.data };
+      }, function (e) {
+        humanError(e);
+        return { ok: false, motivo: 'No se pudo mandar.' };
+      });
+  }
+
   /* --- Sesiones de mesa ---------------------------------------------------
      Una sesion = una cuenta = muchas rondas. Se abre con el primer pedido de
      la mesa y se cierra cuando paga y se levanta. Sin esto, una mesa que pide
@@ -1100,6 +1249,16 @@
     WA_TABLE: WA_TABLE,
     FOTOS_TABLE: FOTOS_TABLE,
     SESIONES_TABLE: SESIONES_TABLE,
+    NOTAS_TABLE: NOTAS_TABLE,
+    ESTADOS: ESTADOS,
+    AVISOS: AVISOS,
+    avisarEstado: avisarEstado,
+    cambiarEstado: cambiarEstado,
+    aprobarPedido: aprobarPedido,
+    rechazarPedido: rechazarPedido,
+    tomarPedido: tomarPedido,
+    notasDePedido: notasDePedido,
+    agregarNota: agregarNota,
     sesionDeMesa: sesionDeMesa,
     cuentaDeSesion: cuentaDeSesion,
     resumirCuenta: resumirCuenta,

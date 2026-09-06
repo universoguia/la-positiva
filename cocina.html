@@ -246,16 +246,16 @@
   </div>
 
   <div class="tabs" id="tabs" role="group" aria-label="Estados del pedido">
-    <span class="tab" aria-hidden="true">Nuevos</span>
+    <span class="tab" aria-hidden="true">Comandas</span>
     <span class="tab" aria-hidden="true">Cocinando</span>
     <span class="tab" aria-hidden="true">Listos</span>
     <span class="tab" aria-hidden="true">Entregados</span>
   </div>
 
   <div class="cols" id="cols">
-    <section class="col is-active" data-col="Nuevo" aria-labelledby="h-Nuevo">
-      <div class="col-head"><h2 id="h-Nuevo">Nuevos</h2><span class="n" data-count="Nuevo">0</span></div>
-      <div class="col-body" data-body="Nuevo" data-mode="skel">
+    <section class="col is-active" data-col="En cocina" aria-labelledby="h-EnCocina">
+      <div class="col-head"><h2 id="h-EnCocina">Comandas</h2><span class="n" data-count="En cocina">0</span></div>
+      <div class="col-body" data-body="En cocina" data-mode="skel">
         <div class="skel"></div><div class="skel"></div>
       </div>
     </section>
@@ -323,11 +323,18 @@ document.addEventListener('DOMContentLoaded', function () {
   var esc = LP.esc, money = LP.money;
   var sb = LP.client();
 
-  var STEPS = ['Nuevo', 'Cocinando', 'Listo', 'Entregado'];
-  var TAB_LABEL = { Nuevo: 'Nuevos', Cocinando: 'Cocinando', Listo: 'Listos', Entregado: 'Entregados' };
-  var NEXT = { Nuevo: 'Cocinando', Cocinando: 'Listo', Listo: 'Entregado' };
-  var NEXT_LABEL = { Nuevo: 'Marcar en cocina', Cocinando: 'Marcar listo', Listo: 'Marcar entregado' };
-  var BADGE = { Nuevo: 'b-nuevo', Cocinando: 'b-cocinando', Listo: 'b-listo', Entregado: 'b-entregado' };
+  /* El pedido llega aca solo despues de que el mozo lo aprobo: la cocina no
+     ve nada que este 'Por aprobar'. 'En cocina' es la comanda recien llegada;
+     'Cocinando' es que la cocina ya la tomo.                             */
+  var STEPS = ['En cocina', 'Cocinando', 'Listo', 'Entregado'];
+  var TAB_LABEL = { 'En cocina': 'Comandas', Cocinando: 'Cocinando',
+                    Listo: 'Listos', Entregado: 'Entregados' };
+  var NEXT = { 'En cocina': 'Cocinando', Cocinando: 'Listo', Listo: 'Entregado' };
+  // Un solo boton para "la recibimos Y la estamos haciendo", como se pidio.
+  var NEXT_LABEL = { 'En cocina': 'Recibido y cocinando', Cocinando: 'Marcar listo',
+                     Listo: 'Marcar entregado' };
+  var BADGE = { 'En cocina': 'b-nuevo', Cocinando: 'b-cocinando',
+                Listo: 'b-listo', Entregado: 'b-entregado' };
   var ENTREGADOS_VISIBLES = 6;   // el resto queda detras de "ver mas"
 
   var elCols = document.getElementById('cols');
@@ -335,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var elState = document.getElementById('boardState');
   var conn = new LP.ConnBadge(document.getElementById('conn'));
 
-  var activeTab = 'Nuevo';       // en celular arranca en Nuevos
+  var activeTab = 'En cocina';   // en celular arranca en las comandas
   var showAllDone = false;
   var orders = [];
   var knownIds = null;           // null = primera carga, no marcamos nada como nuevo
@@ -385,7 +392,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function cardHTML(o) {
     var next = NEXT[o.estado];
     var mins = minutesOld(o);
-    var urgent = (o.estado === 'Nuevo' || o.estado === 'Cocinando') && mins >= 15;
+    var urgent = (o.estado === 'En cocina' || o.estado === 'Cocinando') && mins >= 15;
     var PENDIENTE = {
       Efectivo: 'Paga en efectivo',
       QR: 'Paga con QR',
@@ -424,10 +431,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ------------------------------------------------- render con diffing -- */
   function groupOrders() {
-    var g = { Nuevo: [], Cocinando: [], Listo: [], Entregado: [] };
-    orders.forEach(function (o) { (g[o.estado] || g.Entregado).push(o); });
+    /* Los grupos salen de STEPS y no de una lista escrita a mano: cuando
+       cambiaron los estados, la lista fija dejaba g['En cocina'] en undefined
+       y el fallback mandaba TODAS las comandas nuevas al cajon de entregados,
+       o sea invisibles para la cocina.                                    */
+    var g = {};
+    STEPS.forEach(function (s) { g[s] = []; });
+    orders.forEach(function (o) { (g[o.estado] || g[STEPS[STEPS.length - 1]]).push(o); });
     // Activos: el mas viejo primero (es el que apura). Entregados: los ultimos.
-    ['Nuevo', 'Cocinando', 'Listo'].forEach(function (s) {
+    STEPS.slice(0, -1).forEach(function (s) {
       g[s].sort(function (a, b) { return new Date(a.created_at) - new Date(b.created_at); });
     });
     g.Entregado.sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); });
@@ -531,17 +543,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!sb) { fail(null); return; }
 
-    sb.from(LP.TABLE)
-      .update({ estado: next, updated_at: new Date().toISOString() })
-      .eq('id', id).select().then(function (res) {
+    /* Pasa por LP.cambiarEstado y no por un update propio: ahi vive la tabla
+       de avisos, asi que ninguna transicion puede quedarse muda.        */
+    LP.cambiarEstado(sb, id, next).then(function (r) {
         delete pendingIds[id];
-        if (res.error || !res.data || !res.data.length) { fail(res.error); return; }
+        if (!r.ok) { fail(null); return; }
         // Aplica el cambio localmente para que se vea al instante.
         orders = orders.map(function (o) {
-          return String(o.id) === String(id) ? res.data[0] : o;
+          return String(o.id) === String(id) ? r.pedido : o;
         });
         render();
-        avisarPaso(res.data[0]);
       }, function (e) { delete pendingIds[id]; fail(e); });
 
     function fail(err) {
@@ -553,44 +564,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  /* ------------------------------------------- avisos de cada paso -----
-     Jonathan sigue el pedido de punta a punta, no solo el pago. El aviso sale
-     DESPUES de que la base confirmo el cambio: si el update falla, no se
-     manda nada.
-
-     Se avisa en un solo sentido -al encargado- y nunca a Cocina: el aviso lo
-     dispara la propia cocina al tocar el boton, asi que devolverselo seria
-     hacer sonar el aparato que acaban de usar.                            */
-  var PASOS_AVISADOS = {
-    Cocinando: { titulo: 'La cocina tomo el pedido' },
-    Entregado: { titulo: 'Pedido entregado' }
-    // 'Listo' queda afuera a proposito: es el paso que mas se repite en un
-    // servicio y satura el celular. Se agrega aca si hace falta.
-  };
-
-  function avisarPaso(o) {
-    if (!o) return;
-    var paso = PASOS_AVISADOS[o.estado];
-    if (!paso) return;
-
-    var cuerpo = o.mesa + ' - ' + money(o.total) +
-                 (o.cliente ? ' - ' + o.cliente : '');
-
-    LP.avisar(sb, 'Jonathan', paso.titulo, cuerpo, o.id, 'caja.html', false)
-      .then(function (r) {
-        if (!r.ok && r.codigo !== 'sin-destinos') {
-          console.warn('[La Positiva] Jonathan no recibio el aviso de "' +
-                       o.estado + '" del pedido ' + o.id + ': ' +
-                       (r.motivo || 'motivo desconocido'));
-        }
-      });
-  }
-
   /* --------------------------------------------------------- carga ---- */
   var loadInFlight = false;
   var otraPendiente = false;      // llego un cambio mientras cargabamos
 
-  var ACTIVOS = ['Nuevo', 'Cocinando', 'Listo'];
+  var ACTIVOS = ['En cocina', 'Cocinando', 'Listo'];
   var ENTREGADOS_TRAIDOS = 20;
 
   function load(quiet) {
@@ -862,10 +840,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
   chip.addEventListener('click', function () {
     limpiarSinVer();
-    activeTab = 'Nuevo';
-    delete newsTabs.Nuevo;
+    activeTab = 'En cocina';
+    delete newsTabs['En cocina'];
     render();
-    var col = elCols.querySelector('[data-body="Nuevo"]');
+    var col = elCols.querySelector('[data-body="En cocina"]');
     if (col) col.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   });
 
@@ -900,7 +878,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function pendientes() {
     var out = [];
     for (var i = 0; i < orders.length; i++) {
-      if (orders[i].estado === 'Nuevo') out.push(orders[i]);
+      if (orders[i].estado === 'En cocina') out.push(orders[i]);
     }
     return out;
   }
@@ -912,7 +890,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function hayDemorado() {
     for (var i = 0; i < orders.length; i++) {
       var o = orders[i];
-      if ((o.estado === 'Nuevo' || o.estado === 'Cocinando') && minutesOld(o) >= 15) return true;
+      if ((o.estado === 'En cocina' || o.estado === 'Cocinando') && minutesOld(o) >= 15) return true;
     }
     return false;
   }
@@ -1068,10 +1046,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (insistCount >= INSIST_TOPE && hayPendientes()) {
-      mostrarBarra('warn', 'Hay pedidos sin tomar',
-        'Dejamos de repetir el aviso para no molestar, pero siguen esperando en la columna Nuevos.',
-        'Ver los nuevos', function () {
-          activeTab = 'Nuevo'; delete newsTabs.Nuevo; render();
+      mostrarBarra('warn', 'Hay comandas sin tomar',
+        'Dejamos de repetir el aviso para no molestar, pero siguen esperando en Comandas.',
+        'Ver las comandas', function () {
+          activeTab = 'En cocina'; delete newsTabs['En cocina']; render();
         });
       return;
     }

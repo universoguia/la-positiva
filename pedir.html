@@ -912,7 +912,8 @@ document.addEventListener('DOMContentLoaded', function () {
       cliente: document.getElementById('clienteNombre').value.trim().slice(0, 40) || null,
       lines: lines,
       total: cartTotal(),
-      estado: 'Nuevo',
+      // El pedido NO va derecho a la cocina: primero lo aprueba el mozo.
+      estado: 'Por aprobar',
       pagado: metodo === 'Tarjeta',      // QR y efectivo se cobran despues
       metodo_pago: metodo
     };
@@ -951,60 +952,14 @@ document.addEventListener('DOMContentLoaded', function () {
         showStatus(res.data);
         startPolling();
 
-        /* Aviso a cocina, sin bloquear ni afectar al cliente si falla.
-           El panel abierto ya se entera solo por Realtime: esto cubre el
-           caso de que lo tengan cerrado o el celular en el bolsillo.
+        /* Un solo llamado: la tabla de avisos del nucleo decide a quien le
+           toca segun el estado en que quedo el pedido. Recien creado esta
+           'Por aprobar', asi que le avisa AL MOZO, no a la cocina.
 
-           El resultado NO se tira. Al comensal no se le dice nada -no puede
-           hacer nada al respecto y solo le romperia la confianza-, pero la
-           falla queda registrada en consola con el motivo que devolvio el
-           servidor. Antes se descartaba en silencio y el canal podia estar
-           muerto durante meses sin que nadie se enterara. Quien tiene que
-           ver el estado es el local, y lo ve en el panel de cocina:
-           "ningun dispositivo tiene los avisos activados".
-
-           La url manda el aviso al panel de cocina. Sin ella el service
-           worker abria caja.html, que es la pantalla equivocada.        */
-        LP.avisar(sb, 'Cocina', 'Pedido nuevo',
-                  res.data.mesa + ' - ' + money(res.data.total),
-                  res.data.id, 'cocina.html', true)
-          .then(function (r) {
-            if (!r.ok) {
-              console.warn('[La Positiva] la cocina no recibio el aviso del pedido ' +
-                           res.data.id + ': ' + (r.motivo || 'motivo desconocido'));
-            }
-          });
-
-        /* El encargado sigue el pedido desde que entra, no desde que se paga.
-           Va aparte del aviso a cocina: son dos destinatarios distintos y uno
-           no puede quedar sin avisar porque fallo el otro.                */
-        LP.avisar(sb, 'Jonathan', 'Pedido nuevo',
-                  res.data.mesa + ' - ' + money(res.data.total),
-                  res.data.id, 'caja.html', false)
-          .then(function (r) {
-            if (!r.ok && r.codigo !== 'sin-destinos') {
-              console.warn('[La Positiva] Jonathan no recibio el aviso del pedido ' +
-                           res.data.id + ': ' + (r.motivo || 'motivo desconocido'));
-            }
-          });
-
-        /* Segundo canal, independiente del push: si la cocina tiene un numero
-           cargado, le llega tambien por WhatsApp. Va aparte a proposito, para
-           que una falla de Twilio no toque el aviso que ya funciona.      */
-        var detalle = lines.map(function (l) { return l.qty + 'x ' + l.name; }).join(', ');
-        LP.avisarWhatsapp(sb, {
-          rol: 'Cocina',
-          texto: 'Pedido nuevo - ' + res.data.mesa + '\n' +
-                 detalle + '\n' +
-                 'Total: ' + money(res.data.total)
-        }).then(function (w) {
-          if (!w.ok && w.codigo !== 'sin-destinos') {
-            // 'sin-destinos' no se registra: no tener numero cargado es una
-            // decision del local, no una falla.
-            console.warn('[La Positiva] WhatsApp a cocina no enviado: ' +
-                         (w.motivo || 'motivo desconocido'));
-          }
-        });
+           Antes cada destinatario se escribia a mano aca y era facil que un
+           paso quedara mudo. El resultado no se muestra al comensal -no puede
+           hacer nada al respecto-, pero queda en consola con el motivo.   */
+        LP.avisarEstado(sb, res.data);
       }, function (e) { fallo(e); });
       }
     }, delay);
@@ -1020,10 +975,14 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   /* ------------------------------------------------------- seguimiento -- */
-  var STEPS = ['Nuevo', 'Cocinando', 'Listo', 'Entregado'];
+  var STEPS = ['Por aprobar', 'En cocina', 'Cocinando', 'Listo', 'Entregado'];
+  /* En lenguaje de comensal, no de sistema. 'Por aprobar' no dice que lo
+     estan aprobando -eso suena a que puede rechazarse-: dice que el mozo lo
+     esta viendo, que es lo que efectivamente pasa.                       */
   var STEP_LABEL = {
-    Nuevo: 'Recibido',
-    Cocinando: 'En la cocina',
+    'Por aprobar': 'El mozo lo esta viendo',
+    'En cocina': 'Enviado a la cocina',
+    Cocinando: 'Lo estan preparando',
     Listo: 'Listo para servir',
     Entregado: 'Entregado'
   };

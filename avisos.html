@@ -125,6 +125,15 @@ document.addEventListener('DOMContentLoaded', function () {
      aviso de cocina no le suena al encargado y al reves.                 */
   var ROLES = [
     {
+      id: 'Mozo',
+      titulo: 'Mozo',
+      quien: 'Recibe el aviso cuando una mesa pide algo y necesita que lo aprueben, ' +
+             'y cuando la cocina responde. Es el que mas avisos recibe.',
+      prueba: { title: 'Prueba de aviso', body: 'Si ves esto, los avisos del mozo funcionan.',
+                url: 'mozo.html' },
+      wa: 'Hay un pedido esperando aprobacion en La Positiva. (mensaje de prueba)'
+    },
+    {
       id: 'Cocina',
       titulo: 'Cocina',
       quien: 'Recibe el aviso cuando entra un pedido nuevo. Va a la tablet o al celular ' +
