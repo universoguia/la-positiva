@@ -1,0 +1,4 @@
+# Herramientas de desarrollo: no tienen por que viajar al sitio publico.
+# No contienen secretos, pero tampoco aportan nada al deploy.
+scripts/
+.claude/

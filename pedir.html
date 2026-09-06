@@ -192,6 +192,15 @@
   }
   .cartbar-btn:hover{background:#241c18}
   .cartbar-btn .total{color:var(--gold);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums}
+  /* La barra dice la accion, no un sustantivo: "Ver mi pedido" con el
+     contador al lado, como en las apps de delivery. */
+  .cart-left{display:flex;align-items:center;gap:11px;min-width:0}
+  .cart-count{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:28px;height:28px;padding:0 8px;flex:none;
+    border-radius:var(--r-pill);background:var(--gold);color:var(--ink);
+    font-weight:600;font-size:16px;font-variant-numeric:tabular-nums;
+  }
   @media (min-width:700px){.cartbar-btn{max-width:600px}}
 
   .track-chip{
@@ -352,7 +361,10 @@
 
 <div class="cartbar" id="cartbar" hidden>
   <button type="button" class="cartbar-btn" id="cartbarBtn">
-    <span id="cartCount">0 items</span>
+    <span class="cart-left">
+      <span class="cart-count" id="cartCount">0</span>
+      <span>Ver mi pedido</span>
+    </span>
     <span class="total" id="cartTotal">$0</span>
   </button>
 </div>
@@ -371,7 +383,7 @@
     <div id="cartLines"></div>
     <div class="totals"><span class="lbl">Total</span><span class="val" id="cartSheetTotal">$0</span></div>
     <button type="button" class="btn btn-primary btn-block" id="goCheckoutBtn" style="margin-top:18px;min-height:56px;font-size:18px">
-      Continuar
+      Elegir como pagar
     </button>
   </div>
 </div>
@@ -695,10 +707,11 @@ document.addEventListener('DOMContentLoaded', function () {
   function renderCartBar() {
     var n = cartCount();
     elCartbar.hidden = n === 0;
-    document.getElementById('cartCount').textContent = n + (n === 1 ? ' item' : ' items');
+    document.getElementById('cartCount').textContent = n;
     document.getElementById('cartTotal').textContent = money(cartTotal());
     document.getElementById('cartbarBtn').setAttribute(
-      'aria-label', 'Ver tu pedido: ' + n + (n === 1 ? ' item' : ' items') + ', total ' + money(cartTotal())
+      'aria-label', 'Ver mi pedido: ' + n + (n === 1 ? ' producto' : ' productos') +
+                    ', total ' + money(cartTotal())
     );
   }
 
