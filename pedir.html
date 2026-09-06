@@ -67,7 +67,7 @@
   .cats::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px}
   .cat-btn{
     flex:none;scroll-snap-align:start;
-    min-height:40px;padding:8px 15px;
+    min-height:var(--tap);padding:8px 15px;
     border-radius:var(--r-pill);border:1px solid var(--border-strong);
     background:var(--card);color:var(--muted-strong);
     font-size:15px;white-space:nowrap;
@@ -113,7 +113,7 @@
   .dish-tag{
     display:inline-block;margin-left:6px;vertical-align:middle;
     background:var(--warn-bg);color:var(--warn);
-    font-size:12px;padding:2px 8px;border-radius:var(--r-pill);
+    font-size:13px;padding:2px 8px;border-radius:var(--r-pill);
   }
 
   .dish-actions{display:flex;align-items:center;gap:8px;justify-self:end}
@@ -130,8 +130,19 @@
     font-variant-numeric:tabular-nums;
   }
 
-  /* En pantallas muy angostas los controles bajan debajo del precio. */
-  @media (max-width:380px){
+  /* En pantallas chicas el header sticky se compacta para no comerse
+     la carta: pierde alto en los margenes, no en las areas tactiles. */
+  @media (max-width:360px),(max-height:600px){
+    header.top{padding-top:calc(8px + var(--sa-t));padding-bottom:6px}
+    .brand h1{font-size:21px}
+    .search{margin-top:8px}
+    .cats-shell{margin-top:8px}
+  }
+
+  /* En pantallas muy angostas los controles bajan debajo del precio.
+     A 375px (iPhone SE/8) todavia entra la fila compacta, asi que el
+     corte va en 360px y no mas arriba. */
+  @media (max-width:360px){
     .dish{grid-template-columns:auto minmax(0,1fr)}
     .dish-actions{grid-column:1 / -1;justify-self:stretch;justify-content:flex-end;margin-top:2px}
     .dish-media{width:60px;height:60px}

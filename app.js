@@ -52,7 +52,9 @@
      Nunca mostramos error.message crudo al usuario: se registra en consola
      para diagnostico y se muestra una frase entendible.                    */
   function humanError(err, fallback) {
-    if (err) { try { console.error('[La Positiva]', err); } catch (e) {} }
+    // warn y no error: son condiciones previstas y ya manejadas en pantalla,
+    // no fallas del navegador. Deja rastro sin ensuciar la consola.
+    if (err) { try { console.warn('[La Positiva]', err); } catch (e) {} }
     if (!navigator.onLine) {
       return 'Parece que te quedaste sin internet. Revisa la conexion y proba de nuevo.';
     }
