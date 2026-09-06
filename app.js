@@ -20,6 +20,8 @@
   var TABLE = CFG.TABLE;
   var PUSH_TABLE = CFG.PUSH_TABLE;
   var COBROS_TABLE = CFG.COBROS_TABLE;
+  var WA_TABLE = CFG.WA_TABLE || 'la_positiva_whatsapp';
+  var FOTOS_TABLE = CFG.FOTOS_TABLE || 'la_positiva_fotos';
   var BUCKET = CFG.BUCKET;
   var IMG_BASE = CFG.IMG_BASE;
 
@@ -252,6 +254,59 @@
     }).catch(function () { return 'inactivo'; });
   }
 
+  /* Que aparato es este. Sin esto la tabla guardaba suscripciones anonimas y
+     era imposible saber cual era el celular de quien, ni sacar el que sobraba.
+     Se deduce del user agent: no pide permisos ni datos personales.       */
+  function describirDispositivo() {
+    var ua = navigator.userAgent || '';
+    var plataforma = 'Dispositivo';
+
+    if (/iPad/.test(ua)) plataforma = 'iPad';
+    else if (/iPhone|iPod/.test(ua)) plataforma = 'iPhone';
+    else if (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) plataforma = 'iPad';
+    else if (/Android/.test(ua)) plataforma = /Mobile/.test(ua) ? 'Android' : 'Tablet Android';
+    else if (/Windows/.test(ua)) plataforma = 'PC con Windows';
+    else if (/Macintosh|Mac OS X/.test(ua)) plataforma = 'Mac';
+    else if (/Linux/.test(ua)) plataforma = 'PC con Linux';
+
+    // El orden importa: casi todos dicen "Safari" y "Chrome" en el user agent.
+    var nav = '';
+    if (/EdgA?\//.test(ua)) nav = 'Edge';
+    else if (/OPR\/|Opera/.test(ua)) nav = 'Opera';
+    else if (/Brave/.test(ua)) nav = 'Brave';
+    else if (/Firefox\//.test(ua)) nav = 'Firefox';
+    else if (/CriOS|Chrome\//.test(ua)) nav = 'Chrome';
+    else if (/Safari\//.test(ua)) nav = 'Safari';
+
+    var instalada = esInstalada();
+    var nombre = plataforma + (nav ? ' - ' + nav : '') + (instalada ? ' (app instalada)' : '');
+
+    return { plataforma: plataforma, nombre: nombre, ua: ua.slice(0, 400) };
+  }
+
+  /* Compara la clave con la que se creo la suscripcion contra la vigente.
+     Si el navegador no expone options.applicationServerKey damos por buena
+     la que hay: no podemos afirmar que este vencida.                      */
+  function claveVigente(sub) {
+    try {
+      var actual = sub.options && sub.options.applicationServerKey;
+      if (!actual) return true;
+      var a = new Uint8Array(actual);
+      var b = urlBase64ToUint8Array(VAPID_PUBLIC);
+      if (a.length !== b.length) return false;
+      for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+      return true;
+    } catch (e) { return true; }
+  }
+
+  // Saca de la base un endpoint que ya no sirve, para no dejar destinos muertos.
+  function olvidarSub(sb, endpoint) {
+    if (!sb || !endpoint) return Promise.resolve(false);
+    return sb.from(PUSH_TABLE).delete()
+      .eq('subscription->>endpoint', endpoint)
+      .then(function () { return true; }, function () { return false; });
+  }
+
   /* La tabla no tiene UNIQUE sobre empleado, asi que un upsert por conflicto
      no es posible sin cambiar el esquema. Se deduplica por endpoint.      */
   function guardarSub(sb, empleado, sub) {
@@ -260,18 +315,34 @@
     var endpoint = json && json.endpoint;
     if (!endpoint) return Promise.resolve(false);
 
+    var quien = describirDispositivo();
+
     return sb.from(PUSH_TABLE).select('id')
       .eq('empleado', empleado)
       .eq('subscription->>endpoint', endpoint)
       .limit(1)
       .then(function (res) {
         if (res.error) { humanError(res.error); return false; }
-        if (res.data && res.data.length) return true;   // ya estaba: no duplica
-        return sb.from(PUSH_TABLE).insert({ empleado: empleado, subscription: json })
-          .then(function (ins) {
-            if (ins.error) { humanError(ins.error); return false; }
-            return true;
-          });
+        if (res.data && res.data.length) {
+          // Ya estaba: no duplica, pero refresca como se llama el aparato.
+          return sb.from(PUSH_TABLE)
+            .update({ dispositivo: quien.nombre, plataforma: quien.plataforma,
+                      user_agent: quien.ua })
+            .eq('id', res.data[0].id)
+            .then(function () { return true; }, function () { return true; });
+        }
+        return sb.from(PUSH_TABLE).insert({
+          empleado: empleado,
+          subscription: json,
+          dispositivo: quien.nombre,
+          plataforma: quien.plataforma,
+          user_agent: quien.ua
+        }).then(function (ins) {
+          // 23505 = ya existe por el indice unico. Es exito, no falla: dos
+          // pestanias del mismo aparato pueden registrarse a la vez.
+          if (ins.error && ins.error.code !== '23505') { humanError(ins.error); return false; }
+          return true;
+        });
       }, function (e) { humanError(e); return false; });
   }
 
@@ -286,6 +357,18 @@
         if (perm === 'denied') return 'denegado';
         if (perm !== 'granted') return 'sin-decidir';
         return reg.pushManager.getSubscription().then(function (sub) {
+          // Una suscripcion hecha con la clave VAPID anterior sigue viva en
+          // el navegador pero el servidor de push la rechaza para siempre.
+          // Al rotar claves hay que tirarla y sacar una nueva.
+          if (sub && !claveVigente(sub)) {
+            var viejo = (sub.toJSON() || {}).endpoint;
+            return sub.unsubscribe()
+              .catch(function () { return null; })
+              .then(function () { return olvidarSub(sb, viejo); })
+              .then(function () { return null; });
+          }
+          return sub;
+        }).then(function (sub) {
           if (sub) return sub;
           return reg.pushManager.subscribe({
             userVisibleOnly: true,
@@ -300,14 +383,240 @@
     }).catch(function (e) { humanError(e); return 'error'; });
   }
 
-  // Dispara el aviso sin bloquear al que lo llama: si falla, no rompe nada.
-  function avisar(sb, empleado, title, body, pedidoId) {
-    if (!sb) return Promise.resolve(false);
+  /* Los aparatos registrados para un rol, para poder mirarlos y sacar el que
+     no corresponde. Marca cual es EL DE ESTA PANTALLA: sin eso, una lista de
+     "iPhone, iPhone, PC" no se puede desambiguar mirandola.               */
+  /* Ultimo recurso cuando la fila no tiene identidad guardada (se registro
+     antes de que existiera la columna). El servidor de push delata bastante:
+     Apple solo lo usan iPhone, iPad y Mac; FCM, Chrome y Android.        */
+  function describirEndpoint(ep) {
+    if (!ep) return null;
+    if (ep.indexOf('web.push.apple.com') !== -1) return 'Apple - iPhone, iPad o Mac';
+    if (ep.indexOf('fcm.googleapis.com') !== -1) return 'Chrome o Android';
+    if (ep.indexOf('notify.windows.com') !== -1) return 'Windows';
+    if (ep.indexOf('mozilla.com') !== -1 || ep.indexOf('mozaws.net') !== -1) return 'Firefox';
+    return null;
+  }
+
+  function listarSubs(sb, empleado) {
+    if (!sb) return Promise.resolve(null);
+    var q = sb.from(PUSH_TABLE)
+      .select('id, empleado, dispositivo, plataforma, created_at, ultimo_aviso, subscription')
+      .order('created_at', { ascending: true });
+    if (empleado) q = q.eq('empleado', empleado);
+
+    return q.then(function (res) {
+      if (res.error) { humanError(res.error); return null; }
+      var filas = res.data || [];
+      return endpointDeEsteAparato().then(function (mio) {
+        return filas.map(function (f) {
+          var ep = f.subscription && f.subscription.endpoint;
+          return {
+            id: f.id,
+            empleado: f.empleado,
+            dispositivo: f.dispositivo || describirEndpoint(ep) ||
+                         'Dispositivo sin identificar',
+            /* Se muestran los ultimos caracteres del endpoint: es lo unico
+               que distingue dos aparatos de la misma marca, y permite ver a
+               simple vista que dos filas son en realidad el MISMO aparato
+               registrado en dos roles.                                    */
+            huella: ep ? ep.slice(-8) : null,
+            sinIdentificar: !f.dispositivo,
+            plataforma: f.plataforma || '',
+            created_at: f.created_at,
+            ultimo_aviso: f.ultimo_aviso,
+            esteAparato: !!(mio && ep && mio === ep)
+          };
+        });
+      });
+    }, function (e) { humanError(e); return null; });
+  }
+
+  function endpointDeEsteAparato() {
+    if (!pushSoportado()) return Promise.resolve(null);
+    return navigator.serviceWorker.getRegistration().then(function (reg) {
+      if (!reg) return null;
+      return reg.pushManager.getSubscription().then(function (sub) {
+        var json = sub && sub.toJSON();
+        return (json && json.endpoint) || null;
+      });
+    }).catch(function () { return null; });
+  }
+
+  function borrarSub(sb, id) {
+    if (!sb || !id) return Promise.resolve(false);
+    return sb.from(PUSH_TABLE).delete().eq('id', id)
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return false; }
+        return true;
+      }, function (e) { humanError(e); return false; });
+  }
+
+  /* Dispara el aviso sin bloquear al que lo llama. Nunca rompe nada, pero
+     tampoco se traga el motivo: devuelve { ok, motivo, config } y deja
+     rastro en consola. 'config' distingue "el servidor esta sin configurar"
+     (reintentar no sirve) de "no hay a quien avisarle" o de un corte de red.
+     'url' es la pantalla que se abre al tocar la notificacion.            */
+  function avisar(sb, empleado, title, body, pedidoId, url, insistir) {
+    if (!sb) {
+      return Promise.resolve({ ok: false, config: false, codigo: 'sin-cliente',
+        motivo: 'No hay conexion con el sistema.' });
+    }
     return sb.functions.invoke('notify-empleado', {
-      body: { empleado: empleado, title: title, body: body, pedidoId: pedidoId || null }
+      body: {
+        empleado: empleado, title: title, body: body,
+        pedidoId: pedidoId || null, url: url || null,
+        /* Sin esto el aviso se autodescarta a los segundos. El service worker
+           y la Edge Function ya lo esperaban, pero nadie lo emitia. */
+        requireInteraction: insistir === true
+      }
     }).then(function (res) {
-      return !(res.error || (res.data && res.data.ok === false));
-    }, function () { return false; });
+      /* El texto del servidor es nuestro y se puede mostrar. El message de un
+         error de transporte es crudo (stack, codigos HTTP) y no va a pantalla:
+         queda en consola y al usuario le damos una frase entendible.       */
+      var delServidor = (res.data && res.data.error) || null;
+      var codigo = (res.data && res.data.motivo) || null;
+      var ok = !(res.error || (res.data && res.data.ok === false));
+      if (!ok) console.warn('[La Positiva] aviso no enviado a ' + empleado,
+                            delServidor || res.error || res);
+      return {
+        ok: ok,
+        codigo: codigo,
+        config: codigo === 'sin-config',
+        motivo: delServidor ||
+                (ok ? null : humanError(res.error, 'El servidor de avisos no respondio.'))
+      };
+    }, function (e) {
+      console.warn('[La Positiva] aviso no enviado a ' + empleado, e);
+      return { ok: false, config: false, codigo: 'error',
+        motivo: humanError(e, 'No pudimos contactar al servidor de avisos.') };
+    });
+  }
+
+  /* Cuantos dispositivos hay realmente registrados por empleado.
+     Es la unica forma de saber que un aviso tiene a quien llegarle: el
+     permiso del navegador no dice nada sobre la fila en la base.        */
+  function contarSubs(sb, empleado) {
+    if (!sb) return Promise.resolve(null);
+    var q = sb.from(PUSH_TABLE).select('id', { count: 'exact', head: true });
+    if (empleado) q = q.eq('empleado', empleado);
+    return q.then(function (res) {
+      if (res.error) { humanError(res.error); return null; }
+      return typeof res.count === 'number' ? res.count : null;
+    }, function (e) { humanError(e); return null; });
+  }
+
+  /* Confirma que ESTE dispositivo esta registrado en la base para ese
+     empleado. estadoPush() solo mira el navegador; esto mira el servidor.
+
+     Devuelve TRES valores, no dos: true / false / null. null es "no pudimos
+     comprobarlo" (sin red, error de la consulta). Colapsar el error en false
+     acusaba de "no registrado" a un aparato sano y mandaba a registrarlo de
+     nuevo cuando el problema era la conexion.                             */
+  function pushRegistrado(sb, empleado) {
+    if (!sb || !pushSoportado()) return Promise.resolve(null);
+    return navigator.serviceWorker.getRegistration().then(function (reg) {
+      if (!reg) return false;
+      return reg.pushManager.getSubscription().then(function (sub) {
+        if (!sub) return false;
+        var json = sub.toJSON();
+        if (!json || !json.endpoint) return false;
+        return sb.from(PUSH_TABLE).select('id')
+          .eq('empleado', empleado)
+          .eq('subscription->>endpoint', json.endpoint)
+          .limit(1)
+          .then(function (res) {
+            if (res.error) { humanError(res.error); return null; }
+            return !!(res.data && res.data.length);
+          }, function (e) { humanError(e); return null; });
+      });
+    }).catch(function () { return null; });
+  }
+
+  /* --- WhatsApp -----------------------------------------------------------
+     Canal aparte del push: otras credenciales, otros modos de falla. Que se
+     caiga uno no puede tumbar al otro.                                    */
+
+  /* Deja el numero en formato internacional o devuelve null. Se valida aca
+     ademas de en el servidor para poder explicarlo mientras se escribe.  */
+  function normalizarTelefono(t) {
+    if (!t) return null;
+    var limpio = String(t).replace(/[\s()\-.]/g, '');
+    return /^\+[1-9]\d{6,14}$/.test(limpio) ? limpio : null;
+  }
+
+  function listarWhatsapp(sb, rol) {
+    if (!sb) return Promise.resolve(null);
+    var q = sb.from(WA_TABLE).select('*').order('created_at', { ascending: true });
+    if (rol) q = q.eq('rol', rol);
+    return q.then(function (res) {
+      if (res.error) { humanError(res.error); return null; }
+      return res.data || [];
+    }, function (e) { humanError(e); return null; });
+  }
+
+  function agregarWhatsapp(sb, rol, telefono, nombre) {
+    if (!sb) return Promise.resolve({ ok: false, motivo: 'No hay conexion con el sistema.' });
+    var tel = normalizarTelefono(telefono);
+    if (!tel) {
+      return Promise.resolve({
+        ok: false,
+        motivo: 'El numero tiene que ir en formato internacional, con el codigo de pais. ' +
+                'Por ejemplo +5491122334455.'
+      });
+    }
+    return sb.from(WA_TABLE)
+      .insert({ rol: rol, telefono: tel, nombre: (nombre || '').slice(0, 60) || null })
+      .select().single()
+      .then(function (res) {
+        if (res.error) {
+          // 23505 = ese numero ya estaba cargado para ese rol.
+          if (res.error.code === '23505') {
+            return { ok: false, motivo: 'Ese numero ya estaba cargado para ' + rol + '.' };
+          }
+          humanError(res.error);
+          return { ok: false, motivo: 'No pudimos guardar el numero.' };
+        }
+        return { ok: true, fila: res.data };
+      }, function (e) {
+        humanError(e);
+        return { ok: false, motivo: 'No pudimos guardar el numero.' };
+      });
+  }
+
+  function borrarWhatsapp(sb, id) {
+    if (!sb || !id) return Promise.resolve(false);
+    return sb.from(WA_TABLE).delete().eq('id', id).then(function (res) {
+      if (res.error) { humanError(res.error); return false; }
+      return true;
+    }, function (e) { humanError(e); return false; });
+  }
+
+  /* Manda el WhatsApp. opts: { rol } para los numeros del local, o
+     { telefono } para uno suelto (el comensal). Devuelve la misma forma que
+     avisar(): { ok, codigo, motivo }.                                     */
+  function avisarWhatsapp(sb, opts) {
+    if (!sb) {
+      return Promise.resolve({ ok: false, codigo: 'sin-cliente',
+        motivo: 'No hay conexion con el sistema.' });
+    }
+    return sb.functions.invoke('notify-whatsapp', { body: opts }).then(function (res) {
+      var delServidor = (res.data && res.data.error) || null;
+      var codigo = (res.data && res.data.motivo) || null;
+      var ok = !(res.error || (res.data && res.data.ok === false));
+      if (!ok) console.warn('[La Positiva] WhatsApp no enviado', delServidor || res.error || res);
+      return {
+        ok: ok,
+        codigo: codigo,
+        config: codigo === 'sin-config',
+        motivo: delServidor ||
+                (ok ? null : humanError(res.error, 'El servidor de WhatsApp no respondio.'))
+      };
+    }, function (e) {
+      console.warn('[La Positiva] WhatsApp no enviado', e);
+      return { ok: false, codigo: 'error',
+        motivo: humanError(e, 'No pudimos contactar al servidor de WhatsApp.') };
+    });
   }
 
   /* --- Registro del service worker ----------------------------------------
@@ -320,6 +629,115 @@
         return reg;
       })
       .catch(function (e) { console.warn('[La Positiva] SW no registrado', e); return null; });
+  }
+
+  /* --- Fotos de los platos ------------------------------------------------
+     La carta trae una foto por plato en menu-data.js, pero apunta a OTRO
+     deploy: cambiarla obligaba a publicar ese otro sitio, cosa que desde un
+     celular no se puede. Estas fotos son un dato en la base, asi que el mozo
+     saca la foto y queda, sin que nadie despliegue nada.                  */
+
+  /* Devuelve { plato_id: url } con todas las fotos propias cargadas. */
+  function fotosDePlatos(sb) {
+    if (!sb) return Promise.resolve({});
+    return sb.from(FOTOS_TABLE).select('plato_id, imagen_url')
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return {}; }
+        var mapa = {};
+        (res.data || []).forEach(function (f) { mapa[f.plato_id] = f.imagen_url; });
+        return mapa;
+      }, function (e) { humanError(e); return {}; });
+  }
+
+  /* La URL que hay que mostrar para un plato: la propia si existe, si no la
+     que venia en la carta.                                                */
+  function fotoDePlato(propias, plato) {
+    if (propias && propias[plato.id]) return propias[plato.id];
+    return plato.photo ? (IMG_BASE + plato.photo) : null;
+  }
+
+  /* Sube la foto y la deja asociada al plato.
+     Resuelve { ok, motivo, url }.                                         */
+  function subirFotoPlato(sb, platoId, file, quien) {
+    if (!sb) {
+      return Promise.resolve({ ok: false, motivo: 'No hay conexion con el sistema.' });
+    }
+    if (!file || !/^image\//.test(file.type || '')) {
+      return Promise.resolve({ ok: false, motivo: 'Eso no parece una imagen.' });
+    }
+
+    return prepararImagen(file).then(function (blob) {
+      /* Si el navegador no supo dibujar la imagen, prepararImagen devuelve el
+         original tal cual. En iPhone eso suele ser HEIC, que Chrome y Android
+         NO muestran: subirla dejaria la carta con un hueco en la mitad de los
+         telefonos. Es mejor frenarlo y explicar como resolverlo.         */
+      var tipo = (blob.type || file.type || '').toLowerCase();
+      if (tipo.indexOf('heic') !== -1 || tipo.indexOf('heif') !== -1) {
+        return {
+          ok: false,
+          motivo: 'La foto esta en formato HEIC y no se ve en todos los celulares. ' +
+                  'En el iPhone: Ajustes > Camara > Formatos > "Mas compatible", ' +
+                  'y sacala de nuevo. O mandatela por WhatsApp y guarda esa copia.'
+        };
+      }
+      if (blob.size > 5 * 1024 * 1024) {
+        return { ok: false, motivo: 'La imagen sigue pesando mas de 5 MB.' };
+      }
+
+      var ext = (blob.type === 'image/jpeg') ? 'jpg'
+              : ((blob.type === 'image/png') ? 'png' : 'jpg');
+      // El id del plato va en la ruta para poder reconocerla en el bucket, y
+      // el sufijo aleatorio evita que el navegador muestre la foto vieja.
+      var limpio = String(platoId).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || 'plato';
+      var path = 'carta/' + limpio + '-' + Date.now() + '-' +
+                 Math.random().toString(36).slice(2, 7) + '.' + ext;
+
+      return sb.storage.from(BUCKET)
+        .upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: false })
+        .then(function (up) {
+          if (up.error) throw up.error;
+          var pub = sb.storage.from(BUCKET).getPublicUrl(path);
+          var url = pub && pub.data && pub.data.publicUrl;
+          if (!url) throw new Error('sin URL publica');
+
+          // Se guarda la ruta anterior para borrarla despues: si no, el bucket
+          // junta todas las fotos descartadas para siempre.
+          return sb.from(FOTOS_TABLE).select('imagen_path').eq('plato_id', platoId).maybeSingle()
+            .then(function (prev) {
+              var anterior = prev && prev.data && prev.data.imagen_path;
+              return sb.from(FOTOS_TABLE).upsert({
+                plato_id: platoId,
+                imagen_path: path,
+                imagen_url: url,
+                cargada_por: (quien || '').slice(0, 40) || null
+              }, { onConflict: 'plato_id' }).then(function (ins) {
+                if (ins.error) throw ins.error;
+                if (anterior && anterior !== path) {
+                  // Que falle el borrado no invalida la carga: es limpieza.
+                  sb.storage.from(BUCKET).remove([anterior]).then(null, function () {});
+                }
+                return { ok: true, url: url };
+              });
+            });
+        });
+    }).then(null, function (e) {
+      humanError(e);
+      return { ok: false, motivo: 'No pudimos subir la foto. Proba de nuevo.' };
+    });
+  }
+
+  /* Saca la foto propia y deja que vuelva la original de la carta. */
+  function borrarFotoPlato(sb, platoId) {
+    if (!sb) return Promise.resolve(false);
+    return sb.from(FOTOS_TABLE).select('imagen_path').eq('plato_id', platoId).maybeSingle()
+      .then(function (prev) {
+        var path = prev && prev.data && prev.data.imagen_path;
+        return sb.from(FOTOS_TABLE).delete().eq('plato_id', platoId).then(function (res) {
+          if (res.error) { humanError(res.error); return false; }
+          if (path) sb.storage.from(BUCKET).remove([path]).then(null, function () {});
+          return true;
+        });
+      }, function (e) { humanError(e); return false; });
   }
 
   /* --- QR de cobro ---------------------------------------------------------
@@ -557,6 +975,23 @@
     esInstalada: esInstalada,
     estadoPush: estadoPush,
     suscribirPush: suscribirPush,
+    pushRegistrado: pushRegistrado,
+    contarSubs: contarSubs,
+    listarSubs: listarSubs,
+    borrarSub: borrarSub,
+    WA_TABLE: WA_TABLE,
+    FOTOS_TABLE: FOTOS_TABLE,
+    fotosDePlatos: fotosDePlatos,
+    fotoDePlato: fotoDePlato,
+    subirFotoPlato: subirFotoPlato,
+    borrarFotoPlato: borrarFotoPlato,
+    prepararImagen: prepararImagen,
+    normalizarTelefono: normalizarTelefono,
+    listarWhatsapp: listarWhatsapp,
+    agregarWhatsapp: agregarWhatsapp,
+    borrarWhatsapp: borrarWhatsapp,
+    avisarWhatsapp: avisarWhatsapp,
+    describirDispositivo: describirDispositivo,
     avisar: avisar
   };
 })(window);

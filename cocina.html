@@ -148,6 +148,40 @@
   .aviso-guia li:last-child{margin-bottom:0}
   /* El boton de la cabecera avisa si el sonido esta puesto. */
   #avisosBtn.on{border-color:var(--gold);color:var(--gold);background:#2c221d}
+  /* Y grita si esta apagado: un panel mudo no puede parecer normal. */
+  #avisosBtn.off{border-color:#e0855f;color:#ffc9b3;background:#3a221a}
+
+  /* ------------------------------------------- barra de estado del aviso --
+     Vive arriba del tablero, no adentro de un dialogo. Si esta pantalla no
+     puede avisar, tiene que verse sin abrir nada.                         */
+  .alerta-barra{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    margin:0 0 14px;padding:13px 16px;border-radius:var(--r-md);
+    background:#3a221a;border:1px solid #7a4530;color:#ffd9c9;
+    font-size:15px;line-height:1.45;
+  }
+  .alerta-barra.warn{background:#3a3020;border-color:#7a6430;color:#ffe9b8}
+  .alerta-barra p{margin:0;flex:1;min-width:220px}
+  .alerta-barra strong{display:block;color:#fff;margin-bottom:2px}
+  .alerta-barra .btn{flex:none;padding:9px 18px;font-size:15px}
+  .alerta-barra[hidden]{display:none}
+
+  /* --------------------------------------------------- chip de sin ver --
+     Un pedido que entro con la pantalla apagada tiene que seguir visible
+     cuando el cocinero vuelve. Solo se borra tocandolo.                   */
+  #sinVerChip{
+    display:inline-flex;align-items:center;gap:9px;
+    min-height:var(--tap);padding:8px 16px;border-radius:var(--r-pill);
+    background:var(--gold);color:var(--ink);border:none;
+    font-size:15px;font-weight:600;
+  }
+  #sinVerChip[hidden]{display:none}
+  #sinVerChip .punto{
+    width:9px;height:9px;border-radius:50%;background:var(--ink);flex:none;
+    animation:latido 1.4s ease-in-out infinite;
+  }
+  @keyframes latido{0%,100%{opacity:1}50%{opacity:.25}}
+  @media (prefers-reduced-motion:reduce){#sinVerChip .punto{animation:none}}
 
   .board-state{color:var(--dark-ink);text-align:center;padding:50px 20px}
   .board-state h3{color:#fff;font-size:22px;margin:0 0 6px}
@@ -187,6 +221,10 @@
       <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
         <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
       </span>
+      <!-- Sobrevive a que la tablet se bloquee: no se limpia solo al volver. -->
+      <button type="button" id="sinVerChip" hidden>
+        <span class="punto" aria-hidden="true"></span><span id="sinVerTxt"></span>
+      </button>
       <!-- Los mozos trabajan sobre este panel: desde aca saltan a mostrar
            el QR sin tener que volver al inicio. -->
       <button type="button" class="btn btn-secondary" id="avisosBtn"
@@ -201,6 +239,12 @@
   <!-- Las cuatro columnas van escritas en el HTML, no generadas por JS:
        los scripts cargan con defer, asi que si el tablero naciera vacio
        todo saltaria al llegar los datos (era un CLS de 0.166). -->
+  <!-- Estado real de los avisos de ESTA pantalla. Se pinta desde el arranque. -->
+  <div class="alerta-barra" id="alertaBarra" role="status" aria-live="polite" hidden>
+    <p><strong id="alertaTitulo"></strong><span id="alertaTexto"></span></p>
+    <button type="button" class="btn btn-primary" id="alertaBtn"></button>
+  </div>
+
   <div class="tabs" id="tabs" role="group" aria-label="Estados del pedido">
     <span class="tab" aria-hidden="true">Nuevos</span>
     <span class="tab" aria-hidden="true">Cocinando</span>
@@ -261,6 +305,10 @@
          Sirve para el encargado que anda por el salon.</p>
       <p class="aviso-estado" id="pushEstado"></p>
       <button type="button" class="btn btn-primary btn-block" id="pushBtn" disabled>Comprobando...</button>
+      <button type="button" class="btn btn-secondary btn-block" id="pushProbar"
+              style="margin-top:8px" hidden>Probar el aviso al celular</button>
+      <!-- Sin esto, cero dispositivos registrados se ve igual que todo bien. -->
+      <p class="aviso-estado" id="pushDestinos" style="margin-top:10px"></p>
       <div id="pushGuia"></div>
     </section>
   </div>
@@ -315,6 +363,9 @@ document.addEventListener('DOMContentLoaded', function () {
   elTabs.addEventListener('click', function (ev) {
     var b = ev.target.closest('.tab');
     if (!b) return;
+    // Los cuatro spans del HTML inicial no traen data-tab: tocarlos antes de
+    // que lleguen los datos dejaba activeTab en undefined y el tablero vacio.
+    if (!b.dataset.tab) return;
     activeTab = b.dataset.tab;
     delete newsTabs[activeTab];
     render();
@@ -429,13 +480,19 @@ document.addEventListener('DOMContentLoaded', function () {
           el.dataset.card = o.id;
           el.dataset.sig = sig;
           el.innerHTML = cardHTML(o);
-          if (flashIds[o.id]) {
-            el.classList.add('is-new');
-            setTimeout(function () { el.classList.remove('is-new'); delete flashIds[o.id]; }, 1800);
-          }
         } else if (el.dataset.sig !== sig) {
           el.dataset.sig = sig;
           el.innerHTML = cardHTML(o);
+        }
+        /* El destello se aplica DESPUES de tener el nodo, sea recien creado o
+           reutilizado. Estaba adentro de la rama de creacion, asi que el
+           pedido que entraba con la pantalla oculta creaba su tarjeta ahi
+           mismo y despues nunca volvia a pasar por esa rama: la marca no se
+           usaba nunca y flashIds crecia sin fin.                          */
+        if (flashIds[o.id] && !document.hidden) {
+          delete flashIds[o.id];
+          el.classList.add('is-new');
+          setTimeout(function () { el.classList.remove('is-new'); }, 1800);
         }
         // Reordena solo si hace falta, para no saltar el scroll.
         if (body.children[i] !== el) body.insertBefore(el, body.children[i] || null);
@@ -484,6 +541,7 @@ document.addEventListener('DOMContentLoaded', function () {
           return String(o.id) === String(id) ? res.data[0] : o;
         });
         render();
+        avisarPaso(res.data[0]);
       }, function (e) { delete pendingIds[id]; fail(e); });
 
     function fail(err) {
@@ -495,40 +553,112 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  /* ------------------------------------------- avisos de cada paso -----
+     Jonathan sigue el pedido de punta a punta, no solo el pago. El aviso sale
+     DESPUES de que la base confirmo el cambio: si el update falla, no se
+     manda nada.
+
+     Se avisa en un solo sentido -al encargado- y nunca a Cocina: el aviso lo
+     dispara la propia cocina al tocar el boton, asi que devolverselo seria
+     hacer sonar el aparato que acaban de usar.                            */
+  var PASOS_AVISADOS = {
+    Cocinando: { titulo: 'La cocina tomo el pedido' },
+    Entregado: { titulo: 'Pedido entregado' }
+    // 'Listo' queda afuera a proposito: es el paso que mas se repite en un
+    // servicio y satura el celular. Se agrega aca si hace falta.
+  };
+
+  function avisarPaso(o) {
+    if (!o) return;
+    var paso = PASOS_AVISADOS[o.estado];
+    if (!paso) return;
+
+    var cuerpo = o.mesa + ' - ' + money(o.total) +
+                 (o.cliente ? ' - ' + o.cliente : '');
+
+    LP.avisar(sb, 'Jonathan', paso.titulo, cuerpo, o.id, 'caja.html', false)
+      .then(function (r) {
+        if (!r.ok && r.codigo !== 'sin-destinos') {
+          console.warn('[La Positiva] Jonathan no recibio el aviso de "' +
+                       o.estado + '" del pedido ' + o.id + ': ' +
+                       (r.motivo || 'motivo desconocido'));
+        }
+      });
+  }
+
   /* --------------------------------------------------------- carga ---- */
   var loadInFlight = false;
+  var otraPendiente = false;      // llego un cambio mientras cargabamos
+
+  var ACTIVOS = ['Nuevo', 'Cocinando', 'Listo'];
+  var ENTREGADOS_TRAIDOS = 20;
 
   function load(quiet) {
-    if (loadInFlight) return Promise.resolve();
+    // Descartar el refresco concurrente escondia el segundo de dos pedidos
+    // casi simultaneos hasta el siguiente respaldo. Ahora se encola.
+    if (loadInFlight) { otraPendiente = true; return Promise.resolve(); }
     if (!sb) { showFatal(); return Promise.resolve(); }
     loadInFlight = true;
 
-    return sb.from(LP.TABLE).select('*')
-      .order('created_at', { ascending: false }).limit(80)
-      .then(function (res) {
-        loadInFlight = false;
-        if (res.error) { showError(res.error, quiet); return; }
+    /* Dos consultas en vez de un .limit(80) sobre todo: los pedidos que la
+       cocina todavia debe hacer no pueden competir por cupo con los ya
+       entregados. Los activos vienen completos, siempre.                 */
+    return Promise.all([
+      sb.from(LP.TABLE).select('*').in('estado', ACTIVOS)
+        .order('created_at', { ascending: false }),
+      sb.from(LP.TABLE).select('*').eq('estado', 'Entregado')
+        .order('created_at', { ascending: false }).limit(ENTREGADOS_TRAIDOS)
+    ]).then(function (res) {
+      loadInFlight = false;
+      var err = (res[0] && res[0].error) || (res[1] && res[1].error);
+      if (err) { showError(err, quiet); reintentarSiHaceFalta(quiet); return; }
 
-        var data = res.data || [];
-        var recienLlegados = [];
-        if (knownIds) {
-          data.forEach(function (o) {
-            if (!knownIds[o.id]) {
-              flashIds[o.id] = true;
-              if (o.estado !== activeTab) newsTabs[o.estado] = true;
-              recienLlegados.push(o);
-            }
-          });
-        }
-        if (recienLlegados.length) alertaNuevos(recienLlegados);
-        knownIds = Object.create(null);
-        data.forEach(function (o) { knownIds[o.id] = true; });
+      /* Las dos consultas no son un unico snapshot: si un pedido pasa a
+         Entregado entre una y otra, puede volver en las dos (duplicado en el
+         tablero) o en ninguna. Se deduplica por id y gana la de activos: un
+         pedido que todavia puede necesitar cocina nunca se esconde.      */
+      var data = [];
+      var vistos = Object.create(null);
+      [(res[0].data || []), (res[1].data || [])].forEach(function (lote) {
+        lote.forEach(function (o) {
+          if (vistos[o.id]) return;
+          vistos[o.id] = true;
+          data.push(o);
+        });
+      });
+      var recienLlegados = [];
+      if (knownIds) {
+        data.forEach(function (o) {
+          if (!knownIds[o.id]) {
+            flashIds[o.id] = true;
+            if (o.estado !== activeTab) newsTabs[o.estado] = true;
+            // Los entregados quedan fuera del aviso: la ventana de 20 rota
+            // sola y volveria a sonar por pedidos ya despachados.
+            if (o.estado !== 'Entregado') recienLlegados.push(o);
+          }
+        });
+      }
+      if (recienLlegados.length) alertaNuevos(recienLlegados);
+      knownIds = Object.create(null);
+      data.forEach(function (o) { knownIds[o.id] = true; });
 
-        orders = data;
-        loaded = true;
-        elState.innerHTML = '';
-        render();
-      }, function (e) { loadInFlight = false; showError(e, quiet); });
+      orders = data;
+      loaded = true;
+      elState.innerHTML = '';
+      render();
+      repasarInsistencia();
+      reintentarSiHaceFalta(quiet);
+    }, function (e) {
+      loadInFlight = false;
+      showError(e, quiet);
+      reintentarSiHaceFalta(quiet);
+    });
+  }
+
+  function reintentarSiHaceFalta(quiet) {
+    if (!otraPendiente) return;
+    otraPendiente = false;
+    load(quiet);
   }
 
   function showError(err, quiet) {
@@ -559,9 +689,12 @@ document.addEventListener('DOMContentLoaded', function () {
   function scheduleBackup() {
     clearTimeout(backupTimer);
     // Con Realtime sano el respaldo es espaciado; si esta caido, se apura.
-    var every = conn.state === 'live' ? 25000 : 7000;
+    /* Antes se apagaba con la pestania oculta, que es exactamente cuando el
+       aviso del sistema tendria que estar mirando. Sigue corriendo, mas
+       espaciado para no gastar bateria de la tablet.                     */
+    var every = document.hidden ? 20000 : (conn.state === 'live' ? 25000 : 7000);
     backupTimer = setTimeout(function () {
-      if (!document.hidden) load(true);
+      load(true);
       scheduleBackup();
     }, every);
   }
@@ -570,11 +703,18 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!sb) return;
     if (channel) { try { sb.removeChannel(channel); } catch (e) {} channel = null; }
 
-    channel = sb.channel('cocina-' + Date.now())
+    /* El canal propio queda capturado aca: cuando cerramos uno a proposito,
+       su callback llega con CLOSED y antes reprogramaba OTRA suscripcion,
+       asi que Realtime no se estabilizaba nunca. Ahora el callback viejo se
+       descarta apenas deja de ser el vigente.                            */
+    var mio = sb.channel('cocina-' + Date.now())
       .on('postgres_changes', { event: '*', schema: 'public', table: LP.TABLE }, function () {
         load(true);
-      })
-      .subscribe(function (status) {
+      });
+    channel = mio;
+
+    mio.subscribe(function (status) {
+        if (channel !== mio) return;
         if (status === 'SUBSCRIBED') {
           conn.set(navigator.onLine ? 'live' : 'off');
           retryMs = 2000;
@@ -591,7 +731,11 @@ document.addEventListener('DOMContentLoaded', function () {
   window.addEventListener('online', function () { conn.set('retry'); load(true); subscribe(); });
   window.addEventListener('offline', function () { conn.set('off'); });
   document.addEventListener('visibilitychange', function () {
-    if (!document.hidden) load(true);
+    if (document.hidden) return;
+    // render() aparte de load(): aplica los destellos que quedaron guardados
+    // mientras la pantalla estaba apagada, sin esperar a la consulta.
+    if (loaded) render();
+    load(true);
   });
 
   LP.onCleanup(function () {
@@ -607,58 +751,200 @@ document.addEventListener('DOMContentLoaded', function () {
 
   var TITULO = 'La Positiva - Cocina y equipo';
   var SONIDO_KEY = 'lp_cocina_sonido';
-  var sonidoOn = false;
   var sinVer = 0;
   var audioCtx = null;
 
-  try { sonidoOn = localStorage.getItem(SONIDO_KEY) === '1'; } catch (e) {}
+  /* El sonido viene PUESTO. Es la unica capa que funciona sin configurar
+     nada en el servidor, y nacia apagada: el panel arrancaba mudo y no lo
+     decia en ningun lado. Solo queda apagado si alguien lo apago a mano. */
+  var sonidoOn = true;
+  try { sonidoOn = localStorage.getItem(SONIDO_KEY) !== '0'; } catch (e) {}
 
   /* --------------------------------------------------------- sonido --- */
+  /* Los navegadores no dejan sonar hasta que alguien toca la pantalla. El
+     AudioContext nace 'suspended' y, tras recargar, el panel decia "sonido
+     activado" mientras el primer pedido entraba mudo. Aca se mira el estado
+     de verdad y se avisa cuando falta el toque.                          */
+  function armarAudio() {
+    if (!audioCtx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return 'no-soportado';
+      try { audioCtx = new AC(); } catch (e) { return 'no-soportado'; }
+      /* resume() es asincronico: leer .state en la linea siguiente devuelve
+         'suspended' aunque el gesto haya servido, y la barra pedia un
+         segundo toque. Repintamos cuando el estado cambia de verdad.    */
+      try {
+        audioCtx.onstatechange = function () { pintarSonido(); };
+      } catch (e) {}
+    }
+    if (audioCtx.state === 'suspended') {
+      try {
+        var pr = audioCtx.resume();
+        if (pr && pr.then) {
+          pr.then(function () {
+            if (audioCtx.state === 'running') pintarSonido();
+          }, function () {});
+        }
+      } catch (e) {}
+    }
+    return audioCtx.state === 'running' ? 'listo' : 'falta-toque';
+  }
+
   // Se genera con Web Audio: no hace falta descargar ningun archivo.
-  function sonar() {
-    if (!sonidoOn) return;
+  // 'fuerte' es para el pedido que ya lleva rato esperando.
+  function sonar(fuerte) {
+    if (!sonidoOn) return false;
+    if (armarAudio() !== 'listo') { pintarAlerta(); return false; }
     try {
-      if (!audioCtx) {
-        var AC = window.AudioContext || window.webkitAudioContext;
-        if (!AC) return;
-        audioCtx = new AC();
-      }
-      if (audioCtx.state === 'suspended') audioCtx.resume();
       var t0 = audioCtx.currentTime;
-      [880, 1174.7].forEach(function (hz, i) {
+      var notas = fuerte ? [880, 1174.7, 880, 1174.7] : [880, 1174.7];
+      notas.forEach(function (hz, i) {
         var t = t0 + i * 0.17;
         var osc = audioCtx.createOscillator();
         var gain = audioCtx.createGain();
         osc.type = 'sine';
         osc.frequency.value = hz;
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(0.3, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(fuerte ? 0.45 : 0.3, t + 0.02);
         gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.start(t); osc.stop(t + 0.32);
       });
-    } catch (e) { /* si el navegador lo bloquea, se sigue sin sonido */ }
+      return true;
+    } catch (e) { return false; }
   }
 
-  /* --------------------------------------------- titulo de la pestania -- */
+  /* Un solo toque en cualquier parte del panel destraba el audio. Es el
+     gesto que pide el navegador y nadie tiene que saber que existe.     */
+  function engancharPrimerToque() {
+    function destrabar() {
+      var st = armarAudio();
+      // Se sueltan los listeners cuando ya no hay nada que esperar; si el
+      // resume sigue en curso, el repintado llega por onstatechange.
+      if (st === 'listo' || st === 'no-soportado') {
+        document.removeEventListener('pointerdown', destrabar, true);
+        document.removeEventListener('keydown', destrabar, true);
+      }
+      pintarSonido();
+    }
+    document.addEventListener('pointerdown', destrabar, true);
+    document.addEventListener('keydown', destrabar, true);
+  }
+
+  /* --------------------------------------- pedidos entrados sin mirar --
+     El contador ya no se borra solo al desbloquear la tablet: un pedido
+     que entro con la pantalla apagada tiene que seguir cantando hasta que
+     alguien lo toque a proposito.                                       */
+  var chip = document.getElementById('sinVerChip');
+  var chipTxt = document.getElementById('sinVerTxt');
+
   function pintarTitulo() {
     document.title = (sinVer > 0 ? '(' + sinVer + ') ' : '') + TITULO;
   }
-  function limpiarSinVer() { if (sinVer) { sinVer = 0; pintarTitulo(); } }
-  window.addEventListener('focus', limpiarSinVer);
-  document.addEventListener('visibilitychange', function () {
-    if (!document.hidden) limpiarSinVer();
+
+  function pintarSinVer() {
+    if (sinVer > 0) {
+      chipTxt.textContent = sinVer === 1
+        ? '1 pedido nuevo - tocar para ver'
+        : sinVer + ' pedidos nuevos - tocar para ver';
+      chip.hidden = false;
+    } else {
+      chip.hidden = true;
+    }
+    pintarTitulo();
+  }
+
+  function limpiarSinVer() {
+    if (!sinVer) return;
+    sinVer = 0;
+    pintarSinVer();
+  }
+
+  chip.addEventListener('click', function () {
+    limpiarSinVer();
+    activeTab = 'Nuevo';
+    delete newsTabs.Nuevo;
+    render();
+    var col = elCols.querySelector('[data-body="Nuevo"]');
+    if (col) col.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   });
 
   /* --------------------------------------------------- disparo general -- */
   function alertaNuevos(lista) {
-    sonar();
-    if (document.hidden) {
-      sinVer += lista.length;
-      pintarTitulo();
-      avisoDelSistema(lista);
-    }
+    /* Trabajo nuevo, presupuesto nuevo. Sin esto, un pedido viejo que se
+       comio las 20 repeticiones dejaba mudos a todos los que entraran
+       despues, hasta que la columna Nuevos quedara vacia: podia no pasar en
+       toda la noche.                                                     */
+    insistCount = 0;
+    clearTimeout(insistTimer);
+    insistTimer = null;
+    sonar(false);
+    // Cuenta SIEMPRE, no solo con la pestania oculta: en la tablet de la
+    // cocina la pantalla esta a la vista pero nadie la mira de continuo.
+    sinVer += lista.length;
+    pintarSinVer();
+    if (document.hidden) avisoDelSistema(lista);
+    repasarInsistencia();
   }
+
+  /* ------------------------------------------------------ insistencia --
+     Un pedido que suena una sola vez y nadie escucho queda sin hacer. El
+     aviso se repite mientras haya algo en 'Nuevos', y se pone mas insistente
+     cuando alguno cruza los 15 minutos que el tablero ya marca como demora.
+     Se corta solo cuando la columna queda vacia.                        */
+  var insistTimer = null;
+  var insistCount = 0;
+  var INSIST_CADA = 60000;
+  var INSIST_TOPE = 20;          // ~20 min de recordatorios, y para
+
+  function pendientes() {
+    var out = [];
+    for (var i = 0; i < orders.length; i++) {
+      if (orders[i].estado === 'Nuevo') out.push(orders[i]);
+    }
+    return out;
+  }
+
+  function hayPendientes() {
+    return pendientes().length > 0;
+  }
+
+  function hayDemorado() {
+    for (var i = 0; i < orders.length; i++) {
+      var o = orders[i];
+      if ((o.estado === 'Nuevo' || o.estado === 'Cocinando') && minutesOld(o) >= 15) return true;
+    }
+    return false;
+  }
+
+  function repasarInsistencia() {
+    if (!hayPendientes()) {
+      clearTimeout(insistTimer);
+      insistTimer = null;
+      insistCount = 0;
+      pintarAlerta();
+      return;
+    }
+    if (insistTimer) return;                 // ya hay uno andando
+    insistTimer = setTimeout(function tick() {
+      insistTimer = null;
+      if (!hayPendientes()) { insistCount = 0; pintarAlerta(); return; }
+      if (insistCount >= INSIST_TOPE) { pintarAlerta(); return; }
+      /* El tope cuenta avisos DADOS, no intentos. Si el navegador todavia no
+         deja sonar, gastar el presupuesto dejaba 20 minutos mudos y despues
+         la alarma no volvia nunca. Cuando no suena, se cae a la capa de
+         abajo en vez de perder el aviso.                                 */
+      if (sonar(hayDemorado())) {
+        insistCount++;
+      } else {
+        avisoDelSistema(pendientes());
+      }
+      pintarAlerta();
+      repasarInsistencia();
+    }, INSIST_CADA);
+  }
+
+  LP.onCleanup(function () { clearTimeout(insistTimer); });
 
   // Aviso local del sistema: no necesita servidor, pero solo funciona si la
   // pagina sigue viva en alguna pestania.
@@ -674,8 +960,13 @@ document.addEventListener('DOMContentLoaded', function () {
           body: uno ? (uno.mesa + ' - ' + money(uno.total)) : 'Entraron mientras no mirabas.',
           icon: 'icons/icon-192.png',
           badge: 'icons/icon-192.png',
-          tag: 'cocina-nuevos',
+          /* Una tanda ya no pisa a la anterior: con el tag fijo, dos pedidos
+             seguidos dejaban una sola notificacion.                       */
+          tag: uno ? ('pedido-' + uno.id) : 'cocina-nuevos',
           renotify: true,
+          // Un pedido que hay que cocinar no se desvanece solo a los segundos.
+          requireInteraction: true,
+          vibrate: [200, 100, 200],
           data: { url: new URL('cocina.html', location.href).href }
         }
       );
@@ -691,6 +982,8 @@ document.addEventListener('DOMContentLoaded', function () {
   var pushBtn = document.getElementById('pushBtn');
   var pushEstado = document.getElementById('pushEstado');
   var pushGuia = document.getElementById('pushGuia');
+  var pushProbar = document.getElementById('pushProbar');
+  var pushDestinos = document.getElementById('pushDestinos');
 
   avisosBtn.addEventListener('click', function () {
     pintarSonido();
@@ -702,29 +995,113 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   function pintarSonido() {
-    sonidoEstado.textContent = sonidoOn
-      ? 'Sonido activado en este dispositivo.'
-      : 'Sonido apagado. No vas a escuchar nada cuando entre un pedido.';
-    sonidoEstado.className = 'aviso-estado' + (sonidoOn ? '' : ' off');
+    var estadoAudio = sonidoOn ? armarAudio() : 'apagado';
+
+    if (!sonidoOn) {
+      sonidoEstado.textContent = 'Sonido apagado. No vas a escuchar nada cuando entre un pedido.';
+      sonidoEstado.className = 'aviso-estado off';
+    } else if (estadoAudio === 'no-soportado') {
+      sonidoEstado.textContent = 'Este navegador no puede reproducir el aviso.';
+      sonidoEstado.className = 'aviso-estado err';
+    } else if (estadoAudio === 'falta-toque') {
+      sonidoEstado.textContent = 'El sonido esta puesto, pero el navegador todavia no lo dejo sonar. ' +
+                                 'Toca la pantalla una vez y queda listo.';
+      sonidoEstado.className = 'aviso-estado warn';
+    } else {
+      sonidoEstado.textContent = 'Sonido activado y funcionando en esta pantalla.';
+      sonidoEstado.className = 'aviso-estado';
+    }
+
     sonidoBtn.textContent = sonidoOn ? 'Apagar el sonido' : 'Activar sonido';
     sonidoProbar.hidden = !sonidoOn;
-    avisosBtn.classList.toggle('on', sonidoOn);
+    // El boton de la cabecera muestra los dos estados, no solo el bueno.
+    avisosBtn.classList.toggle('on', sonidoOn && estadoAudio === 'listo');
+    avisosBtn.classList.toggle('off', !sonidoOn || estadoAudio === 'falta-toque');
+    avisosBtn.textContent = (!sonidoOn || estadoAudio === 'falta-toque') ? 'Avisos apagados' : 'Avisos';
+    pintarAlerta();
   }
 
   sonidoBtn.addEventListener('click', function () {
     sonidoOn = !sonidoOn;
     try { localStorage.setItem(SONIDO_KEY, sonidoOn ? '1' : '0'); } catch (e) {}
     // El click es el gesto que habilita el audio en el navegador.
-    if (sonidoOn) sonar();
+    if (sonidoOn) sonar(false);
     pintarSonido();
   });
-  sonidoProbar.addEventListener('click', sonar);
+  sonidoProbar.addEventListener('click', function () {
+    if (!sonar(false)) {
+      LP.toast('El navegador todavia no deja sonar. Toca la pantalla y proba de nuevo.', 'err');
+    }
+    pintarSonido();
+  });
 
-  /* ------------------------------------------------- push al celular --- */
+  /* ------------------------------------------------ barra sobre el tablero --
+     El estado de los avisos no puede vivir solo adentro de un dialogo que
+     hay que abrir: si esta pantalla no puede avisar, se ve de entrada.   */
+  var barra = document.getElementById('alertaBarra');
+  var barraTitulo = document.getElementById('alertaTitulo');
+  var barraTexto = document.getElementById('alertaTexto');
+  var barraBtn = document.getElementById('alertaBtn');
+  var pushOk = false;               // hay fila en la base para este aparato
+  var accionBarra = null;
+
+  function pintarAlerta() {
+    var estadoAudio = sonidoOn ? armarAudio() : 'apagado';
+
+    if (sonidoOn && estadoAudio === 'falta-toque') {
+      mostrarBarra('warn', 'Falta un toque para que suene',
+        'El navegador no deja sonar hasta que alguien toque la pantalla. Toca aca y queda listo para todo el servicio.',
+        'Activar el sonido', function () {
+          sonar(false);
+          pintarSonido();
+        });
+      return;
+    }
+
+    if (!sonidoOn && !pushOk) {
+      mostrarBarra('', 'Esta pantalla no va a avisar nada',
+        'El sonido esta apagado y este dispositivo no tiene los avisos al celular activados. Un pedido puede entrar y quedar sin hacer.',
+        'Activar avisos', function () {
+          pintarSonido(); pintarPush(); LP.openDialog(avisosSheet);
+        });
+      return;
+    }
+
+    if (insistCount >= INSIST_TOPE && hayPendientes()) {
+      mostrarBarra('warn', 'Hay pedidos sin tomar',
+        'Dejamos de repetir el aviso para no molestar, pero siguen esperando en la columna Nuevos.',
+        'Ver los nuevos', function () {
+          activeTab = 'Nuevo'; delete newsTabs.Nuevo; render();
+        });
+      return;
+    }
+
+    barra.hidden = true;
+    accionBarra = null;
+  }
+
+  function mostrarBarra(clase, titulo, texto, etiqueta, accion) {
+    barra.className = 'alerta-barra' + (clase ? ' ' + clase : '');
+    barraTitulo.textContent = titulo;
+    barraTexto.textContent = texto;
+    barraBtn.textContent = etiqueta;
+    accionBarra = accion;
+    barra.hidden = false;
+  }
+
+  barraBtn.addEventListener('click', function () {
+    if (accionBarra) accionBarra();
+  });
+
+  /* ------------------------------------------------- push al celular ---
+     El permiso del navegador NO alcanza para decir "activado": lo que
+     decide si el aviso llega es que exista la fila en la base. Antes se
+     declaraba verde mirando solo el navegador y se deshabilitaba el boton,
+     asi que un dispositivo sin registrar no tenia forma de recuperarse. */
   function pintarPush() {
-    LP.estadoPush().then(function (st) {
+    return LP.estadoPush().then(function (st) {
       pushGuia.innerHTML = '';
-      var cls = 'aviso-estado', txt, label, disabled = false;
+      var cls = 'aviso-estado', txt, label, disabled = false, probar = false;
 
       if (st === 'no-soportado') {
         cls += ' err'; disabled = true;
@@ -745,19 +1122,72 @@ document.addEventListener('DOMContentLoaded', function () {
               'Entra en Permisos o Configuracion del sitio.',
               'Cambia Notificaciones a "Permitir" y recarga.']);
       } else if (st === 'activo') {
-        txt = 'Avisos activados en este dispositivo.';
-        label = 'Avisos activados';
-        disabled = true;
+        // Un paso mas: confirmar contra la base antes de cantar victoria.
+        return LP.pushRegistrado(sb, 'Cocina').then(function (reg) {
+          if (reg === null) {
+            // No es lo mismo "no esta registrado" que "no pudimos preguntar".
+            pintarEstadoPush('aviso-estado warn',
+              'No pudimos comprobar si este dispositivo esta registrado. Revisa la conexion.',
+              'Volver a registrar', false, true);
+            return pintarDestinos();
+          }
+          pushOk = reg;
+          if (reg) {
+            pintarEstadoPush('aviso-estado',
+              'Avisos activados en este dispositivo y registrados en el sistema.',
+              'Volver a registrar', false, true);
+          } else {
+            pintarEstadoPush('aviso-estado warn',
+              'El permiso esta dado, pero este dispositivo no figura registrado en el sistema. ' +
+              'No le van a llegar los avisos.',
+              'Registrar este dispositivo', false, false);
+          }
+          return pintarDestinos();
+        });
       } else {
         cls += ' off';
         txt = 'Los avisos al celular estan apagados.';
         label = 'Activar avisos al celular';
       }
 
-      pushEstado.textContent = txt;
-      pushEstado.className = cls;
-      pushBtn.textContent = label;
-      pushBtn.disabled = disabled;
+      pushOk = false;
+      pintarEstadoPush(cls, txt, label, disabled, probar);
+      return pintarDestinos();
+    });
+  }
+
+  function pintarEstadoPush(cls, txt, label, disabled, probar) {
+    pushEstado.textContent = txt;
+    pushEstado.className = cls;
+    pushBtn.textContent = label;
+    pushBtn.disabled = disabled;
+    pushProbar.hidden = !probar;
+    pintarAlerta();
+  }
+
+  /* Cuantos aparatos escuchan de verdad. Con la tabla vacia, el sistema se
+     veia exactamente igual que funcionando.                              */
+  function pintarDestinos() {
+    return LP.contarSubs(sb, 'Cocina').then(function (n) {
+      if (n === null) {
+        pushDestinos.textContent = '';
+        pushDestinos.className = 'aviso-estado';
+        return;
+      }
+      if (n === 0) {
+        pushDestinos.textContent = 'Ningun dispositivo tiene los avisos de cocina activados: ' +
+                                   'hoy no le llega a nadie.';
+        pushDestinos.className = 'aviso-estado err';
+      } else {
+        pushDestinos.textContent = n === 1
+          ? '1 dispositivo recibe los avisos de cocina.'
+          : n + ' dispositivos reciben los avisos de cocina.';
+        pushDestinos.className = 'aviso-estado';
+      }
+      /* La prueba manda a TODOS los aparatos registrados, no a este. Asi el
+         encargado puede comprobar desde su computadora que a la tablet de la
+         cocina le llega, aunque en su maquina los avisos esten bloqueados. */
+      if (n > 0) pushProbar.hidden = false;
     });
   }
 
@@ -774,19 +1204,56 @@ document.addEventListener('DOMContentLoaded', function () {
       if (st === 'activo') LP.toast('Avisos activados para cocina.', 'ok');
       else if (st === 'denegado') LP.toast('No diste permiso para los avisos.', 'err');
       else if (st === 'sin-decidir') LP.toast('Quedo sin decidir. Proba de nuevo.', 'err');
-      else LP.toast('No se pudo activar. Revisa la conexion.', 'err');
+      else if (st === 'no-guardado') {
+        // Antes esto culpaba a la conexion y mandaba a buscar el problema
+        // al lugar equivocado: el permiso estaba dado, fallo el guardado.
+        LP.toast('El permiso quedo dado, pero el dispositivo no se registro en el sistema. Proba de nuevo.', 'err');
+      } else LP.toast('No se pudo activar. Revisa la conexion.', 'err');
       pintarPush();
     });
   });
 
+  /* Sin una prueba real, el cartel verde nunca se puede desmentir: el
+     unico modo de saber que la cadena entera funciona es recorrerla.  */
+  pushProbar.addEventListener('click', function () {
+    if (pushProbar.disabled) return;
+    pushProbar.disabled = true;
+    pushProbar.textContent = 'Enviando...';
+
+    LP.avisar(sb, 'Cocina', 'Prueba de aviso',
+              'Si ves esto, los avisos de cocina funcionan.', null, 'cocina.html')
+      .then(function (r) {
+        pushProbar.disabled = false;
+        pushProbar.textContent = 'Probar el aviso al celular';
+        if (r.ok) {
+          LP.toast('Aviso de prueba enviado. Deberia llegarte en unos segundos.', 'ok');
+        } else if (r.config) {
+          // Reintentar no lo arregla: falta configuracion del servidor.
+          pushEstado.className = 'aviso-estado err';
+          pushEstado.textContent = 'Los avisos al celular estan sin configurar en el servidor. ' +
+            'Avisale a quien administra el sistema: no se arregla desde este dispositivo.';
+          LP.toast('Falta configurar los avisos en el servidor.', 'err');
+        } else {
+          LP.toast(r.motivo || 'No salio la notificacion de prueba.', 'err');
+        }
+      });
+  });
+
   pintarSonido();
+  engancharPrimerToque();
 
   /* ------------------------------------------------------------ inicio -- */
   conn.set(navigator.onLine ? 'connecting' : 'off');
+  /* Se comprueba el push al abrir, no solo al abrir el dialogo: la barra de
+     arriba necesita saber si esta pantalla puede avisar o no.           */
+  pintarPush();
   load().then(function () { subscribe(); scheduleBackup(); });
 
   // Refresca los "hace X min" sin volver a consultar la base.
-  setInterval(function () { if (loaded && !document.hidden) render(); }, 30000);
+  setInterval(function () {
+    if (loaded && !document.hidden) render();
+    if (loaded) repasarInsistencia();
+  }, 30000);
 });
 </script>
 </body>

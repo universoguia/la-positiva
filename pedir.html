@@ -467,6 +467,11 @@ document.addEventListener('DOMContentLoaded', function () {
   var params = new URLSearchParams(location.search);
   // La mesa viene de la URL: se limita y se escapa antes de mostrarla.
   var MESA = (params.get('mesa') || '7').replace(/[^\w\s-]/g, '').slice(0, 12) || '7';
+
+  /* Fotos que cargo el local desde el celular. Arranca vacio a proposito: la
+     carta se pinta enseguida con las que ya vienen en menu-data.js y no espera
+     a la consulta. Cuando llegan las propias, se repinta.                 */
+  var fotosPropias = {};
   document.getElementById('mesaPill').textContent = 'Mesa ' + MESA;
 
   var CATS = [];
@@ -565,8 +570,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     return '<article class="dish">' +
       '<div class="dish-media" data-ini="' + ini + '">' +
-        '<img src="' + LP.IMG_BASE + esc(d.photo) + '" alt="" width="800" height="600" ' +
-             'loading="lazy" decoding="async">' +
+        '<img src="' + esc(LP.fotoDePlato(fotosPropias, d) || '') + '" alt="" ' +
+             'width="800" height="600" loading="lazy" decoding="async">' +
         (d.tag ? '<span class="dish-tag">' + esc(d.tag) + '</span>' : '') +
       '</div>' +
       '<div class="dish-body">' +
@@ -931,11 +936,60 @@ document.addEventListener('DOMContentLoaded', function () {
         showStatus(res.data);
         startPolling();
 
-        // Aviso a cocina, sin bloquear ni afectar al cliente si falla.
-        // El panel abierto ya se entera solo por Realtime: esto cubre el
-        // caso de que lo tengan cerrado o el celular en el bolsillo.
+        /* Aviso a cocina, sin bloquear ni afectar al cliente si falla.
+           El panel abierto ya se entera solo por Realtime: esto cubre el
+           caso de que lo tengan cerrado o el celular en el bolsillo.
+
+           El resultado NO se tira. Al comensal no se le dice nada -no puede
+           hacer nada al respecto y solo le romperia la confianza-, pero la
+           falla queda registrada en consola con el motivo que devolvio el
+           servidor. Antes se descartaba en silencio y el canal podia estar
+           muerto durante meses sin que nadie se enterara. Quien tiene que
+           ver el estado es el local, y lo ve en el panel de cocina:
+           "ningun dispositivo tiene los avisos activados".
+
+           La url manda el aviso al panel de cocina. Sin ella el service
+           worker abria caja.html, que es la pantalla equivocada.        */
         LP.avisar(sb, 'Cocina', 'Pedido nuevo',
-                  res.data.mesa + ' - ' + money(res.data.total), res.data.id);
+                  res.data.mesa + ' - ' + money(res.data.total),
+                  res.data.id, 'cocina.html', true)
+          .then(function (r) {
+            if (!r.ok) {
+              console.warn('[La Positiva] la cocina no recibio el aviso del pedido ' +
+                           res.data.id + ': ' + (r.motivo || 'motivo desconocido'));
+            }
+          });
+
+        /* El encargado sigue el pedido desde que entra, no desde que se paga.
+           Va aparte del aviso a cocina: son dos destinatarios distintos y uno
+           no puede quedar sin avisar porque fallo el otro.                */
+        LP.avisar(sb, 'Jonathan', 'Pedido nuevo',
+                  res.data.mesa + ' - ' + money(res.data.total),
+                  res.data.id, 'caja.html', false)
+          .then(function (r) {
+            if (!r.ok && r.codigo !== 'sin-destinos') {
+              console.warn('[La Positiva] Jonathan no recibio el aviso del pedido ' +
+                           res.data.id + ': ' + (r.motivo || 'motivo desconocido'));
+            }
+          });
+
+        /* Segundo canal, independiente del push: si la cocina tiene un numero
+           cargado, le llega tambien por WhatsApp. Va aparte a proposito, para
+           que una falla de Twilio no toque el aviso que ya funciona.      */
+        var detalle = lines.map(function (l) { return l.qty + 'x ' + l.name; }).join(', ');
+        LP.avisarWhatsapp(sb, {
+          rol: 'Cocina',
+          texto: 'Pedido nuevo - ' + res.data.mesa + '\n' +
+                 detalle + '\n' +
+                 'Total: ' + money(res.data.total)
+        }).then(function (w) {
+          if (!w.ok && w.codigo !== 'sin-destinos') {
+            // 'sin-destinos' no se registra: no tener numero cargado es una
+            // decision del local, no una falla.
+            console.warn('[La Positiva] WhatsApp a cocina no enviado: ' +
+                         (w.motivo || 'motivo desconocido'));
+          }
+        });
       }, function (e) { fallo(e); });
     }, delay);
 
@@ -1073,6 +1127,19 @@ document.addEventListener('DOMContentLoaded', function () {
   renderMenu();
   renderCartBar();
   updateScrollHint();
+
+  /* Las fotos propias llegan aparte. Si la consulta falla, la carta se queda
+     con las fotos originales: nunca deja al cliente sin ver los platos.  */
+  if (sb) {
+    LP.fotosDePlatos(sb).then(function (mapa) {
+      if (!mapa) return;
+      var hay = false;
+      for (var k in mapa) { if (Object.prototype.hasOwnProperty.call(mapa, k)) { hay = true; break; } }
+      if (!hay) return;              // nada que cambiar, no vale repintar
+      fotosPropias = mapa;
+      renderMenu();
+    });
+  }
 
   var saved = null;
   try { saved = localStorage.getItem(ORDER_KEY); } catch (e) {}

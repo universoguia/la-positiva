@@ -412,15 +412,32 @@ document.addEventListener('DOMContentLoaded', function () {
         empleado: 'Jonathan',
         title: 'Pago confirmado',
         body: o.mesa + ' pago ' + money(o.total) + '. Ya podes seguir.',
-        pedidoId: id
+        pedidoId: id,
+        url: 'caja.html'
       }
     }).then(function (res) {
       var bad = res.error || (res.data && res.data.ok === false);
       if (bad) {
         LP.humanError(res.error || res.data);
-        done('fail', isRetry
-          ? 'El aviso sigue sin salir. Jonathan quizas no activo las notificaciones.'
-          : 'Pago confirmado. El aviso no salio: Jonathan quizas no activo las notificaciones.', 'err');
+        /* El servidor dice POR QUE fallo. Antes todo se resolvia acusando a
+           Jonathan de no haber activado los avisos, aunque el problema fuera
+           de configuracion, que no se arregla ni reintentando ni tocandolo
+           a el.                                                          */
+        var motivo = res.data && res.data.motivo;
+        if (motivo === 'sin-config') {
+          done('fail', 'Pago confirmado. Los avisos estan sin configurar en el servidor: ' +
+                       'avisale a quien administra el sistema.', 'err');
+        } else if (motivo === 'clave-no-coincide') {
+          done('fail', 'Pago confirmado. Jonathan tiene que volver a activar los avisos ' +
+                       'en su celular: las claves cambiaron.', 'err');
+        } else if (motivo === 'sin-destinos') {
+          done('fail', 'Pago confirmado. Jonathan todavia no activo las notificaciones ' +
+                       'en ningun celular.', 'err');
+        } else {
+          done('fail', isRetry
+            ? 'El aviso sigue sin salir. Proba de nuevo en un momento.'
+            : 'Pago confirmado, pero el aviso no salio.', 'err');
+        }
       } else {
         done('ok', isRetry ? 'Aviso enviado a Jonathan.' : 'Pago confirmado y aviso enviado a Jonathan.', 'ok');
       }

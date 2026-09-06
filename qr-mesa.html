@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3ece2">
+<meta name="description" content="Genera e imprime el QR de cada mesa de La Positiva.">
+<title>La Positiva - QR de las mesas</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .wrap{max-width:760px;padding-top:calc(36px + var(--sa-t))}
+  .intro{margin-bottom:24px}
+  .intro h1{font-size:32px;margin:0 0 6px}
+  .intro p{color:var(--muted);margin:0;font-size:16px;line-height:1.55}
+
+  .controles{
+    display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--r-lg);padding:18px 20px;margin-bottom:22px;
+  }
+  .campo{display:flex;flex-direction:column;gap:6px}
+  .campo label{font-size:14px;color:var(--muted-strong);font-weight:500}
+  .campo input{
+    min-height:var(--tap);padding:10px 13px;font-size:16px;width:150px;
+    border:1px solid var(--border-strong);border-radius:var(--r-md);
+    background:var(--bg);color:var(--ink);font-family:inherit;
+  }
+  .campo input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .controles .btn{min-height:var(--tap);padding:0 20px;font-size:15px}
+
+  /* --------------------------------------------------------- la pieza --- */
+  .pieza{
+    background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);
+    padding:38px 30px 32px;text-align:center;max-width:420px;margin:0 auto;
+  }
+  .pieza .marca{width:74px;height:74px;border-radius:14px;margin:0 auto 16px;display:block}
+  .pieza h2{font-size:31px;margin:0 0 2px;color:var(--ink)}
+  .pieza .mesa{
+    font-family:'Jost',sans-serif;font-style:normal;
+    font-size:15px;letter-spacing:.16em;text-transform:uppercase;
+    font-weight:600;color:var(--accent);margin:0 0 22px;
+  }
+  .pieza .codigo{
+    width:236px;height:236px;margin:0 auto 20px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .pieza .codigo svg{width:100%;height:100%;display:block}
+  .pieza .pedi{font-size:17px;color:var(--ink);margin:0 0 6px;line-height:1.45}
+  .pieza .chico{font-size:13px;color:var(--muted);margin:0;line-height:1.5}
+
+  .destino{
+    margin:20px auto 0;max-width:420px;padding:12px 14px;
+    background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);
+    font-size:13px;color:var(--muted);line-height:1.55;word-break:break-all;
+  }
+  .destino b{color:var(--ink);display:block;margin-bottom:3px;word-break:normal}
+
+  .aviso{
+    margin:0 0 20px;padding:13px 16px;border-radius:var(--r-md);
+    background:var(--warn-soft);color:var(--warn);border:1px solid #e8d3a8;
+    font-size:14px;line-height:1.55;
+  }
+  .aviso[hidden]{display:none}
+
+  .back-link{
+    display:inline-flex;align-items:center;min-height:var(--tap);margin-top:24px;
+    color:var(--muted-strong);font-size:15px;text-decoration:underline;
+  }
+  .back-link:hover{color:var(--ink)}
+
+  /* ------------------------------------------------------- impresion ---
+     Solo sale la pieza. Nada de controles, avisos ni navegacion.        */
+  @media print{
+    @page{margin:14mm}
+    body{background:#fff}
+    .no-imprimir{display:none !important}
+    .wrap{max-width:none;padding:0}
+    .pieza{
+      border:none;box-shadow:none;padding:0;max-width:none;
+      break-inside:avoid;page-break-inside:avoid;
+    }
+    .pieza .codigo{width:62mm;height:62mm}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="no-imprimir">
+    <div class="intro">
+      <h1>QR de las mesas</h1>
+      <p>Elegi el numero de mesa, imprimi y dejalo sobre la mesa. El codigo lleva
+         directo a la carta con esa mesa ya cargada.</p>
+    </div>
+
+    <div class="aviso" id="avisoLocal" hidden></div>
+
+    <form class="controles" id="form">
+      <div class="campo">
+        <label for="mesa">Numero de mesa</label>
+        <input type="text" id="mesa" name="mesa" value="7" inputmode="numeric"
+               maxlength="12" autocomplete="off">
+      </div>
+      <button type="submit" class="btn btn-secondary">Generar</button>
+      <button type="button" class="btn btn-primary" id="imprimir">Imprimir</button>
+    </form>
+  </div>
+
+  <div class="pieza" id="pieza">
+    <img class="marca" src="icons/icon-192.png" alt="" width="74" height="74">
+    <h2>La Positiva</h2>
+    <p class="mesa" id="piezaMesa">Mesa 7</p>
+    <div class="codigo" id="codigo"></div>
+    <p class="pedi">Escanea para ver la carta y pedir</p>
+    <p class="chico">Desde tu celular, sin instalar nada.</p>
+  </div>
+
+  <div class="destino no-imprimir" id="destino"></div>
+
+  <a class="back-link no-imprimir" href="./">Volver al inicio</a>
+</div>
+
+<script src="vendor/qrcode.js" defer></script>
+<script src="config.js" defer></script>
+<script src="app.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var esc = LP.esc;
+
+  var inputMesa = document.getElementById('mesa');
+  var piezaMesa = document.getElementById('piezaMesa');
+  var cajaCodigo = document.getElementById('codigo');
+  var cajaDestino = document.getElementById('destino');
+  var avisoLocal = document.getElementById('avisoLocal');
+
+  /* La URL se arma contra el origen donde esta corriendo ESTA pagina. Es a
+     proposito: el QR del paquete viejo apuntaba a un dominio que ya no es el
+     de la demo, y un QR impreso con la direccion equivocada no se puede
+     arreglar despues: hay que reimprimir todas las mesas.               */
+  function urlDeMesa(mesa) {
+    var base = location.href.replace(/[^/]*$/, '');
+    return base + 'pedir.html?mesa=' + encodeURIComponent(mesa);
+  }
+
+  // En local el QR sirve para probar, pero no para imprimir: el celular del
+  // cliente no llega a localhost. Mejor decirlo antes de gastar papel.
+  if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) {
+    avisoLocal.textContent = 'Estas viendo esto en tu computadora (localhost). ' +
+      'El codigo apunta a esta maquina, asi que sirve para probar pero no para ' +
+      'imprimir: desde el celular de un cliente no va a abrir. Genera los ' +
+      'definitivos desde el sitio publicado.';
+    avisoLocal.hidden = false;
+  }
+
+  function limpiar(v) {
+    // Se permite "12" y tambien "Barra 3": solo se sacan los caracteres que
+    // romperian la URL o el nombre que despues muestra la cocina.
+    return String(v || '').replace(/[^\w\s-]/g, '').trim().slice(0, 12);
+  }
+
+  function pintar() {
+    var mesa = limpiar(inputMesa.value) || '7';
+    inputMesa.value = mesa;
+    piezaMesa.textContent = 'Mesa ' + mesa;
+
+    var destino = urlDeMesa(mesa);
+
+    /* Correccion de errores alta: el QR sigue leyendose con una mancha de
+       grasa o un pliegue, que en un bodegon pasa. Tipo 0 = que la libreria
+       elija el tamanio minimo que entre.                                */
+    try {
+      var qr = qrcode(0, 'H');
+      qr.addData(destino);
+      qr.make();
+      cajaCodigo.innerHTML = qr.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
+      var svg = cajaCodigo.querySelector('svg');
+      if (svg) {
+        svg.setAttribute('role', 'img');
+        svg.setAttribute('aria-label', 'Codigo QR de la mesa ' + mesa);
+        // El negro de la marca, no un negro puro cualquiera.
+        var paths = svg.querySelectorAll('path, rect');
+        for (var i = 0; i < paths.length; i++) {
+          if (paths[i].getAttribute('fill') === '#000000') paths[i].setAttribute('fill', '#14100e');
+        }
+      }
+    } catch (e) {
+      LP.humanError(e);
+      cajaCodigo.innerHTML = '';
+      LP.toast('No pudimos generar el codigo. Proba con un numero mas corto.', 'err');
+      return;
+    }
+
+    cajaDestino.innerHTML = '<b>A donde lleva este codigo</b>' + esc(destino);
+  }
+
+  document.getElementById('form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    pintar();
+  });
+  inputMesa.addEventListener('input', pintar);
+  document.getElementById('imprimir').addEventListener('click', function () { window.print(); });
+
+  /* Permite llegar con la mesa puesta: qr-mesa.html?mesa=12 */
+  var params = new URLSearchParams(location.search);
+  if (params.get('mesa')) inputMesa.value = limpiar(params.get('mesa'));
+
+  pintar();
+});
+</script>
+</body>
+</html>
