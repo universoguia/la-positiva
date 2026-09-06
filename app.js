@@ -203,6 +203,107 @@
   }
   global.addEventListener('pagehide', runCleanup);
 
+  /* --- Web Push -----------------------------------------------------------
+     La clave publica VAPID es publica por definicion: identifica al emisor
+     y viaja al navegador. La privada vive solo en la Edge Function.      */
+  var VAPID_PUBLIC = 'BJI6zNTZGccfBNfA0U0-difiHHYW1rNPU-YVhThhX2g3K51nHdcWCOdI8EiCtD8lgygfiKiU18zN8_GF-IMnSSI';
+
+  function urlBase64ToUint8Array(base64String) {
+    var padding = '='.repeat((4 - base64String.length % 4) % 4);
+    var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    var raw = atob(base64);
+    var out = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+
+  function pushSoportado() {
+    return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
+  }
+
+  function esIOS() {
+    var ua = navigator.userAgent || '';
+    return /iPad|iPhone|iPod/.test(ua) ||
+           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  function esInstalada() {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+           window.navigator.standalone === true;
+  }
+
+  /* Devuelve el estado real, sin pedir permisos:
+     no-soportado | ios-sin-instalar | denegado | activo | inactivo        */
+  function estadoPush() {
+    if (!pushSoportado()) return Promise.resolve('no-soportado');
+    if (esIOS() && !esInstalada()) return Promise.resolve('ios-sin-instalar');
+    if (Notification.permission === 'denied') return Promise.resolve('denegado');
+    return navigator.serviceWorker.getRegistration().then(function (reg) {
+      if (!reg) return 'inactivo';
+      return reg.pushManager.getSubscription().then(function (sub) {
+        return (sub && Notification.permission === 'granted') ? 'activo' : 'inactivo';
+      });
+    }).catch(function () { return 'inactivo'; });
+  }
+
+  /* La tabla no tiene UNIQUE sobre empleado, asi que un upsert por conflicto
+     no es posible sin cambiar el esquema. Se deduplica por endpoint.      */
+  function guardarSub(sb, empleado, sub) {
+    if (!sb) return Promise.resolve(false);
+    var json = sub.toJSON();
+    var endpoint = json && json.endpoint;
+    if (!endpoint) return Promise.resolve(false);
+
+    return sb.from(PUSH_TABLE).select('id')
+      .eq('empleado', empleado)
+      .eq('subscription->>endpoint', endpoint)
+      .limit(1)
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return false; }
+        if (res.data && res.data.length) return true;   // ya estaba: no duplica
+        return sb.from(PUSH_TABLE).insert({ empleado: empleado, subscription: json })
+          .then(function (ins) {
+            if (ins.error) { humanError(ins.error); return false; }
+            return true;
+          });
+      }, function (e) { humanError(e); return false; });
+  }
+
+  /* Pide permiso y deja la suscripcion guardada.
+     Resuelve con activo | denegado | sin-decidir | error | no-guardado.   */
+  function suscribirPush(sb, empleado) {
+    return registerSW().then(function (reg) {
+      if (!reg) throw new Error('sw');
+      return navigator.serviceWorker.ready.then(function () { return reg; });
+    }).then(function (reg) {
+      return Notification.requestPermission().then(function (perm) {
+        if (perm === 'denied') return 'denegado';
+        if (perm !== 'granted') return 'sin-decidir';
+        return reg.pushManager.getSubscription().then(function (sub) {
+          if (sub) return sub;
+          return reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC)
+          });
+        }).then(function (sub) {
+          return guardarSub(sb, empleado, sub).then(function (ok) {
+            return ok ? 'activo' : 'no-guardado';
+          });
+        });
+      });
+    }).catch(function (e) { humanError(e); return 'error'; });
+  }
+
+  // Dispara el aviso sin bloquear al que lo llama: si falla, no rompe nada.
+  function avisar(sb, empleado, title, body, pedidoId) {
+    if (!sb) return Promise.resolve(false);
+    return sb.functions.invoke('notify-empleado', {
+      body: { empleado: empleado, title: title, body: body, pedidoId: pedidoId || null }
+    }).then(function (res) {
+      return !(res.error || (res.data && res.data.ok === false));
+    }, function () { return false; });
+  }
+
   /* --- Registro del service worker ----------------------------------------
      Alcance en la raiz para que valga para todas las vistas.               */
   function registerSW() {
@@ -443,6 +544,13 @@
     isDialogOpen: isDialogOpen,
     ConnBadge: ConnBadge,
     onCleanup: onCleanup,
-    registerSW: registerSW
+    registerSW: registerSW,
+    VAPID_PUBLIC: VAPID_PUBLIC,
+    pushSoportado: pushSoportado,
+    esIOS: esIOS,
+    esInstalada: esInstalada,
+    estadoPush: estadoPush,
+    suscribirPush: suscribirPush,
+    avisar: avisar
   };
 })(window);

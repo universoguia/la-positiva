@@ -122,6 +122,33 @@
        el tablero crece al llegar los datos y eso cuenta como CLS. */
     height:234px;
   }
+  /* ------------------------------------------------------- avisos ----- */
+  /* El dialogo va sobre fondo crema, no sobre el tinta del tablero. */
+  .aviso-bloque{padding-top:16px;margin-top:16px;border-top:1px dashed var(--border-strong)}
+  .aviso-bloque:first-of-type{padding-top:0;margin-top:0;border-top:none}
+  .aviso-bloque h3{
+    font-family:'Jost',sans-serif;font-style:normal;font-weight:600;
+    font-size:14px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--muted-strong);margin:0 0 8px;
+  }
+  .aviso-bloque p{margin:0 0 12px;color:var(--muted);font-size:15px;line-height:1.5}
+  .aviso-estado{
+    padding:10px 12px;border-radius:var(--r-sm);font-size:15px;line-height:1.45;
+    background:var(--ok-soft);color:var(--ok);border:1px solid #bfe0ce;
+  }
+  .aviso-estado.off{background:var(--bg);color:var(--muted-strong);border-color:var(--border-strong)}
+  .aviso-estado.warn{background:var(--warn-soft);color:var(--warn);border-color:#e8d3a8}
+  .aviso-estado.err{background:var(--err-bg);color:var(--err-ink);border-color:#f0cfc9}
+  .aviso-guia{
+    margin-top:12px;background:var(--card);border:1px solid var(--border);
+    border-radius:var(--r-md);padding:12px 14px;
+  }
+  .aviso-guia ol{margin:0;padding-left:20px}
+  .aviso-guia li{font-size:15px;line-height:1.5;margin-bottom:6px;color:var(--muted-strong)}
+  .aviso-guia li:last-child{margin-bottom:0}
+  /* El boton de la cabecera avisa si el sonido esta puesto. */
+  #avisosBtn.on{border-color:var(--gold);color:var(--gold);background:#2c221d}
+
   .board-state{color:var(--dark-ink);text-align:center;padding:50px 20px}
   .board-state h3{color:#fff;font-size:22px;margin:0 0 6px}
   .board-state p{color:var(--dark-muted);margin:0 0 4px}
@@ -162,6 +189,8 @@
       </span>
       <!-- Los mozos trabajan sobre este panel: desde aca saltan a mostrar
            el QR sin tener que volver al inicio. -->
+      <button type="button" class="btn btn-secondary" id="avisosBtn"
+              style="padding:8px 16px;font-size:15px">Avisos</button>
       <a class="btn btn-secondary" href="cobrar.html" style="padding:8px 16px;font-size:15px">
         Cobrar con QR
       </a>
@@ -206,6 +235,35 @@
     </section>
   </div>
   <div id="boardState"></div>
+</div>
+
+<!-- ------------------------------------------------------------- avisos -- -->
+<div class="sheet" id="avisosSheet" role="dialog" aria-modal="true" aria-labelledby="avisosTitle" hidden>
+  <div class="sheet-panel">
+    <div class="sheet-head">
+      <h2 id="avisosTitle">Avisos de pedidos nuevos</h2>
+      <button type="button" class="close-x" id="avisosClose" aria-label="Cerrar">&#10005;</button>
+    </div>
+
+    <section class="aviso-bloque" aria-labelledby="h-sonido">
+      <h3 id="h-sonido">Sonido en este panel</h3>
+      <p>Suena cada vez que entra un pedido, mientras esta pantalla este abierta.
+         Es lo mas util si el panel vive en una tablet o un monitor de la cocina.</p>
+      <p class="aviso-estado" id="sonidoEstado"></p>
+      <button type="button" class="btn btn-primary btn-block" id="sonidoBtn">Activar sonido</button>
+      <button type="button" class="btn btn-secondary btn-block" id="sonidoProbar"
+              style="margin-top:8px" hidden>Probar el sonido</button>
+    </section>
+
+    <section class="aviso-bloque" aria-labelledby="h-push">
+      <h3 id="h-push">Avisos al celular</h3>
+      <p>Llegan aunque tengas el panel cerrado o la pantalla apagada.
+         Sirve para el encargado que anda por el salon.</p>
+      <p class="aviso-estado" id="pushEstado"></p>
+      <button type="button" class="btn btn-primary btn-block" id="pushBtn" disabled>Comprobando...</button>
+      <div id="pushGuia"></div>
+    </section>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
@@ -451,14 +509,17 @@ document.addEventListener('DOMContentLoaded', function () {
         if (res.error) { showError(res.error, quiet); return; }
 
         var data = res.data || [];
+        var recienLlegados = [];
         if (knownIds) {
           data.forEach(function (o) {
             if (!knownIds[o.id]) {
               flashIds[o.id] = true;
               if (o.estado !== activeTab) newsTabs[o.estado] = true;
+              recienLlegados.push(o);
             }
           });
         }
+        if (recienLlegados.length) alertaNuevos(recienLlegados);
         knownIds = Object.create(null);
         data.forEach(function (o) { knownIds[o.id] = true; });
 
@@ -536,6 +597,188 @@ document.addEventListener('DOMContentLoaded', function () {
     clearTimeout(backupTimer); clearTimeout(resubTimer);
     if (channel && sb) { try { sb.removeChannel(channel); } catch (e) {} }
   });
+
+  /* ============================ AVISOS DE PEDIDOS NUEVOS ================
+     Tres capas, de la mas util a la menos:
+     1. sonido, mientras el panel este a la vista;
+     2. aviso del sistema, si el panel quedo en segundo plano;
+     3. push al celular, que llega aunque el navegador este cerrado.     */
+
+  var TITULO = 'La Positiva - Cocina y equipo';
+  var SONIDO_KEY = 'lp_cocina_sonido';
+  var sonidoOn = false;
+  var sinVer = 0;
+  var audioCtx = null;
+
+  try { sonidoOn = localStorage.getItem(SONIDO_KEY) === '1'; } catch (e) {}
+
+  /* --------------------------------------------------------- sonido --- */
+  // Se genera con Web Audio: no hace falta descargar ningun archivo.
+  function sonar() {
+    if (!sonidoOn) return;
+    try {
+      if (!audioCtx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        audioCtx = new AC();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      var t0 = audioCtx.currentTime;
+      [880, 1174.7].forEach(function (hz, i) {
+        var t = t0 + i * 0.17;
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = hz;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.3, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(t); osc.stop(t + 0.32);
+      });
+    } catch (e) { /* si el navegador lo bloquea, se sigue sin sonido */ }
+  }
+
+  /* --------------------------------------------- titulo de la pestania -- */
+  function pintarTitulo() {
+    document.title = (sinVer > 0 ? '(' + sinVer + ') ' : '') + TITULO;
+  }
+  function limpiarSinVer() { if (sinVer) { sinVer = 0; pintarTitulo(); } }
+  window.addEventListener('focus', limpiarSinVer);
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) limpiarSinVer();
+  });
+
+  /* --------------------------------------------------- disparo general -- */
+  function alertaNuevos(lista) {
+    sonar();
+    if (document.hidden) {
+      sinVer += lista.length;
+      pintarTitulo();
+      avisoDelSistema(lista);
+    }
+  }
+
+  // Aviso local del sistema: no necesita servidor, pero solo funciona si la
+  // pagina sigue viva en alguna pestania.
+  function avisoDelSistema(lista) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (!navigator.serviceWorker) return;
+    navigator.serviceWorker.getRegistration().then(function (reg) {
+      if (!reg) return;
+      var uno = lista.length === 1 ? lista[0] : null;
+      reg.showNotification(
+        lista.length === 1 ? 'Pedido nuevo' : lista.length + ' pedidos nuevos',
+        {
+          body: uno ? (uno.mesa + ' - ' + money(uno.total)) : 'Entraron mientras no mirabas.',
+          icon: 'icons/icon-192.png',
+          badge: 'icons/icon-192.png',
+          tag: 'cocina-nuevos',
+          renotify: true,
+          data: { url: new URL('cocina.html', location.href).href }
+        }
+      );
+    }).catch(function () {});
+  }
+
+  /* ------------------------------------------------------- el dialogo -- */
+  var avisosSheet = document.getElementById('avisosSheet');
+  var avisosBtn = document.getElementById('avisosBtn');
+  var sonidoBtn = document.getElementById('sonidoBtn');
+  var sonidoProbar = document.getElementById('sonidoProbar');
+  var sonidoEstado = document.getElementById('sonidoEstado');
+  var pushBtn = document.getElementById('pushBtn');
+  var pushEstado = document.getElementById('pushEstado');
+  var pushGuia = document.getElementById('pushGuia');
+
+  avisosBtn.addEventListener('click', function () {
+    pintarSonido();
+    pintarPush();
+    LP.openDialog(avisosSheet);
+  });
+  document.getElementById('avisosClose').addEventListener('click', function () {
+    LP.closeDialog(avisosSheet);
+  });
+
+  function pintarSonido() {
+    sonidoEstado.textContent = sonidoOn
+      ? 'Sonido activado en este dispositivo.'
+      : 'Sonido apagado. No vas a escuchar nada cuando entre un pedido.';
+    sonidoEstado.className = 'aviso-estado' + (sonidoOn ? '' : ' off');
+    sonidoBtn.textContent = sonidoOn ? 'Apagar el sonido' : 'Activar sonido';
+    sonidoProbar.hidden = !sonidoOn;
+    avisosBtn.classList.toggle('on', sonidoOn);
+  }
+
+  sonidoBtn.addEventListener('click', function () {
+    sonidoOn = !sonidoOn;
+    try { localStorage.setItem(SONIDO_KEY, sonidoOn ? '1' : '0'); } catch (e) {}
+    // El click es el gesto que habilita el audio en el navegador.
+    if (sonidoOn) sonar();
+    pintarSonido();
+  });
+  sonidoProbar.addEventListener('click', sonar);
+
+  /* ------------------------------------------------- push al celular --- */
+  function pintarPush() {
+    LP.estadoPush().then(function (st) {
+      pushGuia.innerHTML = '';
+      var cls = 'aviso-estado', txt, label, disabled = false;
+
+      if (st === 'no-soportado') {
+        cls += ' err'; disabled = true;
+        txt = 'Este navegador no puede recibir avisos. Proba con Chrome en Android.';
+        label = 'No disponible';
+      } else if (st === 'ios-sin-instalar') {
+        cls += ' warn'; disabled = true;
+        txt = 'En iPhone hay que agregar la app a la pantalla de inicio primero.';
+        label = 'Falta instalar la app';
+        guia(['Toca Compartir en la barra de Safari.',
+              'Elegi "Agregar a pantalla de inicio".',
+              'Abri La Positiva desde el icono nuevo y volve aca.']);
+      } else if (st === 'denegado') {
+        cls += ' err'; disabled = true;
+        txt = 'Bloqueaste los avisos en este dispositivo.';
+        label = 'Permiso bloqueado';
+        guia(['Toca el candado al lado de la direccion web.',
+              'Entra en Permisos o Configuracion del sitio.',
+              'Cambia Notificaciones a "Permitir" y recarga.']);
+      } else if (st === 'activo') {
+        txt = 'Avisos activados en este dispositivo.';
+        label = 'Avisos activados';
+        disabled = true;
+      } else {
+        cls += ' off';
+        txt = 'Los avisos al celular estan apagados.';
+        label = 'Activar avisos al celular';
+      }
+
+      pushEstado.textContent = txt;
+      pushEstado.className = cls;
+      pushBtn.textContent = label;
+      pushBtn.disabled = disabled;
+    });
+  }
+
+  function guia(pasos) {
+    pushGuia.innerHTML = '<div class="aviso-guia"><ol>' +
+      pasos.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ol></div>';
+  }
+
+  pushBtn.addEventListener('click', function () {
+    if (pushBtn.disabled) return;
+    pushBtn.disabled = true;
+    pushBtn.textContent = 'Activando...';
+    LP.suscribirPush(sb, 'Cocina').then(function (st) {
+      if (st === 'activo') LP.toast('Avisos activados para cocina.', 'ok');
+      else if (st === 'denegado') LP.toast('No diste permiso para los avisos.', 'err');
+      else if (st === 'sin-decidir') LP.toast('Quedo sin decidir. Proba de nuevo.', 'err');
+      else LP.toast('No se pudo activar. Revisa la conexion.', 'err');
+      pintarPush();
+    });
+  });
+
+  pintarSonido();
 
   /* ------------------------------------------------------------ inicio -- */
   conn.set(navigator.onLine ? 'connecting' : 'off');

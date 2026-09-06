@@ -929,6 +929,12 @@ document.addEventListener('DOMContentLoaded', function () {
         lastEstado = null;
         showStatus(res.data);
         startPolling();
+
+        // Aviso a cocina, sin bloquear ni afectar al cliente si falla.
+        // El panel abierto ya se entera solo por Realtime: esto cubre el
+        // caso de que lo tengan cerrado o el celular en el bolsillo.
+        LP.avisar(sb, 'Cocina', 'Pedido nuevo',
+                  res.data.mesa + ' - ' + money(res.data.total), res.data.id);
       }, function (e) { fallo(e); });
     }, delay);
 
