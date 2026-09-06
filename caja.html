@@ -95,8 +95,11 @@
   .qr-actual .meta span{display:block;color:var(--muted);font-size:14px;margin-top:2px}
   .qr-vacio{
     background:var(--warn-soft);border:1px solid #e8d3a8;color:var(--warn);
-    border-radius:var(--r-md);padding:14px;margin-bottom:14px;font-size:15px;line-height:1.5;
+    border-radius:var(--r-md);padding:14px;margin:0 0 14px;font-size:15px;line-height:1.5;
   }
+  /* Alto reservado: el aviso vacio y la ficha del QR cargado ocupan casi lo
+     mismo, asi que pasar de uno a otro no mueve nada debajo. */
+  #qrEstado{min-height:136px}
   .qr-msg{font-size:14px;margin:10px 0 0}
   .qr-msg:empty{display:none}
   .qr-msg.ok{color:var(--ok)}
@@ -160,7 +163,12 @@
         la billetera que use.
       </p>
 
-      <div id="qrEstado"><div class="state"><div class="spinner"></div></div></div>
+      <!-- Nace con el estado real (sin QR cargado), no con un spinner: asi el
+           panel no cambia de alto cuando responde Supabase. -->
+      <div id="qrEstado">
+        <p class="qr-vacio">Todavia no hay ningun QR cargado. Hasta que subas uno,
+          la pantalla de cobro no le puede mostrar nada al cliente.</p>
+      </div>
 
       <label class="btn btn-primary btn-block" for="qrFile" id="qrLabel">
         Subir o sacar foto del QR

@@ -243,7 +243,9 @@ body.sheet-open{overflow:hidden}
   text-align:center;padding:36px 20px;color:var(--muted);
   font-size:15px;line-height:1.55;
 }
-.state h3{font-size:20px;color:var(--ink);margin:0 0 6px}
+/* h2 y h3 comparten estilo: el nivel se elige por la jerarquia de cada
+   pagina, no por el tamano que se quiere mostrar. */
+.state h2,.state h3{font-size:20px;color:var(--ink);margin:0 0 6px}
 .state .btn{margin-top:14px}
 .state-err{color:var(--err-ink);background:var(--err-bg);border-radius:var(--r-md);padding:20px}
 
