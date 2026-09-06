@@ -68,12 +68,16 @@
   .pnote.warn{color:var(--warn)}
   .pnote:empty{display:none}
 
-  /* Esqueleto de carga: las fichas ocupan su sitio desde el primer pintado,
-     asi la llegada de los datos no empuja el layout (CLS). */
+  /* Esqueleto de carga a la altura de una ficha real (medida: 249px).
+     Pendientes ademas reserva ese alto de forma permanente: si encogiera
+     al quedar vacio arrastraria la seccion de Pagados hacia arriba, que
+     era el origen de un CLS de 0.186 en la primera carga. */
   .skel{
     background:#efe7db;border:1px solid var(--border);
-    border-radius:var(--r-md);height:210px;
+    border-radius:var(--r-md);height:249px;
   }
+  [data-body="pend"]{min-height:249px}
+  [data-body="pend"] .state{align-self:center}
 
   .offline-bar{
     position:fixed;left:0;right:0;top:0;z-index:90;
@@ -362,10 +366,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Dibuja las dos secciones con marcadores antes de tener datos.
   function showSkeleton() {
+    // Una sola ficha de marcador: reserva el alto tipico sin inventar
+    // una lista larga que despues tenga que encogerse.
     ['pend', 'pag'].forEach(function (k) {
       var body = document.querySelector('[data-body="' + k + '"]');
       body.dataset.mode = 'skel';
-      body.innerHTML = '<div class="skel"></div><div class="skel"></div>';
+      body.innerHTML = '<div class="skel"></div>';
     });
   }
 
