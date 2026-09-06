@@ -1,13 +1,255 @@
+/* ==========================================================================
+   La Positiva - sistema de diseno compartido
+   Mobile-first. Identidad: terracota #b4472a, dorado #c8963e,
+   crema #f3ece2, tinta #14100e (los cuatro se conservan sin cambios).
+   La escala de grises se oscurecio respecto de la version anterior porque
+   --muted (3.54:1) y --muted2 (2.43:1) no alcanzaban el minimo AA de 4.5:1.
+   ========================================================================== */
+
 :root{
-  --bg:#f3ece2; --ink:#14100e; --accent:#b4472a; --gold:#c8963e;
-  --card:#fdfaf6; --border:#e0d5c6; --muted:#8a7a68; --muted2:#a89684; --muted3:#6b5847;
-  --dark:#14100e; --dark-ink:#cbbba8;
-  --ok:#2fa06b; --ok-bg:#a9d8c2; --warn:#c78f2a; --warn-bg:#f0d9ae;
+  /* --- Identidad de marca (no modificar) --- */
+  --accent:#b4472a;        /* terracota */
+  --gold:#c8963e;          /* dorado */
+  --bg:#f3ece2;            /* crema */
+  --ink:#14100e;           /* tinta */
+
+  /* --- Derivados --- */
+  --accent-dark:#93381f;
+  --accent-soft:#fbf1ec;
+  --card:#fdfaf6;
+  --border:#e0d5c6;
+  --border-strong:#cdbca6;
+
+  /* --- Texto secundario (todos >= 4.5:1 sobre crema y sobre card) --- */
+  --muted:#6b5847;         /* 5.75 / 6.48 */
+  --muted-soft:#736152;    /* 5.03 / 5.67 */
+  --muted-strong:#5f4d3d;  /* 6.85 / 7.72 */
+
+  /* --- Sobre fondo tinta (panel de cocina) --- */
+  --dark-ink:#cbbba8;      /* 10.10 */
+  --dark-muted:#b3a08c;    /* 7.50  */
+
+  /* --- Semanticos --- */
+  --ok:#145136;   --ok-bg:#a9d8c2;   --ok-soft:#e6f2ec;
+  --warn:#6b4610; --warn-bg:#f0d9ae; --warn-soft:#faf0dc;
+  --cook:#7d4409; --cook-bg:#fde3c8;
+  --err:#9a2f1c;  --err-bg:#fdecea;  --err-ink:#8f2c1a;
+  --done:#5f4d3d; --done-bg:#e0d5c6;
+
+  /* --- Medidas --- */
+  --tap:44px;              /* area tactil minima */
+  --r-sm:10px; --r-md:14px; --r-lg:18px; --r-pill:999px;
+  --shadow:0 6px 18px rgba(20,16,14,.14);
+  --shadow-lg:0 10px 30px rgba(20,16,14,.24);
+
+  /* --- Safe areas (iPhone) --- */
+  --sa-t:env(safe-area-inset-top,0px);
+  --sa-r:env(safe-area-inset-right,0px);
+  --sa-b:env(safe-area-inset-bottom,0px);
+  --sa-l:env(safe-area-inset-left,0px);
 }
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:'Jost',sans-serif;-webkit-font-smoothing:antialiased}
-h1,h2,h3,.serif{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500}
-img{max-width:100%}
+
+/* --------------------------------------------------------------- reset -- */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'Jost',system-ui,-apple-system,'Segoe UI',sans-serif;
+  font-size:16px;              /* base legible, nunca por debajo */
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;           /* red de seguridad contra desbordes */
+}
+h1,h2,h3,.serif{
+  font-family:'Cormorant Garamond',Georgia,serif;
+  font-style:italic;font-weight:500;line-height:1.2;
+}
+img{max-width:100%;height:auto}
 a{color:inherit;text-decoration:none}
-button{font-family:inherit;cursor:pointer;border:none}
-.container{max-width:520px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:96px}
+button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:16px} /* 16px evita el zoom forzado de iOS */
+img,svg,video,canvas,table,pre{max-width:100%}
+
+/* ------------------------------------------------------- accesibilidad -- */
+:focus{outline:none}
+:focus-visible{
+  outline:3px solid var(--accent);
+  outline-offset:2px;
+  border-radius:4px;
+}
+body.dark :focus-visible{outline-color:var(--gold)}
+
+.visually-hidden{
+  position:absolute!important;width:1px;height:1px;
+  padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0;
+}
+.skip-link{
+  position:absolute;left:-9999px;top:0;z-index:100;
+  background:var(--ink);color:#fff;padding:12px 18px;border-radius:0 0 var(--r-sm) 0;
+}
+.skip-link:focus{left:0}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms!important;animation-iteration-count:1!important;
+    transition-duration:.001ms!important;scroll-behavior:auto!important;
+  }
+}
+
+/* ------------------------------------------------------------ layouts -- */
+.container{
+  width:100%;max-width:560px;margin:0 auto;min-height:100svh;
+  background:var(--bg);position:relative;
+  padding-left:var(--sa-l);padding-right:var(--sa-r);
+}
+.wrap{
+  width:100%;max-width:1180px;margin:0 auto;
+  padding:24px max(16px,var(--sa-l)) 64px max(16px,var(--sa-r));
+}
+
+/* -------------------------------------------------------------- botones -- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:var(--tap);padding:12px 18px;
+  border-radius:var(--r-sm);font-size:16px;font-weight:500;
+  text-align:center;transition:background-color .18s,color .18s,transform .06s,border-color .18s;
+}
+.btn-block{display:flex;width:100%}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--accent-dark)}
+.btn-primary:active:not(:disabled){transform:translateY(1px)}
+.btn-secondary{background:var(--card);color:var(--muted-strong);border:1px solid var(--border-strong)}
+.btn-secondary:hover:not(:disabled){background:#fff;border-color:var(--muted)}
+.btn-ghost{background:transparent;color:var(--muted-strong);text-decoration:underline}
+.btn-ghost:hover:not(:disabled){color:var(--ink)}
+.btn:disabled,.btn[aria-disabled="true"]{
+  opacity:.7;cursor:not-allowed;background:var(--done-bg);color:var(--muted-strong);
+}
+
+/* Boton circular (mas / menos). Nunca comparte reglas con "Agregar". */
+.icon-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:var(--tap);height:var(--tap);min-width:var(--tap);
+  border-radius:50%;background:var(--bg);border:1px solid var(--border-strong);
+  font-size:20px;line-height:1;color:var(--ink);flex:none;
+  transition:background-color .18s,border-color .18s;
+}
+.icon-btn:hover:not(:disabled){background:#fff;border-color:var(--muted)}
+.icon-btn:active:not(:disabled){background:var(--border)}
+
+/* --------------------------------------------------------------- cards -- */
+.card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r-md);padding:16px;
+}
+
+/* -------------------------------------------------------------- badges -- */
+.badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:13px;font-weight:500;line-height:1.3;
+  padding:4px 10px;border-radius:var(--r-pill);white-space:nowrap;
+}
+.b-nuevo{background:var(--warn-bg);color:var(--warn)}
+.b-cocinando{background:var(--cook-bg);color:var(--cook)}
+.b-listo{background:var(--ok-bg);color:var(--ok)}
+.b-entregado{background:var(--done-bg);color:var(--done)}
+.b-ok{background:var(--ok-bg);color:var(--ok)}
+.b-pend{background:var(--warn-bg);color:var(--warn)}
+
+/* --------------------------------------------------- dialogos / sheets -- */
+.sheet[hidden]{display:none!important}
+.sheet{
+  position:fixed;inset:0;z-index:60;
+  background:rgba(20,16,14,.58);
+  display:flex;align-items:flex-end;justify-content:center;
+}
+.sheet-panel{
+  background:var(--bg);width:100%;max-width:560px;
+  border-radius:var(--r-lg) var(--r-lg) 0 0;
+  max-height:min(88svh,900px);overflow-y:auto;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  padding:20px max(20px,var(--sa-l)) calc(20px + var(--sa-b)) max(20px,var(--sa-r));
+}
+@media (min-width:640px){
+  .sheet{align-items:center;padding:24px}
+  .sheet-panel{border-radius:var(--r-lg);max-height:min(86svh,900px)}
+}
+.sheet-head{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:12px;margin-bottom:14px;
+}
+.sheet-head h2{margin:0;font-size:24px}
+.close-x{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:var(--tap);height:var(--tap);min-width:var(--tap);flex:none;
+  border-radius:50%;background:var(--card);border:1px solid var(--border-strong);
+  font-size:18px;line-height:1;color:var(--ink);
+}
+.close-x:hover{background:#fff;border-color:var(--muted)}
+body.sheet-open{overflow:hidden}
+
+/* --------------------------------------------------------------- toast -- */
+.toast-region{
+  position:fixed;left:0;right:0;bottom:0;z-index:80;
+  padding:0 max(16px,var(--sa-l)) calc(16px + var(--sa-b)) max(16px,var(--sa-r));
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  pointer-events:none;
+}
+.toast{
+  width:100%;max-width:560px;
+  background:var(--ink);color:#fff;
+  padding:14px 16px;border-radius:var(--r-sm);
+  font-size:15px;line-height:1.4;box-shadow:var(--shadow-lg);
+  pointer-events:auto;
+}
+.toast.is-ok{background:var(--ok)}
+.toast.is-err{background:var(--err)}
+
+/* ------------------------------------------------------------- estados -- */
+.state{
+  text-align:center;padding:36px 20px;color:var(--muted);
+  font-size:15px;line-height:1.55;
+}
+.state h3{font-size:20px;color:var(--ink);margin:0 0 6px}
+.state .btn{margin-top:14px}
+.state-err{color:var(--err-ink);background:var(--err-bg);border-radius:var(--r-md);padding:20px}
+
+.spinner{
+  width:40px;height:40px;border-radius:50%;
+  border:4px solid var(--border);border-top-color:var(--accent);
+  animation:spin 1s linear infinite;margin:0 auto 14px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){
+  .spinner{animation:none;border-top-color:var(--border-strong)}
+}
+
+/* --------------------------------------------------- barra de conexion -- */
+.conn{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:14px;padding:6px 12px;border-radius:var(--r-pill);
+  border:1px solid transparent;
+}
+.conn .dot{width:9px;height:9px;border-radius:50%;flex:none}
+.conn-live{background:var(--ok-soft);color:var(--ok);border-color:#bfe0ce}
+.conn-live .dot{background:var(--ok);animation:pulse 2.2s infinite}
+.conn-retry{background:var(--warn-soft);color:var(--warn);border-color:#e8d3a8}
+.conn-retry .dot{background:var(--warn)}
+.conn-off{background:var(--err-bg);color:var(--err-ink);border-color:#f0cfc9}
+.conn-off .dot{background:var(--err)}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 rgba(20,81,54,.5)}
+  70%{box-shadow:0 0 0 7px rgba(20,81,54,0)}
+  100%{box-shadow:0 0 0 0 rgba(20,81,54,0)}
+}
+@media (prefers-reduced-motion:reduce){.conn .dot{animation:none}}
+
+/* ------------------------------------------------------- utilitarios --- */
+.hidden,[hidden]{display:none!important}
+.nowrap{white-space:nowrap}
+.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.muted{color:var(--muted)}
+.tnum{font-variant-numeric:tabular-nums}

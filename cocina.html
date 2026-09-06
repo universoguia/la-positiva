@@ -2,124 +2,492 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>La Positiva — Cocina / Equipo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14100e">
+<title>La Positiva - Cocina y equipo</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
   body{background:var(--ink)}
-  .wrap{max-width:1100px;margin:0 auto;padding:22px 20px 60px}
-  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
-  header h1{color:#fff;margin:0;font-size:28px}
-  header .sub{color:var(--dark-ink);font-size:13px;margin-top:2px}
-  .live{display:flex;align-items:center;gap:8px;color:var(--dark-ink);font-size:13px}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(47,160,107,.6);animation:pulse 2s infinite}
-  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(47,160,107,.55)}70%{box-shadow:0 0 0 8px rgba(47,160,107,0)}100%{box-shadow:0 0 0 0 rgba(47,160,107,0)}}
-  .cols{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-  @media(max-width:900px){.cols{grid-template-columns:repeat(2,1fr)}}
-  @media(max-width:560px){.cols{grid-template-columns:1fr}}
-  .col h3{color:var(--dark-ink);font-family:'Jost';font-style:normal;font-size:12px;letter-spacing:.14em;text-transform:uppercase;margin:0 0 10px;padding-left:4px}
-  .card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
-  .card.new-flash{animation:flash 1.4s ease}
-  @keyframes flash{0%{box-shadow:0 0 0 0 rgba(200,150,62,.9)}100%{box-shadow:0 6px 18px rgba(0,0,0,.18)}}
-  .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
-  .mesa{font-family:'Cormorant Garamond';font-style:italic;font-size:20px}
-  .meta{color:var(--muted);font-size:11.5px;margin-top:2px}
-  .badge{font-size:10.5px;padding:3px 9px;border-radius:20px;font-weight:500;white-space:nowrap}
-  .b-nuevo{background:var(--warn-bg);color:#8a5c14}
-  .b-cocinando{background:#fde3c8;color:#a15a12}
-  .b-listo{background:var(--ok-bg);color:#1c6b48}
-  .b-entregado{background:var(--border);color:var(--muted3)}
-  .paybadge{font-size:10px;margin-left:6px;color:var(--muted2)}
-  .lines{border-top:1px dashed var(--border);border-bottom:1px dashed var(--border);padding:8px 0;margin:6px 0}
-  .lines div{font-size:13px;display:flex;justify-content:space-between;padding:2px 0}
-  .total{font-weight:600;text-align:right;font-size:14px;margin-bottom:10px}
-  .advance{width:100%;padding:10px;border-radius:10px;background:var(--accent);color:#fff;font-size:13.5px;font-weight:500}
-  .advance.done{background:var(--border);color:var(--muted3)}
-  .empty{color:var(--muted2);font-size:13px;padding:10px 4px}
+  .wrap{max-width:1400px;padding-top:calc(18px + var(--sa-t))}
+
+  header.top{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    gap:12px;flex-wrap:wrap;margin-bottom:16px;
+  }
+  header.top h1{color:#fff;margin:0;font-size:28px}
+  header.top .sub{color:var(--dark-muted);font-size:15px;margin-top:2px}
+  .head-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .back-link{
+    color:var(--dark-muted);font-size:15px;min-height:var(--tap);
+    display:inline-flex;align-items:center;padding:0 4px;
+  }
+  .back-link:hover{color:#fff;text-decoration:underline}
+
+  /* ---------------------------------------------------- tabs (celular) -- */
+  .tabs{
+    display:flex;gap:8px;overflow-x:auto;
+    position:sticky;top:0;z-index:20;
+    background:var(--ink);
+    padding:10px 0;margin:0 0 12px;
+    scrollbar-width:none;
+  }
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{
+    flex:1 0 auto;min-height:var(--tap);
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;
+    padding:8px 14px;border-radius:var(--r-pill);
+    border:1px solid #3a2f28;background:#221a16;color:var(--dark-ink);
+    font-size:15px;white-space:nowrap;
+    transition:background-color .18s,color .18s,border-color .18s;
+  }
+  .tab:hover{background:#2c221d;color:#fff}
+  .tab[aria-pressed="true"]{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:600}
+  .tab .n{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:22px;height:22px;padding:0 6px;border-radius:var(--r-pill);
+    background:rgba(255,255,255,.14);font-size:13px;font-weight:600;
+  }
+  .tab[aria-pressed="true"] .n{background:rgba(20,16,14,.18)}
+  /* Aviso de pedidos nuevos sin robarle el contexto al empleado. */
+  .tab.has-news{border-color:var(--gold);box-shadow:0 0 0 2px rgba(200,150,62,.35)}
+  .tab .news{
+    width:8px;height:8px;border-radius:50%;background:var(--gold);flex:none;
+  }
+
+  /* --------------------------------------------------------- tablero -- */
+  .cols{display:grid;gap:14px}
+  .col-head{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    margin:0 0 10px;padding:0 2px;
+  }
+  .col-head h2{
+    color:var(--dark-ink);font-family:'Jost',sans-serif;font-style:normal;
+    font-size:14px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;margin:0;
+  }
+  .col-head .n{
+    color:var(--ink);background:var(--dark-ink);
+    font-size:13px;font-weight:600;padding:2px 9px;border-radius:var(--r-pill);
+  }
+  .col-body{display:flex;flex-direction:column;gap:12px}
+
+  .kcard{
+    background:var(--card);border-radius:var(--r-md);padding:14px;
+    box-shadow:0 6px 18px rgba(0,0,0,.22);
+  }
+  .kcard.is-new{animation:flash 1.6s ease}
+  @keyframes flash{
+    0%{box-shadow:0 0 0 3px var(--gold),0 6px 18px rgba(0,0,0,.22)}
+    100%{box-shadow:0 0 0 0 rgba(200,150,62,0),0 6px 18px rgba(0,0,0,.22)}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .kcard.is-new{animation:none;box-shadow:0 0 0 3px var(--gold),0 6px 18px rgba(0,0,0,.22)}
+  }
+  .kcard-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
+  .kmesa{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:22px;line-height:1.15}
+  .kmeta{color:var(--muted);font-size:14px;margin-top:3px}
+  .kmeta.urgent{color:var(--err-ink);font-weight:600}
+  .kpay{font-size:13px;color:var(--muted-strong);margin-top:5px;text-align:right}
+  .klines{
+    border-top:1px dashed var(--border);border-bottom:1px dashed var(--border);
+    padding:9px 0;margin:8px 0;
+  }
+  .klines div{font-size:15px;padding:3px 0;display:flex;gap:8px}
+  .klines .q{font-weight:600;min-width:26px;font-variant-numeric:tabular-nums}
+  .ktotal{font-weight:600;text-align:right;font-size:16px;margin-bottom:10px;font-variant-numeric:tabular-nums}
+  .kerr{color:var(--err-ink);font-size:14px;margin-bottom:8px}
+  .kerr:empty{display:none}
+
+  .empty-col{
+    color:var(--dark-muted);font-size:15px;padding:16px 4px;
+    border:1px dashed #3a2f28;border-radius:var(--r-md);text-align:center;
+  }
+  .more-btn{
+    width:100%;min-height:var(--tap);color:var(--dark-ink);
+    border:1px solid #3a2f28;border-radius:var(--r-sm);font-size:15px;background:#221a16;
+  }
+  .more-btn:hover{background:#2c221d;color:#fff}
+
+  .board-state{color:var(--dark-ink);text-align:center;padding:50px 20px}
+  .board-state h3{color:#fff;font-size:22px;margin:0 0 6px}
+  .board-state p{color:var(--dark-muted);margin:0 0 4px}
+
+  /* Celular: una sola columna a la vez. */
+  @media (max-width:767px){
+    .col{display:none}
+    .col.is-active{display:block}
+    .col-head{display:none}
+  }
+  /* Tablet: scroll horizontal controlado, columnas con ancho minimo util. */
+  @media (min-width:768px){
+    .tabs{display:none}
+    .cols{
+      grid-auto-flow:column;
+      grid-auto-columns:minmax(260px,1fr);
+      overflow-x:auto;padding-bottom:8px;
+    }
+  }
+  @media (min-width:1180px){
+    .cols{grid-auto-flow:row;grid-template-columns:repeat(4,minmax(0,1fr));overflow-x:visible}
+  }
 </style>
 </head>
-<body>
+<body class="dark">
+<a class="skip-link" href="#cols">Ir al tablero</a>
 <div class="wrap">
-  <header>
+  <header class="top">
     <div>
       <h1>La Positiva</h1>
-      <div class="sub">Panel de cocina y equipo</div>
+      <p class="sub">Panel de cocina y equipo</p>
     </div>
-    <div class="live"><span class="dot"></span> En vivo</div>
+    <div class="head-right">
+      <span class="conn" id="conn"></span>
+      <a class="back-link" href="./">Volver al inicio</a>
+    </div>
   </header>
+
+  <div class="tabs" id="tabs" role="group" aria-label="Estados del pedido"></div>
   <div class="cols" id="cols"></div>
+  <div id="boardState"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+<script src="app.js" defer></script>
 <script>
-const SUPABASE_URL = "https://abjonztvstyieukmrikx.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiam9uenR2c3R5aWV1a21yaWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NzUyNDksImV4cCI6MjEwMzM1MTI0OX0.bGpeGAFtBvy_I-np7N8mBmK59Yk_t60UEboei7QZ4rY";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const TABLE = "la_positiva_pedidos";
-const STEPS = ['Nuevo','Cocinando','Listo','Entregado'];
-const NEXT = { Nuevo:'Cocinando', Cocinando:'Listo', Listo:'Entregado' };
-const NEXT_LABEL = { Nuevo:'Marcar en cocina', Cocinando:'Marcar listo', Listo:'Marcar entregado' };
-const fmt = n => '$' + Math.round(n).toLocaleString('es-AR');
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var esc = LP.esc, money = LP.money;
+  var sb = LP.client();
 
-let known = new Set();
+  var STEPS = ['Nuevo', 'Cocinando', 'Listo', 'Entregado'];
+  var TAB_LABEL = { Nuevo: 'Nuevos', Cocinando: 'Cocinando', Listo: 'Listos', Entregado: 'Entregados' };
+  var NEXT = { Nuevo: 'Cocinando', Cocinando: 'Listo', Listo: 'Entregado' };
+  var NEXT_LABEL = { Nuevo: 'Marcar en cocina', Cocinando: 'Marcar listo', Listo: 'Marcar entregado' };
+  var BADGE = { Nuevo: 'b-nuevo', Cocinando: 'b-cocinando', Listo: 'b-listo', Entregado: 'b-entregado' };
+  var ENTREGADOS_VISIBLES = 6;   // el resto queda detras de "ver mas"
 
-function timeAgo(ts){
-  const min = Math.max(0, Math.round((Date.now() - new Date(ts).getTime())/60000));
-  return min <= 0 ? 'recién' : `hace ${min} min`;
-}
+  var elCols = document.getElementById('cols');
+  var elTabs = document.getElementById('tabs');
+  var elState = document.getElementById('boardState');
+  var conn = new LP.ConnBadge(document.getElementById('conn'));
 
-function card(o, isNew){
-  const badgeClass = { Nuevo:'b-nuevo', Cocinando:'b-cocinando', Listo:'b-listo', Entregado:'b-entregado' }[o.estado];
-  const next = NEXT[o.estado];
-  return `<div class="card ${isNew?'new-flash':''}">
-    <div class="card-top">
-      <div>
-        <div class="mesa">${o.mesa}</div>
-        <div class="meta">${o.modo} · ${timeAgo(o.created_at)}${o.cliente ? ' · '+o.cliente : ''}</div>
-      </div>
-      <div style="text-align:right">
-        <span class="badge ${badgeClass}">${o.estado}</span>
-        <div class="paybadge">${o.pagado ? '✓ Pagado' : (o.metodo_pago==='Efectivo' ? 'Paga en efectivo' : 'Pago pendiente')}</div>
-      </div>
-    </div>
-    <div class="lines">${o.lines.map(l => `<div><span>${l.qty} × ${l.name}</span></div>`).join('')}</div>
-    <div class="total">${fmt(o.total)}</div>
-    ${next ? `<button class="advance" onclick="advance(${o.id},'${next}')">${NEXT_LABEL[o.estado]}</button>` : `<button class="advance done" disabled>Completado</button>`}
-  </div>`;
-}
+  var activeTab = 'Nuevo';       // en celular arranca en Nuevos
+  var showAllDone = false;
+  var orders = [];
+  var knownIds = null;           // null = primera carga, no marcamos nada como nuevo
+  var flashIds = Object.create(null);
+  var pendingIds = Object.create(null);   // pedidos con un cambio de estado en curso
+  var newsTabs = Object.create(null);     // tabs con novedades sin mirar
+  var loaded = false;
 
-async function advance(id, next){
-  await sb.from(TABLE).update({ estado: next, updated_at: new Date().toISOString() }).eq('id', id);
-  load();
-}
-window.advance = advance;
+  /* ------------------------------------------------------------- tabs -- */
+  function renderTabs(groups) {
+    var html = STEPS.map(function (s) {
+      var on = s === activeTab;
+      var news = newsTabs[s] && !on;
+      return '<button type="button" class="tab' + (news ? ' has-news' : '') + '" data-tab="' + s + '" ' +
+        'aria-pressed="' + (on ? 'true' : 'false') + '">' +
+        (news ? '<span class="news" aria-hidden="true"></span>' : '') +
+        '<span>' + esc(TAB_LABEL[s]) + '</span>' +
+        '<span class="n">' + groups[s].length + '</span>' +
+        (news ? '<span class="visually-hidden">tiene pedidos nuevos</span>' : '') +
+        '</button>';
+    }).join('');
+    elTabs.innerHTML = html;
+  }
 
-async function load(){
-  const { data, error } = await sb.from(TABLE).select('*').order('created_at', { ascending: false }).limit(60);
-  if (error) { console.error(error); return; }
-  const groups = { Nuevo:[], Cocinando:[], Listo:[], Entregado:[] };
-  data.forEach(o => { (groups[o.estado] || groups.Entregado).push(o); });
+  elTabs.addEventListener('click', function (ev) {
+    var b = ev.target.closest('.tab');
+    if (!b) return;
+    activeTab = b.dataset.tab;
+    delete newsTabs[activeTab];
+    render();
+  });
 
-  const newIds = new Set(data.map(o=>o.id));
-  const freshOnes = data.filter(o => !known.has(o.id));
-  known = newIds;
+  /* ---------------------------------------------------------- tarjeta -- */
+  function minutesOld(o) {
+    return Math.max(0, Math.round((Date.now() - new Date(o.created_at).getTime()) / 60000));
+  }
 
-  document.getElementById('cols').innerHTML = STEPS.map(step => `
-    <div class="col">
-      <h3>${step} (${groups[step].length})</h3>
-      ${groups[step].length ? groups[step].map(o => card(o, freshOnes.some(f=>f.id===o.id))).join('') : '<div class="empty">Sin pedidos</div>'}
-    </div>`).join('');
-}
+  // Firma: si no cambia, la tarjeta no se vuelve a pintar (sin parpadeos).
+  function signature(o) {
+    return [o.id, o.estado, o.pagado, o.updated_at, minutesOld(o),
+            pendingIds[o.id] ? 1 : 0].join('|');
+  }
 
-load();
-setInterval(load, 2000);
+  function cardHTML(o) {
+    var next = NEXT[o.estado];
+    var mins = minutesOld(o);
+    var urgent = (o.estado === 'Nuevo' || o.estado === 'Cocinando') && mins >= 15;
+    var pago = o.pagado ? 'Pagado' : (o.metodo_pago === 'Efectivo' ? 'Paga en efectivo' : 'Pago pendiente');
+    var busy = !!pendingIds[o.id];
 
-sb.channel('pedidos-live')
-  .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, () => load())
-  .subscribe();
+    var lines = (o.lines || []).map(function (l) {
+      return '<div><span class="q">' + esc(l.qty) + '&times;</span><span>' + esc(l.name) + '</span></div>';
+    }).join('');
+
+    return '<div class="kcard-top">' +
+        '<div>' +
+          '<div class="kmesa">' + esc(o.mesa) + '</div>' +
+          '<div class="kmeta' + (urgent ? ' urgent' : '') + '">' +
+            esc(o.modo) + ' &middot; ' + esc(LP.timeAgo(o.created_at)) +
+            (urgent ? ' &middot; demorado' : '') +
+            (o.cliente ? ' &middot; ' + esc(o.cliente) : '') +
+          '</div>' +
+        '</div>' +
+        '<div style="text-align:right">' +
+          '<span class="badge ' + BADGE[o.estado] + '">' + esc(o.estado) + '</span>' +
+          '<div class="kpay">' + esc(pago) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="klines">' + lines + '</div>' +
+      '<div class="ktotal">' + money(o.total) + '</div>' +
+      '<p class="kerr" role="alert" data-err="' + esc(o.id) + '"></p>' +
+      (next
+        ? '<button type="button" class="btn btn-primary btn-block" data-adv="' + esc(o.id) + '" ' +
+            'data-next="' + esc(next) + '"' + (busy ? ' disabled' : '') + '>' +
+            (busy ? 'Guardando...' : esc(NEXT_LABEL[o.estado])) + '</button>'
+        : '<button type="button" class="btn btn-block" disabled>Completado</button>');
+  }
+
+  /* ------------------------------------------------- render con diffing -- */
+  function groupOrders() {
+    var g = { Nuevo: [], Cocinando: [], Listo: [], Entregado: [] };
+    orders.forEach(function (o) { (g[o.estado] || g.Entregado).push(o); });
+    // Activos: el mas viejo primero (es el que apura). Entregados: los ultimos.
+    ['Nuevo', 'Cocinando', 'Listo'].forEach(function (s) {
+      g[s].sort(function (a, b) { return new Date(a.created_at) - new Date(b.created_at); });
+    });
+    g.Entregado.sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+    return g;
+  }
+
+  function ensureColumns() {
+    if (elCols.children.length) return;
+    elCols.innerHTML = STEPS.map(function (s) {
+      return '<section class="col" data-col="' + s + '" aria-labelledby="h-' + s + '">' +
+        '<div class="col-head"><h2 id="h-' + s + '">' + esc(TAB_LABEL[s]) + '</h2>' +
+        '<span class="n" data-count="' + s + '">0</span></div>' +
+        '<div class="col-body" data-body="' + s + '"></div>' +
+      '</section>';
+    }).join('');
+  }
+
+  function render() {
+    var g = groupOrders();
+    ensureColumns();
+    renderTabs(g);
+
+    STEPS.forEach(function (s) {
+      var body = elCols.querySelector('[data-body="' + s + '"]');
+      var count = elCols.querySelector('[data-count="' + s + '"]');
+      var list = g[s];
+      var limited = (s === 'Entregado' && !showAllDone) ? list.slice(0, ENTREGADOS_VISIBLES) : list;
+      count.textContent = list.length;
+
+      elCols.querySelector('[data-col="' + s + '"]').classList.toggle('is-active', s === activeTab);
+
+      if (!limited.length) {
+        if (body.dataset.mode !== 'empty') {
+          body.dataset.mode = 'empty';
+          body.innerHTML = '<p class="empty-col">Sin pedidos ac&aacute;</p>';
+        }
+        return;
+      }
+      if (body.dataset.mode !== 'list') { body.dataset.mode = 'list'; body.innerHTML = ''; }
+
+      // Reconciliacion: se reutiliza el nodo si la firma no cambio.
+      var seen = Object.create(null);
+      limited.forEach(function (o, i) {
+        seen[o.id] = true;
+        var el = body.querySelector('[data-card="' + o.id + '"]');
+        var sig = signature(o);
+        if (!el) {
+          el = document.createElement('article');
+          el.className = 'kcard';
+          el.dataset.card = o.id;
+          el.dataset.sig = sig;
+          el.innerHTML = cardHTML(o);
+          if (flashIds[o.id]) {
+            el.classList.add('is-new');
+            setTimeout(function () { el.classList.remove('is-new'); delete flashIds[o.id]; }, 1800);
+          }
+        } else if (el.dataset.sig !== sig) {
+          el.dataset.sig = sig;
+          el.innerHTML = cardHTML(o);
+        }
+        // Reordena solo si hace falta, para no saltar el scroll.
+        if (body.children[i] !== el) body.insertBefore(el, body.children[i] || null);
+      });
+
+      Array.prototype.slice.call(body.querySelectorAll('[data-card]')).forEach(function (el) {
+        if (!seen[el.dataset.card]) el.remove();
+      });
+
+      if (s === 'Entregado' && list.length > ENTREGADOS_VISIBLES) {
+        var mb = body.querySelector('.more-btn') || document.createElement('button');
+        mb.type = 'button'; mb.className = 'more-btn';
+        mb.textContent = showAllDone
+          ? 'Mostrar solo los ultimos ' + ENTREGADOS_VISIBLES
+          : 'Ver los ' + (list.length - ENTREGADOS_VISIBLES) + ' entregados anteriores';
+        mb.onclick = function () { showAllDone = !showAllDone; render(); };
+        body.appendChild(mb);
+      }
+    });
+  }
+
+  /* ------------------------------------------------------ avanzar estado -- */
+  elCols.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('[data-adv]');
+    if (!btn || btn.disabled) return;
+    advance(btn.dataset.adv, btn.dataset.next, btn);
+  });
+
+  function advance(id, next, btn) {
+    if (pendingIds[id]) return;            // evita el doble clic
+    pendingIds[id] = true;
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    var errBox = elCols.querySelector('[data-err="' + id + '"]');
+    if (errBox) errBox.textContent = '';
+
+    if (!sb) { fail(null); return; }
+
+    sb.from(LP.TABLE)
+      .update({ estado: next, updated_at: new Date().toISOString() })
+      .eq('id', id).select().then(function (res) {
+        delete pendingIds[id];
+        if (res.error || !res.data || !res.data.length) { fail(res.error); return; }
+        // Aplica el cambio localmente para que se vea al instante.
+        orders = orders.map(function (o) {
+          return String(o.id) === String(id) ? res.data[0] : o;
+        });
+        render();
+      }, function (e) { delete pendingIds[id]; fail(e); });
+
+    function fail(err) {
+      delete pendingIds[id];
+      var box = elCols.querySelector('[data-err="' + id + '"]');
+      var msg = LP.humanError(err, 'No se pudo cambiar el estado. Proba de nuevo.');
+      if (box) box.textContent = msg; else LP.toast(msg, 'err');
+      render();
+    }
+  }
+
+  /* --------------------------------------------------------- carga ---- */
+  var loadInFlight = false;
+
+  function load(quiet) {
+    if (loadInFlight) return Promise.resolve();
+    if (!sb) { showFatal(); return Promise.resolve(); }
+    loadInFlight = true;
+
+    return sb.from(LP.TABLE).select('*')
+      .order('created_at', { ascending: false }).limit(80)
+      .then(function (res) {
+        loadInFlight = false;
+        if (res.error) { showError(res.error, quiet); return; }
+
+        var data = res.data || [];
+        if (knownIds) {
+          data.forEach(function (o) {
+            if (!knownIds[o.id]) {
+              flashIds[o.id] = true;
+              if (o.estado !== activeTab) newsTabs[o.estado] = true;
+            }
+          });
+        }
+        knownIds = Object.create(null);
+        data.forEach(function (o) { knownIds[o.id] = true; });
+
+        orders = data;
+        loaded = true;
+        elState.innerHTML = '';
+        render();
+      }, function (e) { loadInFlight = false; showError(e, quiet); });
+  }
+
+  function showError(err, quiet) {
+    LP.humanError(err);
+    if (loaded) {
+      if (!quiet) LP.toast('No pudimos actualizar el tablero. Seguimos intentando.', 'err');
+      return;
+    }
+    elCols.innerHTML = '';
+    elState.innerHTML =
+      '<div class="board-state"><h3>No pudimos cargar los pedidos</h3>' +
+      '<p>Revisa la conexion del local.</p>' +
+      '<button type="button" class="btn btn-primary" id="retryBtn" style="margin-top:14px">Reintentar</button></div>';
+    document.getElementById('retryBtn').addEventListener('click', function () {
+      elState.innerHTML = '<div class="board-state"><div class="spinner"></div><p>Cargando...</p></div>';
+      load();
+    });
+  }
+
+  function showFatal() {
+    elState.innerHTML = '<div class="board-state"><h3>No hay conexion con el sistema</h3>' +
+      '<p>No se pudo cargar la libreria de datos.</p></div>';
+  }
+
+  /* ------------------------------------------- realtime + respaldo ----- */
+  var channel = null, retryMs = 2000, backupTimer = null, resubTimer = null;
+
+  function scheduleBackup() {
+    clearTimeout(backupTimer);
+    // Con Realtime sano el respaldo es espaciado; si esta caido, se apura.
+    var every = conn.state === 'live' ? 25000 : 7000;
+    backupTimer = setTimeout(function () {
+      if (!document.hidden) load(true);
+      scheduleBackup();
+    }, every);
+  }
+
+  function subscribe() {
+    if (!sb) return;
+    if (channel) { try { sb.removeChannel(channel); } catch (e) {} channel = null; }
+
+    channel = sb.channel('cocina-' + Date.now())
+      .on('postgres_changes', { event: '*', schema: 'public', table: LP.TABLE }, function () {
+        load(true);
+      })
+      .subscribe(function (status) {
+        if (status === 'SUBSCRIBED') {
+          conn.set(navigator.onLine ? 'live' : 'off');
+          retryMs = 2000;
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          conn.set(navigator.onLine ? 'retry' : 'off');
+          clearTimeout(resubTimer);
+          resubTimer = setTimeout(subscribe, retryMs);
+          retryMs = Math.min(retryMs * 2, 30000);   // backoff
+        }
+        scheduleBackup();
+      });
+  }
+
+  window.addEventListener('online', function () { conn.set('retry'); load(true); subscribe(); });
+  window.addEventListener('offline', function () { conn.set('off'); });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) load(true);
+  });
+
+  LP.onCleanup(function () {
+    clearTimeout(backupTimer); clearTimeout(resubTimer);
+    if (channel && sb) { try { sb.removeChannel(channel); } catch (e) {} }
+  });
+
+  /* ------------------------------------------------------------ inicio -- */
+  elState.innerHTML = '<div class="board-state"><div class="spinner"></div><p>Cargando pedidos...</p></div>';
+  conn.set(navigator.onLine ? 'connecting' : 'off');
+  load().then(function () { subscribe(); scheduleBackup(); });
+
+  // Refresca los "hace X min" sin volver a consultar la base.
+  setInterval(function () { if (loaded && !document.hidden) render(); }, 30000);
+});
 </script>
 </body>
 </html>

@@ -2,107 +2,408 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>La Positiva — Caja</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3ece2">
+<title>La Positiva - Caja</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
-  .wrap{max-width:640px;margin:0 auto;padding:24px 20px 60px}
-  header{margin-bottom:20px}
-  header h1{margin:0;font-size:30px}
-  header .sub{color:var(--muted3);font-size:13.5px;margin-top:2px}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px}
-  .row{display:flex;justify-content:space-between;align-items:flex-start}
-  .mesa{font-family:'Cormorant Garamond';font-style:italic;font-size:22px}
-  .meta{color:var(--muted);font-size:12px;margin-top:2px}
-  .lines{margin:10px 0;border-top:1px dashed var(--border);border-bottom:1px dashed var(--border);padding:8px 0}
-  .lines div{font-size:13.5px;display:flex;justify-content:space-between;padding:2px 0}
-  .total{font-weight:600;font-size:16px;text-align:right}
-  .metodo{font-size:12px;color:var(--muted3);margin-top:2px}
-  .confirm-btn{width:100%;margin-top:12px;padding:13px;border-radius:10px;background:var(--accent);color:#fff;font-weight:500;font-size:14.5px}
-  .paid-badge{background:var(--ok-bg);color:#1c6b48;font-size:11.5px;padding:5px 12px;border-radius:20px;font-weight:500}
-  .toast{position:fixed;left:16px;right:16px;bottom:20px;max-width:600px;margin:0 auto;background:var(--ink);color:#fff;padding:14px 18px;border-radius:12px;font-size:14px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.3);transition:opacity .3s}
-  .toast.hidden{opacity:0;pointer-events:none}
-  .empty{color:var(--muted2);text-align:center;padding:40px 0;font-size:14px}
+  .wrap{max-width:1180px;padding-top:calc(20px + var(--sa-t));padding-bottom:120px}
+  header.top{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    gap:12px;flex-wrap:wrap;margin-bottom:18px;
+  }
+  header.top h1{margin:0;font-size:30px}
+  header.top .sub{color:var(--muted);font-size:15px;margin-top:2px;max-width:52ch}
+  .head-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .back-link{
+    color:var(--muted-strong);font-size:15px;min-height:var(--tap);
+    display:inline-flex;align-items:center;padding:0 4px;text-decoration:underline;
+  }
+  .back-link:hover{color:var(--ink)}
+
+  .section{margin-bottom:28px}
+  .section-head{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:0 2px}
+  .section-head h2{
+    margin:0;font-family:'Jost',sans-serif;font-style:normal;
+    font-size:14px;letter-spacing:.12em;text-transform:uppercase;
+    font-weight:600;color:var(--muted-strong);
+  }
+  .section-head .n{
+    background:var(--ink);color:var(--gold);font-size:13px;font-weight:600;
+    padding:2px 9px;border-radius:var(--r-pill);
+  }
+
+  /* Escritorio: varias fichas por fila para escanear rapido. */
+  .cards{display:grid;gap:14px}
+  @media (min-width:720px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media (min-width:1080px){.cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+  .pcard{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--r-md);padding:16px;display:flex;flex-direction:column;
+  }
+  .pcard.is-paid{border-color:#bfe0ce;background:#fbfdfc}
+  /* Cabecera flexible: mesa, badge y metodo nunca se pisan en celular. */
+  .pcard-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .pmesa{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:23px;line-height:1.15}
+  .pmeta{color:var(--muted);font-size:14px;margin-top:3px}
+  .pmetodo{font-size:14px;color:var(--muted-strong);margin-top:6px}
+  .plines{
+    margin:12px 0;border-top:1px dashed var(--border);border-bottom:1px dashed var(--border);
+    padding:9px 0;
+  }
+  .plines div{font-size:15px;padding:3px 0;display:flex;gap:8px}
+  .plines .q{font-weight:600;min-width:26px;font-variant-numeric:tabular-nums}
+  .ptotal{font-weight:600;font-size:18px;text-align:right;font-variant-numeric:tabular-nums}
+  .pfoot{margin-top:12px}
+  .pnote{font-size:14px;margin-top:8px}
+  .pnote.ok{color:var(--ok)}
+  .pnote.warn{color:var(--warn)}
+  .pnote:empty{display:none}
+
+  .offline-bar{
+    position:fixed;left:0;right:0;top:0;z-index:90;
+    background:var(--err);color:#fff;text-align:center;
+    padding:calc(8px + var(--sa-t)) 12px 8px;font-size:15px;
+  }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#pendientes">Ir a los pagos pendientes</a>
+<div class="offline-bar" id="offlineBar" hidden>Sin conexion. No vas a poder confirmar pagos hasta que vuelva.</div>
+
 <div class="wrap">
-  <header>
-    <h1>Caja</h1>
-    <div class="sub">Confirmá el pago y avisale a Jonathan sin que tenga que venir a preguntar.</div>
-  </header>
-  <div id="list"></div>
-</div>
-<div class="toast hidden" id="toast"></div>
-
-<script>
-const SUPABASE_URL = "https://abjonztvstyieukmrikx.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiam9uenR2c3R5aWV1a21yaWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NzUyNDksImV4cCI6MjEwMzM1MTI0OX0.bGpeGAFtBvy_I-np7N8mBmK59Yk_t60UEboei7QZ4rY";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const TABLE = "la_positiva_pedidos";
-const fmt = n => '$' + Math.round(n).toLocaleString('es-AR');
-
-function toast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.remove('hidden');
-  setTimeout(() => t.classList.add('hidden'), 3200);
-}
-
-function card(o){
-  return `<div class="card" id="card-${o.id}">
-    <div class="row">
-      <div>
-        <div class="mesa">${o.mesa}</div>
-        <div class="meta">${o.cliente ? o.cliente + ' · ' : ''}Pedido #${o.id}</div>
-        <div class="metodo">${o.metodo_pago === 'Efectivo' ? '💵 Paga en efectivo' : '💳 Tarjeta'}</div>
-      </div>
-      ${o.pagado ? '<span class="paid-badge">✓ Pago confirmado</span>' : ''}
+  <header class="top">
+    <div>
+      <h1>Caja</h1>
+      <p class="sub">Confirma el pago y avisale a Jonathan sin que tenga que venir a preguntar.</p>
     </div>
-    <div class="lines">${o.lines.map(l => `<div><span>${l.qty} × ${l.name}</span></div>`).join('')}</div>
-    <div class="total">${fmt(o.total)}</div>
-    ${o.pagado ? '' : `<button class="confirm-btn" onclick="confirmarPago(${o.id}, '${o.mesa}', ${o.total})">Confirmar pago y avisar a Jonathan</button>`}
-  </div>`;
-}
+    <div class="head-right">
+      <span class="conn" id="conn"></span>
+      <a class="back-link" href="./">Volver al inicio</a>
+    </div>
+  </header>
 
-async function load(){
-  const { data, error } = await sb.from(TABLE).select('*').order('created_at', { ascending: false }).limit(30);
-  if (error) { console.error(error); return; }
-  document.getElementById('list').innerHTML = data.length
-    ? data.map(card).join('')
-    : '<div class="empty">Todavía no hay pedidos.</div>';
-}
+  <section class="section" id="pendientes" aria-labelledby="h-pend">
+    <div class="section-head">
+      <h2 id="h-pend">Pagos pendientes</h2>
+      <span class="n" data-count="pend">0</span>
+    </div>
+    <div class="cards" data-body="pend"></div>
+  </section>
 
-async function confirmarPago(id, mesa, total){
-  const btn = document.querySelector(`#card-${id} .confirm-btn`);
-  if (btn){ btn.disabled = true; btn.textContent = 'Confirmando…'; }
+  <section class="section" id="pagados" aria-labelledby="h-pag">
+    <div class="section-head">
+      <h2 id="h-pag">Pagados</h2>
+      <span class="n" data-count="pag">0</span>
+    </div>
+    <div class="cards" data-body="pag"></div>
+  </section>
 
-  await sb.from(TABLE).update({ pagado: true, updated_at: new Date().toISOString() }).eq('id', id);
+  <div id="boardState"></div>
+</div>
 
-  const { data: fnData, error: fnError } = await sb.functions.invoke('notify-empleado', {
-    body: {
-      empleado: 'Jonathan',
-      title: 'Pago confirmado ✅',
-      body: `${mesa} pagó ${fmt(total)}. Ya podés seguir.`,
-      pedidoId: id
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+<script src="app.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var esc = LP.esc, money = LP.money;
+  var sb = LP.client();
+
+  var VISIBLES_PAGADOS = 9;
+  var conn = new LP.ConnBadge(document.getElementById('conn'));
+  var elState = document.getElementById('boardState');
+  var wrap = document.querySelector('.wrap');
+
+  var orders = [];
+  var loaded = false;
+  var pending = Object.create(null);      // confirmacion de pago en curso
+  var notifyState = Object.create(null);  // id -> 'ok' | 'fail'
+  var notifying = Object.create(null);
+
+  /* -------------------------------------------------------- tarjetas -- */
+  function signature(o) {
+    return [o.id, o.pagado, o.updated_at, pending[o.id] ? 1 : 0,
+            notifying[o.id] ? 1 : 0, notifyState[o.id] || ''].join('|');
+  }
+
+  function cardHTML(o) {
+    var lines = (o.lines || []).map(function (l) {
+      return '<div><span class="q">' + esc(l.qty) + '&times;</span><span>' + esc(l.name) + '</span></div>';
+    }).join('');
+    var metodo = o.metodo_pago === 'Efectivo' ? 'Efectivo al mozo' : 'Tarjeta (simulado)';
+    var busy = !!pending[o.id];
+    var nstate = notifyState[o.id];
+
+    var foot;
+    if (o.pagado) {
+      // Confirmacion persistente en la ficha, ademas del mensaje temporal.
+      var nota = '';
+      if (nstate === 'ok') nota = '<p class="pnote ok">Aviso enviado a Jonathan.</p>';
+      else if (nstate === 'fail') {
+        nota = '<p class="pnote warn">El pago quedo confirmado, pero el aviso no salio.</p>' +
+          '<button type="button" class="btn btn-secondary btn-block" data-retry="' + esc(o.id) + '" ' +
+          'style="margin-top:8px"' + (notifying[o.id] ? ' disabled' : '') + '>' +
+          (notifying[o.id] ? 'Reintentando...' : 'Reintentar aviso') + '</button>';
+      }
+      foot = '<span class="badge b-ok">Pago confirmado</span>' + nota;
+    } else {
+      foot = '<button type="button" class="btn btn-primary btn-block" data-pay="' + esc(o.id) + '"' +
+        (busy ? ' disabled' : '') + '>' +
+        (busy ? 'Confirmando...' : 'Confirmar pago y avisar a Jonathan') + '</button>' +
+        '<p class="pnote warn" data-err="' + esc(o.id) + '" role="alert"></p>';
     }
+
+    return '<div class="pcard-top">' +
+        '<div>' +
+          '<div class="pmesa">' + esc(o.mesa) + '</div>' +
+          '<div class="pmeta">Pedido #' + esc(o.id) +
+            (o.cliente ? ' &middot; ' + esc(o.cliente) : '') +
+            ' &middot; ' + esc(LP.timeAgo(o.created_at)) + '</div>' +
+          '<div class="pmetodo">' + esc(metodo) + '</div>' +
+        '</div>' +
+        '<span class="badge ' + (o.pagado ? 'b-ok' : 'b-pend') + '">' +
+          (o.pagado ? 'Pagado' : 'Pendiente') + '</span>' +
+      '</div>' +
+      '<div class="plines">' + lines + '</div>' +
+      '<div class="ptotal">' + money(o.total) + '</div>' +
+      '<div class="pfoot">' + foot + '</div>';
+  }
+
+  /* -------------------------------------------- render sin pisar el DOM -- */
+  function render() {
+    var pend = orders.filter(function (o) { return !o.pagado; });
+    var pag = orders.filter(function (o) { return o.pagado; }).slice(0, VISIBLES_PAGADOS);
+    paint('pend', pend, 'No hay pagos pendientes.');
+    paint('pag', pag, 'Todavia no se confirmo ningun pago.');
+  }
+
+  function paint(key, list, emptyMsg) {
+    var body = document.querySelector('[data-body="' + key + '"]');
+    document.querySelector('[data-count="' + key + '"]').textContent = list.length;
+
+    if (!list.length) {
+      if (body.dataset.mode !== 'empty') {
+        body.dataset.mode = 'empty';
+        body.innerHTML = '<p class="state" style="grid-column:1/-1">' + esc(emptyMsg) + '</p>';
+      }
+      return;
+    }
+    if (body.dataset.mode !== 'list') { body.dataset.mode = 'list'; body.innerHTML = ''; }
+
+    var seen = Object.create(null);
+    list.forEach(function (o, i) {
+      seen[o.id] = true;
+      var el = body.querySelector('[data-card="' + o.id + '"]');
+      var sig = signature(o);
+      if (!el) {
+        el = document.createElement('article');
+        el.dataset.card = o.id;
+        el.dataset.sig = sig;
+        el.className = 'pcard' + (o.pagado ? ' is-paid' : '');
+        el.innerHTML = cardHTML(o);
+      } else if (el.dataset.sig !== sig) {
+        // Solo se repinta la ficha que cambio, nunca la lista entera.
+        el.dataset.sig = sig;
+        el.className = 'pcard' + (o.pagado ? ' is-paid' : '');
+        el.innerHTML = cardHTML(o);
+      }
+      if (body.children[i] !== el) body.insertBefore(el, body.children[i] || null);
+    });
+    Array.prototype.slice.call(body.querySelectorAll('[data-card]')).forEach(function (el) {
+      if (!seen[el.dataset.card]) el.remove();
+    });
+  }
+
+  /* ------------------------------------------------------- interaccion -- */
+  wrap.addEventListener('click', function (ev) {
+    var pay = ev.target.closest('[data-pay]');
+    if (pay && !pay.disabled) { confirmarPago(pay.dataset.pay); return; }
+    var retry = ev.target.closest('[data-retry]');
+    if (retry && !retry.disabled) { avisar(retry.dataset.retry, true); }
   });
 
-  if (fnError || (fnData && fnData.ok === false)) {
-    toast('Pago confirmado. Aviso: ' + (fnData?.error || 'Jonathan todavía no activó las notificaciones en su celular.'));
-  } else {
-    toast('Pago confirmado. Notificación enviada al celular de Jonathan 📲');
+  function findOrder(id) {
+    for (var i = 0; i < orders.length; i++) if (String(orders[i].id) === String(id)) return orders[i];
+    return null;
   }
-  load();
-}
-window.confirmarPago = confirmarPago;
 
-load();
-setInterval(load, 3000);
+  function confirmarPago(id) {
+    if (pending[id]) return;                 // sin doble confirmacion
+    var o = findOrder(id);
+    if (!o || o.pagado) return;
+    if (!sb) { LP.toast('Sin conexion con el sistema.', 'err'); return; }
+
+    pending[id] = true;
+    render();
+
+    sb.from(LP.TABLE)
+      .update({ pagado: true, updated_at: new Date().toISOString() })
+      .eq('id', id).eq('pagado', false)      // no reconfirma lo ya cobrado
+      .select()
+      .then(function (res) {
+        delete pending[id];
+        if (res.error) { falloPago(id, res.error); return; }
+        if (!res.data || !res.data.length) {
+          // Otro puesto lo confirmo primero: es una carrera, no un error.
+          LP.toast('Ese pago ya habia sido confirmado en otro puesto.', 'ok');
+          load(true);
+          return;
+        }
+        orders = orders.map(function (x) {
+          return String(x.id) === String(id) ? res.data[0] : x;
+        });
+        render();
+        LP.toast('Pago confirmado.', 'ok');
+        avisar(id, false);                   // el aviso es un paso aparte
+      }, function (e) { delete pending[id]; falloPago(id, e); });
+  }
+
+  function falloPago(id, err) {
+    delete pending[id];
+    render();
+    var box = document.querySelector('[data-err="' + id + '"]');
+    var msg = LP.humanError(err, 'No se pudo confirmar el pago. Proba de nuevo.');
+    if (box) box.textContent = msg;
+    LP.toast(msg, 'err');
+  }
+
+  // El aviso se trata por separado del cobro: si falla, el pago sigue confirmado.
+  function avisar(id, isRetry) {
+    var o = findOrder(id);
+    if (!o || notifying[id]) return;
+    notifying[id] = true;
+    render();
+
+    var done = function (state, msg, kind) {
+      delete notifying[id];
+      notifyState[id] = state;
+      render();
+      if (msg) LP.toast(msg, kind);
+    };
+
+    if (!sb) { done('fail', 'El pago quedo confirmado, pero no se pudo avisar.', 'err'); return; }
+
+    sb.functions.invoke('notify-empleado', {
+      body: {
+        empleado: 'Jonathan',
+        title: 'Pago confirmado',
+        body: o.mesa + ' pago ' + money(o.total) + '. Ya podes seguir.',
+        pedidoId: id
+      }
+    }).then(function (res) {
+      var bad = res.error || (res.data && res.data.ok === false);
+      if (bad) {
+        LP.humanError(res.error || res.data);
+        done('fail', isRetry
+          ? 'El aviso sigue sin salir. Jonathan quizas no activo las notificaciones.'
+          : 'Pago confirmado. El aviso no salio: Jonathan quizas no activo las notificaciones.', 'err');
+      } else {
+        done('ok', isRetry ? 'Aviso enviado a Jonathan.' : 'Pago confirmado y aviso enviado a Jonathan.', 'ok');
+      }
+    }, function (e) {
+      LP.humanError(e);
+      done('fail', 'Pago confirmado. El aviso no se pudo enviar.', 'err');
+    });
+  }
+
+  /* ------------------------------------------------------------- carga -- */
+  var inFlight = false;
+  function load(quiet) {
+    if (inFlight) return Promise.resolve();
+    if (!sb) { showFatal(); return Promise.resolve(); }
+    inFlight = true;
+    return sb.from(LP.TABLE).select('*')
+      .order('created_at', { ascending: false }).limit(60)
+      .then(function (res) {
+        inFlight = false;
+        if (res.error) { showError(res.error, quiet); return; }
+        orders = res.data || [];
+        loaded = true;
+        elState.innerHTML = '';
+        render();
+      }, function (e) { inFlight = false; showError(e, quiet); });
+  }
+
+  function showError(err, quiet) {
+    LP.humanError(err);
+    if (loaded) {
+      if (!quiet) LP.toast('No pudimos actualizar la lista. Seguimos intentando.', 'err');
+      return;
+    }
+    elState.innerHTML =
+      '<div class="state state-err"><h3>No pudimos cargar los pedidos</h3>' +
+      '<p>Revisa la conexion.</p>' +
+      '<button type="button" class="btn btn-primary" id="retryBtn">Reintentar</button></div>';
+    document.getElementById('retryBtn').addEventListener('click', function () {
+      elState.innerHTML = '<div class="state"><div class="spinner"></div><p>Cargando...</p></div>';
+      load();
+    });
+  }
+
+  function showFatal() {
+    elState.innerHTML = '<div class="state state-err"><h3>Sin conexion con el sistema</h3>' +
+      '<p>No se pudo cargar la libreria de datos.</p></div>';
+  }
+
+  /* --------------------------------------------- realtime + respaldo --- */
+  var channel = null, retryMs = 2000, backupTimer = null, resubTimer = null;
+
+  function scheduleBackup() {
+    clearTimeout(backupTimer);
+    var every = conn.state === 'live' ? 25000 : 8000;
+    backupTimer = setTimeout(function () {
+      // No refresca mientras hay una confirmacion en curso.
+      if (!document.hidden && !Object.keys(pending).length) load(true);
+      scheduleBackup();
+    }, every);
+  }
+
+  function subscribe() {
+    if (!sb) return;
+    if (channel) { try { sb.removeChannel(channel); } catch (e) {} channel = null; }
+    channel = sb.channel('caja-' + Date.now())
+      .on('postgres_changes', { event: '*', schema: 'public', table: LP.TABLE }, function () {
+        if (!Object.keys(pending).length) load(true);
+      })
+      .subscribe(function (status) {
+        if (status === 'SUBSCRIBED') {
+          conn.set(navigator.onLine ? 'live' : 'off'); retryMs = 2000;
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          conn.set(navigator.onLine ? 'retry' : 'off');
+          clearTimeout(resubTimer);
+          resubTimer = setTimeout(subscribe, retryMs);
+          retryMs = Math.min(retryMs * 2, 30000);
+        }
+        scheduleBackup();
+      });
+  }
+
+  var offBar = document.getElementById('offlineBar');
+  function syncOnline() { offBar.hidden = navigator.onLine; }
+  window.addEventListener('online', function () { syncOnline(); conn.set('retry'); load(true); subscribe(); });
+  window.addEventListener('offline', function () { syncOnline(); conn.set('off'); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) load(true); });
+  syncOnline();
+
+  LP.onCleanup(function () {
+    clearTimeout(backupTimer); clearTimeout(resubTimer);
+    if (channel && sb) { try { sb.removeChannel(channel); } catch (e) {} }
+  });
+
+  /* ------------------------------------------------------------ inicio -- */
+  elState.innerHTML = '<div class="state"><div class="spinner"></div><p>Cargando pedidos...</p></div>';
+  conn.set(navigator.onLine ? 'connecting' : 'off');
+  load().then(function () { subscribe(); scheduleBackup(); });
+  setInterval(function () { if (loaded && !document.hidden) render(); }, 30000);
+});
 </script>
 </body>
 </html>
