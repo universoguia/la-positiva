@@ -168,6 +168,13 @@ document.addEventListener('DOMContentLoaded', function () {
       '<div class="acciones">' +
         '<button type="button" class="btn btn-primary btn-block" id="zoomBtn">' +
           'Agrandar para el cliente</button>' +
+        // El link solo existe si el QR lo traia o si caja lo cargo a mano.
+        (qr.link_pago
+          ? '<button type="button" class="btn btn-secondary btn-block" id="linkBtn">' +
+              'Mandar link de pago</button>' +
+            '<a class="btn btn-ghost btn-block" id="linkAbrir" href="' + esc(qr.link_pago) + '" ' +
+              'target="_blank" rel="noopener noreferrer">Abrir el link de pago</a>'
+          : '') +
         '<button type="button" class="btn btn-secondary btn-block" id="shareBtn" hidden>' +
           'Compartir el QR</button>' +
         (elegido
@@ -198,6 +205,9 @@ document.addEventListener('DOMContentLoaded', function () {
       sh.hidden = false;
       sh.addEventListener('click', compartir);
     }
+
+    var lb = document.getElementById('linkBtn');
+    if (lb) lb.addEventListener('click', mandarLink);
 
     var cb = document.getElementById('cobradoBtn');
     if (cb) cb.addEventListener('click', confirmarCobro);
@@ -256,6 +266,53 @@ document.addEventListener('DOMContentLoaded', function () {
     }).catch(function () {
       // Cancelar el menu de compartir tira error: no es una falla.
     }).then(function () { btn.disabled = false; });
+  }
+
+  /* ------------------------------------------------- link de pago ------ */
+  // Sirve para el cliente que esta en otra mesa o en el piso de arriba:
+  // en vez de bajar a escanear, recibe el link y paga desde donde esta.
+  function mandarLink() {
+    var btn = document.getElementById('linkBtn');
+    if (!qr || !qr.link_pago || btn.disabled) return;
+
+    var texto = elegido
+      ? 'Para pagar ' + money(elegido.total) + ' de ' + elegido.mesa + ' en La Positiva'
+      : 'Para pagar en La Positiva';
+
+    if (navigator.share) {
+      btn.disabled = true;
+      navigator.share({ title: 'La Positiva', text: texto, url: qr.link_pago })
+        .catch(function () { /* cancelar no es un error */ })
+        .then(function () { btn.disabled = false; });
+      return;
+    }
+    // Sin menu de compartir: se copia al portapapeles.
+    copiar(qr.link_pago);
+  }
+
+  function copiar(txt) {
+    var ok = function () { LP.toast('Link copiado. Pegalo donde quieras mandarlo.', 'ok'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(ok, function () { copiarViejo(txt, ok); });
+    } else {
+      copiarViejo(txt, ok);
+    }
+  }
+
+  function copiarViejo(txt, ok) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = txt;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      var hecho = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (hecho) { ok(); return; }
+    } catch (e) {}
+    LP.toast('No pudimos copiarlo. Usa "Abrir el link de pago".', 'err');
   }
 
   /* ------------------------------------------------------ confirmar ---- */

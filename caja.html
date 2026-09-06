@@ -100,6 +100,22 @@
   /* Alto reservado: el aviso vacio y la ficha del QR cargado ocupan casi lo
      mismo, asi que pasar de uno a otro no mueve nada debajo. */
   #qrEstado{min-height:136px}
+  /* ------------------------------------------------ link del QR ------- */
+  .qr-link{margin-top:16px;padding-top:14px;border-top:1px dashed var(--border-strong)}
+  .qr-link label{display:block;font-size:16px;color:var(--muted-strong);margin-bottom:4px}
+  /* Alto reservado: el texto cambia segun el caso y este panel esta arriba
+     de las listas, asi que crecer moveria todo lo de abajo. */
+  .qr-link-nota{margin:0 0 10px;color:var(--muted);font-size:14px;line-height:1.45;min-height:40px}
+  .qr-link-nota.aviso{color:var(--warn)}
+  .qr-link-row{display:flex;gap:8px;flex-wrap:wrap}
+  .qr-link-row input{
+    flex:1 1 220px;min-width:0;min-height:var(--tap);padding:11px 12px;
+    border-radius:var(--r-sm);border:1px solid var(--border-strong);
+    background:#fff;color:var(--ink);
+  }
+  .qr-link-row input[aria-invalid="true"]{border-color:var(--err);background:var(--err-bg)}
+  .qr-link-row .btn{flex:0 0 auto}
+
   .qr-msg{font-size:14px;margin:10px 0 0}
   .qr-msg:empty{display:none}
   .qr-msg.ok{color:var(--ok)}
@@ -160,6 +176,21 @@
       <!-- capture pide la camara en el celular; en escritorio abre el explorador. -->
       <input type="file" id="qrFile" accept="image/*" capture="environment" class="visually-hidden">
       <p class="qr-msg" id="qrMsg" role="status" aria-live="polite"></p>
+
+      <!-- Bloque fijo en el HTML: si lo creara el JS, el panel creceria
+           despues del primer pintado y empujaria las listas de abajo. -->
+      <div class="qr-link">
+        <label for="qrLinkInput">Link de pago (opcional)</label>
+        <p class="qr-link-nota" id="qrLinkNota">
+          Sirve para mandarselo por mensaje a alguien que esta en otra mesa o en el piso de arriba.
+        </p>
+        <div class="qr-link-row">
+          <input id="qrLinkInput" type="url" inputmode="url" autocomplete="off"
+                 placeholder="https://mpago.la/..." aria-describedby="qrLinkNota">
+          <button type="button" class="btn btn-secondary" id="qrLinkSave">Guardar</button>
+        </div>
+        <p class="qr-msg" id="qrLinkMsg" role="status" aria-live="polite"></p>
+      </div>
 
       <a class="btn btn-secondary btn-block" href="cobrar.html" style="margin-top:10px">
         Ir a mostrar el QR a un cliente
@@ -521,9 +552,66 @@ document.addEventListener('DOMContentLoaded', function () {
     elQrLabel.textContent = 'Reemplazar por otro QR';
   }
 
+  /* --- Link de pago -------------------------------------------------------
+     Un QR interoperable (EMVCo) no contiene una URL: su texto es un payload
+     que solo sirve escaneado. Solo los QR de "link de pago" traen una.    */
+  var elLinkInput = document.getElementById('qrLinkInput');
+  var elLinkNota = document.getElementById('qrLinkNota');
+  var elLinkSave = document.getElementById('qrLinkSave');
+  var elLinkMsg = document.getElementById('qrLinkMsg');
+  var qrActual = null;
+
+  function pintarLink(qr, lectura) {
+    qrActual = qr;
+    var hayQR = !!qr;
+    elLinkInput.disabled = !hayQR;
+    elLinkSave.disabled = !hayQR;
+    elLinkInput.value = (qr && qr.link_pago) || '';
+
+    var nota, aviso = false;
+    if (!hayQR) {
+      nota = 'Primero subi el QR. Despues, si tenes un link de pago, se puede agregar aca.';
+    } else if (qr.link_pago) {
+      nota = 'Listo: este QR tiene link. Desde la pantalla de cobro se puede compartir por mensaje.';
+    } else if (lectura && lectura.soportado === false) {
+      nota = 'Este navegador no sabe leer codigos QR. Si tenes el link de pago, pegalo a mano.';
+      aviso = true;
+    } else if (lectura && lectura.texto) {
+      nota = 'Leimos el codigo, pero no es un link: es un QR interoperable y solo funciona ' +
+             'escaneandolo. Si tenes un link de pago, pegalo aca.';
+      aviso = true;
+    } else {
+      nota = 'Este QR no tiene un link asociado. Si tenes uno, pegalo aca.';
+    }
+    elLinkNota.textContent = nota;
+    elLinkNota.className = 'qr-link-nota' + (aviso ? ' aviso' : '');
+  }
+
+  elLinkSave.addEventListener('click', function () {
+    if (!qrActual || elLinkSave.disabled) return;
+    elLinkSave.disabled = true;
+    elLinkSave.textContent = 'Guardando...';
+    elLinkInput.removeAttribute('aria-invalid');
+    elLinkMsg.textContent = '';
+
+    LP.guardarLink(sb, qrActual.id, elLinkInput.value).then(function (qr) {
+      elLinkSave.disabled = false;
+      elLinkSave.textContent = 'Guardar';
+      pintarLink(qr, null);
+      elLinkMsg.textContent = qr.link_pago ? 'Link guardado.' : 'Link borrado.';
+      elLinkMsg.className = 'qr-msg ok';
+    }, function (e) {
+      elLinkSave.disabled = false;
+      elLinkSave.textContent = 'Guardar';
+      elLinkInput.setAttribute('aria-invalid', 'true');
+      elLinkMsg.textContent = e && e.message ? e.message : 'No se pudo guardar el link.';
+      elLinkMsg.className = 'qr-msg err';
+    });
+  });
+
   function cargarQR() {
-    if (!sb) { elQrEstado.innerHTML = ''; return; }
-    LP.qrActivo(sb).then(pintarQR);
+    if (!sb) { elQrEstado.innerHTML = ''; pintarLink(null, null); return; }
+    LP.qrActivo(sb).then(function (qr) { pintarQR(qr); pintarLink(qr, null); });
   }
 
   elQrFile.addEventListener('change', function () {
@@ -546,7 +634,10 @@ document.addEventListener('DOMContentLoaded', function () {
       elQrLabel.removeAttribute('aria-disabled');
       elQrFile.value = '';
       pintarQR(qr);
-      msg('Listo. Ya lo pueden mostrar desde cualquier celular.', 'ok');
+      pintarLink(qr, qr.__lectura);
+      msg(qr.link_pago
+        ? 'Listo. Ademas le leimos el link de pago.'
+        : 'Listo. Ya lo pueden mostrar desde cualquier celular.', 'ok');
       LP.toast('QR de cobro actualizado.', 'ok');
     }, function (e) {
       subiendo = false;

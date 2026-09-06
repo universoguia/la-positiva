@@ -254,6 +254,97 @@
     });
   }
 
+  /* --- Decodificar el QR ---------------------------------------------------
+     Usa BarcodeDetector, que es nativo del navegador: cero dependencias.
+     Ojo con lo que devuelve. Un QR interoperable (EMVCo) NO es una URL:
+     su contenido es un payload estructurado que solo sirve escaneandolo
+     con una app de pagos. Solo los QR de "link de pago" traen una URL.  */
+  function decodificarQR(file) {
+    if (typeof BarcodeDetector !== 'undefined') {
+      return createImageBitmap(file).then(function (bmp) {
+        var det = new BarcodeDetector({ formats: ['qr_code'] });
+        return det.detect(bmp).then(function (codes) {
+          try { bmp.close(); } catch (e) {}
+          var texto = codes && codes.length ? String(codes[0].rawValue || '') : null;
+          if (texto) return { soportado: true, texto: texto, link: comoLink(texto) };
+          return conJsQR(file);          // el nativo no lo vio: segundo intento
+        });
+      }).catch(function () { return conJsQR(file); });
+    }
+    // Chrome de escritorio y Firefox no traen BarcodeDetector.
+    return conJsQR(file);
+  }
+
+  // jsQR se auto-aloja y se carga solo aca, la primera vez que hace falta.
+  var jsqrCargando = null;
+  function cargarJsQR() {
+    if (typeof jsQR !== 'undefined') return Promise.resolve(true);
+    if (jsqrCargando) return jsqrCargando;
+    jsqrCargando = new Promise(function (resolve) {
+      var s = document.createElement('script');
+      s.src = 'vendor/jsqr.js';
+      s.onload = function () { resolve(typeof jsQR !== 'undefined'); };
+      s.onerror = function () { resolve(false); };
+      document.head.appendChild(s);
+    });
+    return jsqrCargando;
+  }
+
+  function conJsQR(file) {
+    return cargarJsQR().then(function (listo) {
+      if (!listo) return { soportado: false, texto: null, link: null };
+      return pixeles(file).then(function (px) {
+        if (!px) return { soportado: true, texto: null, link: null };
+        var res = jsQR(px.data, px.width, px.height, { inversionAttempts: 'attemptBoth' });
+        var texto = res && res.data ? String(res.data) : null;
+        return { soportado: true, texto: texto, link: comoLink(texto) };
+      });
+    }).catch(function (e) {
+      console.warn('[La Positiva] no se pudo leer el QR', e);
+      return { soportado: true, texto: null, link: null };
+    });
+  }
+
+  // Pasa la imagen a pixeles. Se limita el tamano para no trabar el celular,
+  // pero sin bajar tanto como para perder los modulos del codigo.
+  function pixeles(file) {
+    return new Promise(function (resolve) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var max = 1400;
+          var w = img.naturalWidth, h = img.naturalHeight;
+          if (w > max || h > max) {
+            var r = Math.min(max / w, max / h);
+            w = Math.round(w * r); h = Math.round(h * r);
+          }
+          var c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          var ctx = c.getContext('2d', { willReadFrequently: true });
+          ctx.drawImage(img, 0, 0, w, h);
+          var d = ctx.getImageData(0, 0, w, h);
+          URL.revokeObjectURL(url);
+          resolve({ data: d.data, width: w, height: h });
+        } catch (e) { URL.revokeObjectURL(url); resolve(null); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+
+  // Devuelve la URL solo si el contenido realmente lo es. Un payload EMVCo
+  // arranca con "000201" y no se puede abrir en un navegador.
+  function comoLink(texto) {
+    if (!texto) return null;
+    var t = texto.trim();
+    if (!/^https?:\/\//i.test(t)) return null;
+    try {
+      var u = new URL(t);
+      return (u.protocol === 'http:' || u.protocol === 'https:') ? u.href : null;
+    } catch (e) { return null; }
+  }
+
   function qrActivo(sb) {
     if (!sb) return Promise.resolve(null);
     return sb.from(COBROS_TABLE).select('*')
@@ -267,6 +358,8 @@
 
   function subirQR(sb, file, etiqueta, quien) {
     if (!sb) return Promise.reject(new Error('sin cliente'));
+    // Se lee el archivo original, no el comprimido: mejor definicion.
+    var lectura = decodificarQR(file);
     return prepararImagen(file).then(function (blob) {
       if (blob.size > 5 * 1024 * 1024) {
         throw new Error('La imagen sigue pesando mas de 5 MB.');
@@ -284,22 +377,46 @@
           if (!url) throw new Error('sin URL publica');
 
           // Solo un QR activo por vez; el anterior queda de historial.
-          return sb.from(COBROS_TABLE).update({ activo: false }).eq('activo', true)
-            .then(function () {
-              return sb.from(COBROS_TABLE).insert({
-                etiqueta: (etiqueta || 'QR de cobro').slice(0, 60),
-                imagen_path: path,
-                imagen_url: url,
-                activo: true,
-                cargado_por: (quien || '').slice(0, 40) || null
-              }).select().single();
-            })
-            .then(function (ins) {
-              if (ins.error) throw ins.error;
-              return ins.data;
-            });
+          return lectura.then(function (leido) {
+            return sb.from(COBROS_TABLE).update({ activo: false }).eq('activo', true)
+              .then(function () {
+                return sb.from(COBROS_TABLE).insert({
+                  etiqueta: (etiqueta || 'QR de cobro').slice(0, 60),
+                  imagen_path: path,
+                  imagen_url: url,
+                  activo: true,
+                  cargado_por: (quien || '').slice(0, 40) || null,
+                  link_pago: leido.link,
+                  qr_texto: leido.texto ? leido.texto.slice(0, 1200) : null
+                }).select().single();
+              })
+              .then(function (ins) {
+                if (ins.error) throw ins.error;
+                // El resultado de la lectura viaja aparte para poder explicar
+                // en pantalla por que no se obtuvo un link.
+                ins.data.__lectura = leido;
+                return ins.data;
+              });
+          });
         });
     });
+  }
+
+  // Guarda a mano el link del QR activo. Hace falta cuando el codigo es
+  // EMVCo (no trae URL) o cuando el navegador no sabe decodificar.
+  function guardarLink(sb, id, link) {
+    if (!sb || !id) return Promise.reject(new Error('faltan datos'));
+    var limpio = link ? comoLink(link) : null;
+    if (link && link.trim() && !limpio) {
+      return Promise.reject(new Error('Eso no parece un link. Tiene que empezar con https://'));
+    }
+    return sb.from(COBROS_TABLE)
+      .update({ link_pago: limpio })
+      .eq('id', id).select().single()
+      .then(function (res) {
+        if (res.error) throw res.error;
+        return res.data;
+      });
   }
 
   global.LP = {
@@ -312,6 +429,9 @@
     IMG_BASE: IMG_BASE,
     qrActivo: qrActivo,
     subirQR: subirQR,
+    decodificarQR: decodificarQR,
+    comoLink: comoLink,
+    guardarLink: guardarLink,
     client: client,
     esc: esc,
     money: money,
