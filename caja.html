@@ -78,6 +78,33 @@
   [data-body="pend"]{min-height:249px}
   [data-body="pend"] .state{align-self:center}
 
+  /* -------------------------------------------------- QR de cobro ----- */
+  .qr-panel{max-width:620px}
+  .qr-intro{margin:0 0 14px;color:var(--muted);font-size:15px;line-height:1.55}
+  .qr-actual{
+    display:flex;gap:14px;align-items:center;
+    background:#fff;border:1px solid var(--border);
+    border-radius:var(--r-md);padding:12px;margin-bottom:14px;
+  }
+  .qr-actual img{
+    width:96px;height:96px;flex:none;object-fit:contain;
+    background:#fff;border-radius:var(--r-sm);border:1px solid var(--border);
+  }
+  .qr-actual .meta{min-width:0}
+  .qr-actual .meta strong{display:block;font-size:16px}
+  .qr-actual .meta span{display:block;color:var(--muted);font-size:14px;margin-top:2px}
+  .qr-vacio{
+    background:var(--warn-soft);border:1px solid #e8d3a8;color:var(--warn);
+    border-radius:var(--r-md);padding:14px;margin-bottom:14px;font-size:15px;line-height:1.5;
+  }
+  .qr-msg{font-size:14px;margin:10px 0 0}
+  .qr-msg:empty{display:none}
+  .qr-msg.ok{color:var(--ok)}
+  .qr-msg.err{color:var(--err-ink)}
+  /* El label hace de boton del input oculto. Como el label va antes en el
+     DOM, el foco se refleja con :has() desde el contenedor. */
+  .qr-panel:has(#qrFile:focus-visible) #qrLabel{outline:3px solid var(--accent);outline-offset:2px}
+
   .offline-bar{
     position:fixed;left:0;right:0;top:0;z-index:90;
     background:var(--err);color:#fff;text-align:center;
@@ -121,6 +148,33 @@
     <div class="cards" data-body="pag"></div>
   </section>
 
+  <section class="section" id="qr" aria-labelledby="h-qr">
+    <div class="section-head">
+      <h2 id="h-qr">QR de cobro del local</h2>
+    </div>
+    <div class="card qr-panel">
+      <p class="qr-intro">
+        Sacale una foto al QR del posnet, o subi la captura del QR de tu app de cobro.
+        Se carga <strong>una sola vez</strong>: despues cualquier empleado lo muestra
+        desde su celular, en planta baja o en planta alta, y el cliente lo escanea con
+        la billetera que use.
+      </p>
+
+      <div id="qrEstado"><div class="state"><div class="spinner"></div></div></div>
+
+      <label class="btn btn-primary btn-block" for="qrFile" id="qrLabel">
+        Subir o sacar foto del QR
+      </label>
+      <!-- capture pide la camara en el celular; en escritorio abre el explorador. -->
+      <input type="file" id="qrFile" accept="image/*" capture="environment" class="visually-hidden">
+      <p class="qr-msg" id="qrMsg" role="status" aria-live="polite"></p>
+
+      <a class="btn btn-secondary btn-block" href="cobrar.html" style="margin-top:10px">
+        Ir a mostrar el QR a un cliente
+      </a>
+    </div>
+  </section>
+
   <div id="boardState"></div>
 </div>
 
@@ -153,7 +207,12 @@ document.addEventListener('DOMContentLoaded', function () {
     var lines = (o.lines || []).map(function (l) {
       return '<div><span class="q">' + esc(l.qty) + '&times;</span><span>' + esc(l.name) + '</span></div>';
     }).join('');
-    var metodo = o.metodo_pago === 'Efectivo' ? 'Efectivo al mozo' : 'Tarjeta (simulado)';
+    var METODOS = {
+      Efectivo: 'Efectivo al mozo',
+      QR: 'QR desde el celular',
+      Tarjeta: 'Tarjeta (simulado)'
+    };
+    var metodo = METODOS[o.metodo_pago] || 'Sin especificar';
     var busy = !!pending[o.id];
     var nstate = notifyState[o.id];
 
@@ -424,7 +483,77 @@ document.addEventListener('DOMContentLoaded', function () {
     if (channel && sb) { try { sb.removeChannel(channel); } catch (e) {} }
   });
 
+  /* ------------------------------------------------- QR de cobro ------- */
+  var elQrEstado = document.getElementById('qrEstado');
+  var elQrMsg = document.getElementById('qrMsg');
+  var elQrFile = document.getElementById('qrFile');
+  var elQrLabel = document.getElementById('qrLabel');
+  var subiendo = false;
+
+  function pintarQR(qr) {
+    if (!qr) {
+      elQrEstado.innerHTML = '<p class="qr-vacio">Todavia no hay ningun QR cargado. ' +
+        'Hasta que subas uno, la pantalla de cobro no le puede mostrar nada al cliente.</p>';
+      elQrLabel.textContent = 'Subir o sacar foto del QR';
+      return;
+    }
+    elQrEstado.innerHTML =
+      '<div class="qr-actual">' +
+        '<img src="' + esc(qr.imagen_url) + '" alt="QR de cobro cargado" ' +
+             'width="96" height="96" decoding="async">' +
+        '<div class="meta">' +
+          '<strong>' + esc(qr.etiqueta) + '</strong>' +
+          '<span>Cargado ' + esc(LP.timeAgo(qr.created_at)) +
+            (qr.cargado_por ? ' por ' + esc(qr.cargado_por) : '') + '</span>' +
+          '<span>Es el que ven todos los empleados</span>' +
+        '</div>' +
+      '</div>';
+    elQrLabel.textContent = 'Reemplazar por otro QR';
+  }
+
+  function cargarQR() {
+    if (!sb) { elQrEstado.innerHTML = ''; return; }
+    LP.qrActivo(sb).then(pintarQR);
+  }
+
+  elQrFile.addEventListener('change', function () {
+    var file = elQrFile.files && elQrFile.files[0];
+    if (!file || subiendo) return;
+
+    if (!/^image\//.test(file.type || '')) {
+      msg('Eso no es una imagen. Subi una foto o captura del QR.', 'err');
+      elQrFile.value = '';
+      return;
+    }
+
+    subiendo = true;
+    elQrLabel.setAttribute('aria-disabled', 'true');
+    elQrLabel.textContent = 'Subiendo...';
+    msg('', '');
+
+    LP.subirQR(sb, file, 'QR de cobro', null).then(function (qr) {
+      subiendo = false;
+      elQrLabel.removeAttribute('aria-disabled');
+      elQrFile.value = '';
+      pintarQR(qr);
+      msg('Listo. Ya lo pueden mostrar desde cualquier celular.', 'ok');
+      LP.toast('QR de cobro actualizado.', 'ok');
+    }, function (e) {
+      subiendo = false;
+      elQrLabel.removeAttribute('aria-disabled');
+      elQrLabel.textContent = 'Subir o sacar foto del QR';
+      elQrFile.value = '';
+      msg(LP.humanError(e, 'No se pudo subir el QR. Proba de nuevo.'), 'err');
+    });
+  });
+
+  function msg(texto, tipo) {
+    elQrMsg.textContent = texto;
+    elQrMsg.className = 'qr-msg' + (tipo ? ' ' + tipo : '');
+  }
+
   /* ------------------------------------------------------------ inicio -- */
+  cargarQR();
   showSkeleton();
   conn.set(navigator.onLine ? 'connecting' : 'off');
   load().then(function () { subscribe(); scheduleBackup(); });

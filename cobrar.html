@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3ece2">
+<meta name="description" content="Mostrale el QR de cobro al cliente desde cualquier celular del salon.">
+<title>La Positiva - Cobrar con QR</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .wrap{max-width:560px;padding-top:calc(16px + var(--sa-t));padding-bottom:40px}
+
+  header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+  header.top h1{margin:0;font-size:26px}
+  .back-link{
+    color:var(--muted-strong);font-size:15px;min-height:var(--tap);
+    display:inline-flex;align-items:center;padding:0 4px;text-decoration:underline;
+  }
+  .back-link:hover{color:var(--ink)}
+
+  /* --------------------------------------------------------- el QR ----- */
+  /* Fondo blanco y margen propio: un QR sin zona de silencio no escanea. */
+  .qr-card{
+    background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);
+    padding:18px;text-align:center;box-shadow:var(--shadow);
+  }
+  .qr-card img{
+    display:block;width:100%;max-width:420px;margin:0 auto;
+    aspect-ratio:1/1;object-fit:contain;background:#fff;
+  }
+  .qr-pie{
+    margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);
+    color:var(--muted);font-size:15px;
+  }
+
+  /* Monto: lo mas grande de la pantalla, como en Mercado Pago. */
+  .monto-box{
+    background:var(--ink);color:#fff;border-radius:var(--r-lg);
+    padding:18px 20px;margin-bottom:14px;text-align:center;
+  }
+  .monto-box .quien{color:var(--dark-muted);font-size:15px}
+  .monto-box .cifra{
+    color:var(--gold);font-size:44px;font-weight:600;line-height:1.1;
+    margin-top:4px;font-variant-numeric:tabular-nums;
+  }
+  .monto-box .sin{color:var(--dark-ink);font-size:19px;margin-top:4px}
+  @media (max-width:360px){.monto-box .cifra{font-size:36px}}
+
+  .picker{margin-bottom:14px}
+  .picker label{display:block;font-size:15px;color:var(--muted-strong);margin-bottom:6px}
+  .picker select{
+    width:100%;min-height:var(--tap);padding:11px 12px;
+    border-radius:var(--r-sm);border:1px solid var(--border-strong);
+    background:#fff;color:var(--ink);
+  }
+
+  .acciones{display:grid;gap:10px;margin-top:16px}
+
+  .tip{
+    margin-top:16px;padding:12px 14px;border-radius:var(--r-sm);
+    background:var(--warn-soft);border:1px solid #e8d3a8;
+    color:var(--warn);font-size:14px;line-height:1.5;
+  }
+  .tip strong{display:block;margin-bottom:2px}
+
+  /* Modo pantalla: el QR ocupa todo, para acercarle el celular al cliente.
+     Hay que ocultar en los dos niveles: #zonaQR cuelga de #contenido, no
+     de .wrap, asi que un solo selector dejaba el QR sin ancho. */
+  body.zoom .wrap > :not(#contenido){display:none}
+  body.zoom #contenido > :not(#zonaQR){display:none}
+  body.zoom{background:#fff}
+  body.zoom .qr-card{border:none;box-shadow:none;padding:8px}
+  body.zoom .qr-card img{max-width:min(92vw,92vh)}
+  body.zoom .monto-box{background:#fff;color:var(--ink);padding:6px}
+  body.zoom .monto-box .cifra{color:var(--accent)}
+  body.zoom .monto-box .quien{color:var(--muted)}
+  body.zoom .qr-pie{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Cobrar</h1>
+    <a class="back-link" href="./">Inicio</a>
+  </header>
+
+  <div id="contenido">
+    <div class="state"><div class="spinner"></div><p>Buscando el QR del local...</p></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+<script src="app.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var esc = LP.esc, money = LP.money;
+  var sb = LP.client();
+  var cont = document.getElementById('contenido');
+
+  var qr = null;
+  var pendientes = [];
+  var elegido = null;   // pedido seleccionado, o null = cobro sin monto
+
+  /* ------------------------------------------------------------- carga -- */
+  function cargar() {
+    if (!sb) { sinConexion(); return; }
+    Promise.all([
+      LP.qrActivo(sb),
+      sb.from(LP.TABLE).select('*').eq('pagado', false)
+        .order('created_at', { ascending: false }).limit(25)
+        .then(function (r) { return r.error ? [] : (r.data || []); }, function () { return []; })
+    ]).then(function (res) {
+      qr = res[0];
+      pendientes = res[1];
+      pintar();
+    });
+  }
+
+  function sinConexion() {
+    cont.innerHTML = '<div class="state state-err"><h3>Sin conexion con el sistema</h3>' +
+      '<p>No se pudo cargar el QR del local.</p></div>';
+  }
+
+  /* ------------------------------------------------------------ pintar -- */
+  function pintar() {
+    if (!qr) {
+      cont.innerHTML =
+        '<div class="state"><h3>Todavia no hay un QR cargado</h3>' +
+        '<p>Alguien de caja tiene que sacarle una foto al QR del posnet ' +
+        'y subirlo una sola vez. Despues aparece aca para todos.</p>' +
+        '<a class="btn btn-primary" href="caja.html#qr">Ir a caja a cargarlo</a></div>';
+      return;
+    }
+
+    var opciones = '<option value="">Cobro sin monto (el cliente lo escribe)</option>' +
+      pendientes.map(function (o) {
+        return '<option value="' + esc(o.id) + '"' + (elegido && elegido.id === o.id ? ' selected' : '') + '>' +
+          esc(o.mesa) + ' - ' + money(o.total) + (o.cliente ? ' - ' + esc(o.cliente) : '') + '</option>';
+      }).join('');
+
+    cont.innerHTML =
+      '<div class="picker">' +
+        '<label for="pedidoSel">Que estas cobrando</label>' +
+        '<select id="pedidoSel">' + opciones + '</select>' +
+      '</div>' +
+
+      '<div id="zonaQR">' +
+        '<div class="monto-box">' +
+          (elegido
+            ? '<div class="quien">' + esc(elegido.mesa) +
+              (elegido.cliente ? ' &middot; ' + esc(elegido.cliente) : '') + '</div>' +
+              '<div class="cifra">' + money(elegido.total) + '</div>'
+            : '<div class="sin">El cliente escribe el monto</div>') +
+        '</div>' +
+        '<div class="qr-card">' +
+          '<img id="qrImg" src="' + esc(qr.imagen_url) + '" ' +
+               'alt="Codigo QR para pagar en La Positiva">' +
+          '<p class="qr-pie">Escanealo con cualquier billetera o app del banco</p>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="acciones">' +
+        '<button type="button" class="btn btn-primary btn-block" id="zoomBtn">' +
+          'Agrandar para el cliente</button>' +
+        '<button type="button" class="btn btn-secondary btn-block" id="shareBtn" hidden>' +
+          'Compartir el QR</button>' +
+        (elegido
+          ? '<button type="button" class="btn btn-secondary btn-block" id="cobradoBtn">' +
+            'Ya pago: confirmar ' + money(elegido.total) + '</button>'
+          : '') +
+      '</div>' +
+
+      '<p class="tip"><strong>Para que escanee rapido</strong>' +
+        'Subi el brillo del celular al maximo y no tapes los bordes del codigo.</p>' +
+
+      '<div class="acciones"><a class="btn btn-ghost btn-block" href="caja.html#qr">' +
+        'Cambiar el QR del local</a></div>';
+
+    document.getElementById('pedidoSel').addEventListener('change', function (ev) {
+      var id = ev.target.value;
+      elegido = null;
+      for (var i = 0; i < pendientes.length; i++) {
+        if (String(pendientes[i].id) === String(id)) elegido = pendientes[i];
+      }
+      pintar();
+    });
+
+    document.getElementById('zoomBtn').addEventListener('click', entrarZoom);
+
+    if (navigator.share) {
+      var sh = document.getElementById('shareBtn');
+      sh.hidden = false;
+      sh.addEventListener('click', compartir);
+    }
+
+    var cb = document.getElementById('cobradoBtn');
+    if (cb) cb.addEventListener('click', confirmarCobro);
+  }
+
+  /* --------------------------------------------------- modo pantalla --- */
+  function entrarZoom() {
+    document.body.classList.add('zoom');
+    // Se agrega una salida clara y se evita que el celular se apague.
+    var salir = document.createElement('button');
+    salir.type = 'button';
+    salir.className = 'btn btn-secondary btn-block';
+    salir.id = 'salirZoom';
+    salir.textContent = 'Listo, volver';
+    salir.style.marginTop = '14px';
+    document.getElementById('zonaQR').appendChild(salir);
+    salir.addEventListener('click', salirZoom);
+    document.addEventListener('keydown', escSalir);
+    pedirPantallaDespierta();
+  }
+  function salirZoom() {
+    document.body.classList.remove('zoom');
+    var s = document.getElementById('salirZoom');
+    if (s) s.remove();
+    document.removeEventListener('keydown', escSalir);
+    soltarPantalla();
+  }
+  function escSalir(ev) { if (ev.key === 'Escape') salirZoom(); }
+
+  // Mantiene la pantalla encendida mientras el cliente escanea.
+  var wakeLock = null;
+  function pedirPantallaDespierta() {
+    if (!navigator.wakeLock) return;
+    navigator.wakeLock.request('screen').then(function (l) { wakeLock = l; },
+      function () { /* el navegador puede negarlo: no es critico */ });
+  }
+  function soltarPantalla() {
+    if (wakeLock) { try { wakeLock.release(); } catch (e) {} wakeLock = null; }
+  }
+  LP.onCleanup(soltarPantalla);
+
+  /* -------------------------------------------------------- compartir -- */
+  function compartir() {
+    var btn = document.getElementById('shareBtn');
+    btn.disabled = true;
+    var texto = elegido
+      ? 'Pago de ' + elegido.mesa + ' en La Positiva: ' + money(elegido.total)
+      : 'QR para pagar en La Positiva';
+
+    fetch(qr.imagen_url).then(function (r) { return r.blob(); }).then(function (blob) {
+      var file = new File([blob], 'qr-la-positiva.jpg', { type: blob.type || 'image/jpeg' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        return navigator.share({ files: [file], title: 'La Positiva', text: texto });
+      }
+      return navigator.share({ title: 'La Positiva', text: texto, url: qr.imagen_url });
+    }).catch(function () {
+      // Cancelar el menu de compartir tira error: no es una falla.
+    }).then(function () { btn.disabled = false; });
+  }
+
+  /* ------------------------------------------------------ confirmar ---- */
+  function confirmarCobro() {
+    var btn = document.getElementById('cobradoBtn');
+    if (!elegido || btn.disabled) return;
+    var id = elegido.id;
+    btn.disabled = true;
+    btn.textContent = 'Confirmando...';
+
+    sb.from(LP.TABLE).update({ pagado: true, updated_at: new Date().toISOString() })
+      .eq('id', id).eq('pagado', false).select()
+      .then(function (res) {
+        if (res.error) {
+          LP.toast(LP.humanError(res.error, 'No se pudo confirmar el pago.'), 'err');
+          btn.disabled = false; btn.textContent = 'Ya pago: confirmar ' + money(elegido.total);
+          return;
+        }
+        LP.toast(res.data && res.data.length
+          ? 'Pago confirmado.' : 'Ese pago ya estaba confirmado.', 'ok');
+        elegido = null;
+        cargar();
+      }, function (e) {
+        LP.toast(LP.humanError(e, 'No se pudo confirmar el pago.'), 'err');
+        btn.disabled = false;
+      });
+  }
+
+  cargar();
+});
+</script>
+</body>
+</html>

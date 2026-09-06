@@ -271,7 +271,12 @@ document.addEventListener('DOMContentLoaded', function () {
     var next = NEXT[o.estado];
     var mins = minutesOld(o);
     var urgent = (o.estado === 'Nuevo' || o.estado === 'Cocinando') && mins >= 15;
-    var pago = o.pagado ? 'Pagado' : (o.metodo_pago === 'Efectivo' ? 'Paga en efectivo' : 'Pago pendiente');
+    var PENDIENTE = {
+      Efectivo: 'Paga en efectivo',
+      QR: 'Paga con QR',
+      Tarjeta: 'Pago pendiente'
+    };
+    var pago = o.pagado ? 'Pagado' : (PENDIENTE[o.metodo_pago] || 'Pago pendiente');
     var busy = !!pendingIds[o.id];
 
     var lines = (o.lines || []).map(function (l) {

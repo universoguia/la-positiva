@@ -13,6 +13,8 @@
 
   var TABLE = 'la_positiva_pedidos';
   var PUSH_TABLE = 'la_positiva_push_subs';
+  var COBROS_TABLE = 'la_positiva_cobros';
+  var BUCKET = 'la-positiva';
   var IMG_BASE = 'https://la-positiva-phi.vercel.app/';
 
   function client() {
@@ -213,12 +215,103 @@
       .catch(function (e) { console.warn('[La Positiva] SW no registrado', e); return null; });
   }
 
+  /* --- QR de cobro ---------------------------------------------------------
+     El QR de Mercado Pago es estatico: se carga una vez y sirve siempre.
+     Por la interoperabilidad del BCRA lo lee cualquier billetera.          */
+
+  // Las fotos de celular pesan 3-8 MB y el bucket admite 5. Se redimensiona
+  // en el navegador antes de subir. 1400px y calidad 0.92 mantienen el QR
+  // perfectamente escaneable y dejan el archivo en pocos cientos de KB.
+  function prepararImagen(file) {
+    return new Promise(function (resolve) {
+      if (!/^image\//.test(file.type || '')) { resolve(file); return; }
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var max = 1400;
+          var w = img.naturalWidth, h = img.naturalHeight;
+          if (!w || !h) { URL.revokeObjectURL(url); resolve(file); return; }
+          if (w > max || h > max) {
+            var r = Math.min(max / w, max / h);
+            w = Math.round(w * r); h = Math.round(h * r);
+          }
+          var c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          var ctx = c.getContext('2d');
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, w, h);
+          c.toBlob(function (blob) {
+            URL.revokeObjectURL(url);
+            // Si comprimir no ayudo, se manda el original.
+            resolve(blob && blob.size < file.size ? blob : file);
+          }, 'image/jpeg', 0.92);
+        } catch (e) { URL.revokeObjectURL(url); resolve(file); }
+      };
+      // HEIC de iPhone y formatos que el canvas no sepa dibujar.
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
+
+  function qrActivo(sb) {
+    if (!sb) return Promise.resolve(null);
+    return sb.from(COBROS_TABLE).select('*')
+      .eq('activo', true).order('created_at', { ascending: false })
+      .limit(1).maybeSingle()
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return null; }
+        return res.data;
+      }, function (e) { humanError(e); return null; });
+  }
+
+  function subirQR(sb, file, etiqueta, quien) {
+    if (!sb) return Promise.reject(new Error('sin cliente'));
+    return prepararImagen(file).then(function (blob) {
+      if (blob.size > 5 * 1024 * 1024) {
+        throw new Error('La imagen sigue pesando mas de 5 MB.');
+      }
+      var ext = (blob.type === 'image/jpeg') ? 'jpg'
+              : (file.name || '').split('.').pop().toLowerCase().slice(0, 5) || 'jpg';
+      var path = 'qr/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+
+      return sb.storage.from(BUCKET)
+        .upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: false })
+        .then(function (up) {
+          if (up.error) throw up.error;
+          var pub = sb.storage.from(BUCKET).getPublicUrl(path);
+          var url = pub && pub.data && pub.data.publicUrl;
+          if (!url) throw new Error('sin URL publica');
+
+          // Solo un QR activo por vez; el anterior queda de historial.
+          return sb.from(COBROS_TABLE).update({ activo: false }).eq('activo', true)
+            .then(function () {
+              return sb.from(COBROS_TABLE).insert({
+                etiqueta: (etiqueta || 'QR de cobro').slice(0, 60),
+                imagen_path: path,
+                imagen_url: url,
+                activo: true,
+                cargado_por: (quien || '').slice(0, 40) || null
+              }).select().single();
+            })
+            .then(function (ins) {
+              if (ins.error) throw ins.error;
+              return ins.data;
+            });
+        });
+    });
+  }
+
   global.LP = {
     SUPABASE_URL: SUPABASE_URL,
     SUPABASE_ANON: SUPABASE_ANON,
     TABLE: TABLE,
     PUSH_TABLE: PUSH_TABLE,
+    COBROS_TABLE: COBROS_TABLE,
+    BUCKET: BUCKET,
     IMG_BASE: IMG_BASE,
+    qrActivo: qrActivo,
+    subirQR: subirQR,
     client: client,
     esc: esc,
     money: money,

@@ -14,7 +14,7 @@
 <link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 <style>
-  .container{padding-bottom:calc(104px + var(--sa-b))}
+  .container{padding-bottom:calc(112px + var(--sa-b))}
 
   /* --------------------------------------------------------- cabecera -- */
   header.top{
@@ -77,23 +77,32 @@
     background:var(--accent);color:#fff;border-color:var(--accent);font-weight:500;
   }
 
+  /* En pantallas chicas el header se compacta para no comerse la carta. */
+  @media (max-width:360px),(max-height:600px){
+    header.top{padding-top:calc(8px + var(--sa-t));padding-bottom:6px}
+    .brand h1{font-size:21px}
+    .search{margin-top:8px}
+    .cats-shell{margin-top:8px}
+  }
+
   /* ------------------------------------------------------------- carta -- */
   main{padding:14px max(14px,var(--sa-l)) 8px max(14px,var(--sa-r))}
   .catlabel{
-    margin:16px 2px 10px;color:var(--muted-strong);
-    font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:500;
+    margin:14px 2px 12px;color:var(--muted-strong);
+    font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
   }
-  .menu-grid{display:grid;gap:10px}
+  .menu-grid{display:grid;gap:16px}
 
+  /* Ficha grande: foto, nombre, precio y UNA accion evidente.
+     Reemplaza la fila compacta anterior de 72px de alto. */
   .dish{
-    display:grid;grid-template-columns:auto minmax(0,1fr) auto;
-    gap:12px;align-items:center;
     background:var(--card);border:1px solid var(--border);
-    border-radius:var(--r-md);padding:10px;
+    border-radius:var(--r-lg);overflow:hidden;
+    display:flex;flex-direction:column;
   }
   .dish-media{
-    position:relative;width:72px;height:72px;flex:none;
-    border-radius:var(--r-sm);overflow:hidden;background:var(--border);
+    position:relative;width:100%;aspect-ratio:4/3;
+    background:var(--border);overflow:hidden;
   }
   .dish-media img{width:100%;height:100%;object-fit:cover;display:block}
   /* Fallback visible cuando la imagen no carga: nunca un hueco invisible. */
@@ -102,57 +111,70 @@
     content:attr(data-ini);
     position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     background:var(--accent-soft);color:var(--accent);
-    font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:26px;
+    font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:64px;
   }
-  .dish-info{min-width:0}
-  .dish-name{font-weight:500;font-size:16px;line-height:1.3}
-  .dish-note{color:var(--muted);font-size:14px;margin-top:2px}
-  .dish-cat{color:var(--muted-soft);font-size:13px;margin-top:2px}
-  .dish-price{color:var(--accent);font-weight:600;margin-top:5px;font-size:16px}
   .dish-tag{
-    display:inline-block;margin-left:6px;vertical-align:middle;
-    background:var(--warn-bg);color:var(--warn);
-    font-size:13px;padding:2px 8px;border-radius:var(--r-pill);
+    position:absolute;top:10px;left:10px;
+    background:var(--ink);color:var(--gold);
+    font-size:13px;font-weight:500;padding:5px 11px;border-radius:var(--r-pill);
   }
 
-  .dish-actions{display:flex;align-items:center;gap:8px;justify-self:end}
-  /* "Agregar" es un boton de texto: ancho automatico, nunca 30px. */
+  .dish-body{padding:14px 16px 16px;display:flex;flex-direction:column;flex:1}
+  .dish-name{font-size:19px;font-weight:500;line-height:1.25}
+  .dish-note{color:var(--muted);font-size:15px;margin-top:4px}
+  .dish-cat{color:var(--muted-soft);font-size:14px;margin-top:4px}
+  .dish-price{
+    color:var(--accent);font-weight:600;font-size:25px;
+    margin-top:8px;font-variant-numeric:tabular-nums;
+  }
+  .dish-actions{margin-top:14px}
+
+  /* Un solo boton, ancho completo y bien alto. Nada de 30px. */
   .btn-add{
-    min-height:var(--tap);padding:10px 16px;
-    border-radius:var(--r-pill);background:var(--accent);color:#fff;
-    font-size:15px;font-weight:500;white-space:nowrap;
+    display:flex;align-items:center;justify-content:center;
+    width:100%;min-height:52px;padding:12px 18px;
+    border-radius:var(--r-sm);background:var(--accent);color:#fff;
+    font-size:17px;font-weight:500;
     transition:background-color .18s;
   }
   .btn-add:hover{background:var(--accent-dark)}
+  .btn-add:active{transform:translateY(1px)}
+
+  /* Cuando ya hay unidades, el boton se convierte en el contador. */
+  .qty-row{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    background:var(--accent-soft);border:1px solid var(--accent);
+    border-radius:var(--r-sm);padding:5px;min-height:52px;
+  }
+  .qty-row .icon-btn{
+    width:46px;height:46px;min-width:46px;
+    background:#fff;border-color:var(--accent);color:var(--accent);
+    font-size:24px;font-weight:600;
+  }
+  .qty-row .icon-btn:hover{background:var(--accent);color:#fff}
   .qty-val{
-    min-width:28px;text-align:center;font-weight:600;font-size:17px;
-    font-variant-numeric:tabular-nums;
+    flex:1;text-align:center;font-weight:600;font-size:19px;
+    color:var(--accent);font-variant-numeric:tabular-nums;
   }
 
-  /* En pantallas chicas el header sticky se compacta para no comerse
-     la carta: pierde alto en los margenes, no en las areas tactiles. */
-  @media (max-width:360px),(max-height:600px){
-    header.top{padding-top:calc(8px + var(--sa-t));padding-bottom:6px}
-    .brand h1{font-size:21px}
-    .search{margin-top:8px}
-    .cats-shell{margin-top:8px}
+  /* Escritorio: la ficha no se estira, se ponen mas por fila. */
+  @media (min-width:700px){
+    .container{max-width:960px}
+    .menu-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media (min-width:1080px){
+    .container{max-width:1180px}
+    .menu-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
   }
 
-  /* En pantallas muy angostas los controles bajan debajo del precio.
-     A 375px (iPhone SE/8) todavia entra la fila compacta, asi que el
-     corte va en 360px y no mas arriba. */
-  @media (max-width:360px){
-    .dish{grid-template-columns:auto minmax(0,1fr)}
-    .dish-actions{grid-column:1 / -1;justify-self:stretch;justify-content:flex-end;margin-top:2px}
-    .dish-media{width:60px;height:60px}
+  /* ------------------------------------------------- volver a pedir ---- */
+  .repeat-box{
+    background:var(--card);border:1px solid var(--border-strong);
+    border-radius:var(--r-lg);padding:16px;margin-bottom:4px;
   }
-
-  /* Escritorio: dos columnas, sin estirar las tarjetas. */
-  @media (min-width:880px){
-    .container{max-width:940px}
-    .menu-grid{grid-template-columns:1fr 1fr;gap:12px}
-    .dish-media{width:84px;height:84px}
-  }
+  .repeat-box h2{font-size:20px;margin:0 0 4px}
+  .repeat-box p{margin:0 0 12px;color:var(--muted);font-size:15px}
+  .repeat-box .btn{margin-bottom:6px}
 
   /* ------------------------------------------------------ barra carrito -- */
   .cartbar{
@@ -163,19 +185,18 @@
   .cartbar-btn{
     display:flex;width:100%;max-width:560px;margin:0 auto;
     align-items:center;justify-content:space-between;gap:12px;
-    min-height:56px;padding:12px 18px;
+    min-height:60px;padding:12px 20px;
     background:var(--ink);color:#fff;border-radius:var(--r-md);
     box-shadow:var(--shadow-lg);pointer-events:auto;
-    font-size:16px;transition:background-color .18s;
+    font-size:17px;transition:background-color .18s;
   }
   .cartbar-btn:hover{background:#241c18}
-  .cartbar-btn .total{color:var(--gold);font-weight:600;font-size:18px;font-variant-numeric:tabular-nums}
-  @media (min-width:880px){.cartbar-btn{max-width:940px}}
+  .cartbar-btn .total{color:var(--gold);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums}
+  @media (min-width:700px){.cartbar-btn{max-width:600px}}
 
-  /* Chip para volver al seguimiento del pedido activo. */
   .track-chip{
     position:fixed;z-index:39;left:0;right:0;
-    bottom:calc(74px + var(--sa-b));
+    bottom:calc(78px + var(--sa-b));
     display:flex;justify-content:center;padding:0 14px;pointer-events:none;
   }
   .track-chip button{
@@ -187,38 +208,63 @@
   /* ---------------------------------------------------------- carrito -- */
   .line{
     display:flex;justify-content:space-between;align-items:center;gap:12px;
-    padding:12px 0;border-bottom:1px solid var(--border);
+    padding:14px 0;border-bottom:1px solid var(--border);
   }
-  .line-name{font-size:16px;min-width:0}
-  .line-sub{color:var(--muted);font-size:14px;margin-top:2px}
-  .line-right{display:flex;align-items:center;gap:8px;flex:none}
-  .line-total{font-weight:600;min-width:80px;text-align:right;font-variant-numeric:tabular-nums}
-  @media (max-width:400px){
+  .line-name{font-size:17px;min-width:0}
+  .line-sub{color:var(--muted);font-size:15px;margin-top:2px}
+  .line-right{display:flex;align-items:center;gap:10px;flex:none}
+  .line-total{font-weight:600;min-width:88px;text-align:right;font-variant-numeric:tabular-nums;font-size:17px}
+  @media (max-width:420px){
     .line{flex-wrap:wrap}
     .line-right{width:100%;justify-content:flex-end}
   }
   .totals{
-    margin-top:16px;padding-top:12px;border-top:1px dashed var(--border-strong);
-    display:flex;justify-content:space-between;align-items:center;
-    font-size:19px;font-weight:600;
+    margin-top:18px;padding-top:14px;border-top:1px dashed var(--border-strong);
+    display:flex;justify-content:space-between;align-items:baseline;
   }
+  .totals .lbl{font-size:17px;color:var(--muted-strong)}
+  .totals .val{font-size:30px;font-weight:600;font-variant-numeric:tabular-nums}
 
   /* --------------------------------------------------------- checkout -- */
-  fieldset{border:none;padding:0;margin:16px 0 0;min-width:0}
-  legend{padding:0;font-size:15px;color:var(--muted-strong);margin-bottom:8px}
-  .pay-opt{display:flex;gap:10px;flex-wrap:wrap}
-  .pay-opt label{
-    flex:1 1 150px;min-height:var(--tap);
-    display:flex;align-items:center;justify-content:center;gap:8px;
-    border:1px solid var(--border-strong);background:var(--card);
-    border-radius:var(--r-sm);padding:12px;font-size:15px;
-    text-align:center;cursor:pointer;transition:border-color .18s,background-color .18s;
+  /* Un total enorme y una sola accion, al estilo de las apps de pago. */
+  .pay-total{
+    background:var(--ink);color:#fff;border-radius:var(--r-lg);
+    padding:18px 20px;text-align:center;margin-bottom:18px;
   }
-  .pay-opt label:hover{background:#fff}
-  .pay-opt input{position:absolute;opacity:0;width:1px;height:1px}
-  .pay-opt input:checked + span{color:var(--accent);font-weight:600}
-  .pay-opt label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
-  .pay-opt input:focus-visible + span{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+  .pay-total .lbl{color:var(--dark-muted);font-size:15px}
+  .pay-total .val{
+    color:var(--gold);font-size:42px;font-weight:600;line-height:1.1;
+    margin-top:2px;font-variant-numeric:tabular-nums;
+  }
+  @media (max-width:360px){.pay-total .val{font-size:34px}}
+
+  fieldset{border:none;padding:0;margin:0;min-width:0}
+  legend{padding:0;font-size:17px;font-weight:500;margin-bottom:10px}
+
+  .pay-opts{display:grid;gap:10px}
+  .pay-opts label{
+    display:flex;align-items:center;gap:12px;
+    min-height:60px;padding:12px 16px;
+    border:2px solid var(--border-strong);background:var(--card);
+    border-radius:var(--r-md);cursor:pointer;
+    transition:border-color .18s,background-color .18s;
+  }
+  .pay-opts label:hover{background:#fff}
+  .pay-opts input{position:absolute;opacity:0;width:1px;height:1px}
+  .pay-opts label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+  .pay-opts input:focus-visible ~ .pay-txt{outline:3px solid var(--accent);outline-offset:4px;border-radius:4px}
+  /* Circulo de seleccion: el estado no depende solo del color de fondo. */
+  .pay-dot{
+    width:24px;height:24px;flex:none;border-radius:50%;
+    border:2px solid var(--border-strong);background:#fff;position:relative;
+  }
+  .pay-opts label:has(input:checked) .pay-dot{border-color:var(--accent)}
+  .pay-opts label:has(input:checked) .pay-dot::after{
+    content:'';position:absolute;inset:4px;border-radius:50%;background:var(--accent);
+  }
+  .pay-txt{min-width:0}
+  .pay-txt strong{display:block;font-size:17px;font-weight:500}
+  .pay-txt span{display:block;color:var(--muted);font-size:14px;margin-top:1px}
 
   .demo-note{
     margin-top:14px;padding:12px 14px;border-radius:var(--r-sm);
@@ -226,7 +272,7 @@
     color:var(--warn);font-size:14px;line-height:1.45;
   }
   .field{margin-top:14px}
-  .field label{display:block;font-size:15px;color:var(--muted-strong);margin-bottom:6px}
+  .field label{display:block;font-size:16px;color:var(--muted-strong);margin-bottom:6px}
   .field input{
     width:100%;min-height:var(--tap);padding:12px;
     border-radius:var(--r-sm);border:1px solid var(--border-strong);
@@ -241,22 +287,26 @@
   /* -------------------------------------------------------- seguimiento -- */
   .status-screen{text-align:center;padding:12px 4px}
   .check{
-    width:72px;height:72px;border-radius:50%;background:var(--ok-bg);color:var(--ok);
+    width:76px;height:76px;border-radius:50%;background:var(--ok-bg);color:var(--ok);
     display:flex;align-items:center;justify-content:center;
-    margin:0 auto 16px;font-size:36px;
+    margin:0 auto 16px;font-size:38px;
   }
-  .order-no{color:var(--muted-strong);font-size:15px;margin-top:6px}
+  .order-no{color:var(--muted-strong);font-size:16px;margin-top:6px}
+  .qr-aviso{
+    margin-top:16px;background:var(--accent-soft);border:1px solid var(--accent);
+    border-radius:var(--r-md);padding:14px 16px;color:var(--accent);
+    font-size:16px;line-height:1.5;text-align:left;
+  }
+  .qr-aviso strong{display:block;margin-bottom:2px}
   .track{
-    margin-top:22px;text-align:left;background:var(--card);
+    margin-top:20px;text-align:left;background:var(--card);
     border:1px solid var(--border);border-radius:var(--r-md);padding:14px 16px;
   }
   .track-step{
     display:flex;align-items:center;gap:12px;
-    padding:10px 0;color:var(--muted);font-size:16px;
+    padding:11px 0;color:var(--muted);font-size:17px;
   }
-  .track-dot{
-    width:12px;height:12px;border-radius:50%;background:var(--border-strong);flex:none;
-  }
+  .track-dot{width:13px;height:13px;border-radius:50%;background:var(--border-strong);flex:none}
   .track-step.done{color:var(--ink)}
   .track-step.done .track-dot{background:var(--ok)}
   .track-step.current{color:var(--accent);font-weight:600}
@@ -319,8 +369,10 @@
       <button type="button" class="close-x" data-close="cartSheet" aria-label="Cerrar el pedido">&#10005;</button>
     </div>
     <div id="cartLines"></div>
-    <div class="totals"><span>Total</span><span id="cartSheetTotal">$0</span></div>
-    <button type="button" class="btn btn-primary btn-block" id="goCheckoutBtn" style="margin-top:16px">Continuar</button>
+    <div class="totals"><span class="lbl">Total</span><span class="val" id="cartSheetTotal">$0</span></div>
+    <button type="button" class="btn btn-primary btn-block" id="goCheckoutBtn" style="margin-top:18px;min-height:56px;font-size:18px">
+      Continuar
+    </button>
   </div>
 </div>
 
@@ -328,37 +380,52 @@
 <div class="sheet" id="checkoutSheet" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle" hidden>
   <div class="sheet-panel">
     <div class="sheet-head">
-      <h2 id="checkoutTitle">Confirmar pedido</h2>
+      <h2 id="checkoutTitle">Como pagas</h2>
       <button type="button" class="close-x" data-close="checkoutSheet" aria-label="Cerrar el checkout">&#10005;</button>
     </div>
 
     <form id="checkoutForm" novalidate>
-      <div class="field">
-        <label for="clienteNombre">Tu nombre (opcional)</label>
-        <input id="clienteNombre" name="nombre" type="text" autocomplete="given-name"
-               maxlength="40" placeholder="Para llamarte cuando este listo">
+      <div class="pay-total">
+        <div class="lbl">Total a pagar</div>
+        <div class="val" id="checkoutTotal">$0</div>
       </div>
 
       <fieldset>
-        <legend>Como vas a pagar</legend>
-        <div class="pay-opt">
+        <legend class="visually-hidden">Elegi como pagar</legend>
+        <div class="pay-opts">
           <label>
-            <input type="radio" name="pago" value="Tarjeta" checked>
-            <span>Tarjeta (simulado)</span>
+            <input type="radio" name="pago" value="QR" checked>
+            <span class="pay-dot" aria-hidden="true"></span>
+            <span class="pay-txt"><strong>Con QR desde tu celular</strong>
+              <span>Te acercamos el codigo. Pagas con la billetera que uses.</span></span>
           </label>
           <label>
             <input type="radio" name="pago" value="Efectivo">
-            <span>Efectivo al mozo</span>
+            <span class="pay-dot" aria-hidden="true"></span>
+            <span class="pay-txt"><strong>Efectivo al mozo</strong>
+              <span>Pagas cuando te traen el pedido.</span></span>
+          </label>
+          <label>
+            <input type="radio" name="pago" value="Tarjeta">
+            <span class="pay-dot" aria-hidden="true"></span>
+            <span class="pay-txt"><strong>Tarjeta</strong>
+              <span>Simulado en esta demostracion.</span></span>
           </label>
         </div>
       </fieldset>
 
       <div id="payFields"></div>
 
-      <div class="totals"><span>Total a pagar</span><span id="checkoutTotal">$0</span></div>
+      <div class="field">
+        <label for="clienteNombre">Tu nombre (opcional)</label>
+        <input id="clienteNombre" name="nombre" type="text" autocomplete="given-name"
+               maxlength="40" placeholder="Para llamarte cuando este listo">
+      </div>
+
       <p class="field-err" id="formErr" role="alert"></p>
-      <button type="submit" class="btn btn-primary btn-block" id="payBtn" style="margin-top:16px">Enviar pedido</button>
-      <button type="button" class="btn btn-ghost btn-block" id="backToCart" style="margin-top:6px">Volver al pedido</button>
+      <button type="submit" class="btn btn-primary btn-block" id="payBtn"
+              style="margin-top:18px;min-height:58px;font-size:18px">Enviar pedido</button>
+      <button type="button" class="btn btn-ghost btn-block" id="backToCart" style="margin-top:8px">Volver al pedido</button>
     </form>
   </div>
 </div>
@@ -405,6 +472,10 @@ document.addEventListener('DOMContentLoaded', function () {
   var elSearch = document.getElementById('searchInput');
   var elSearchClear = document.getElementById('searchClear');
 
+  var cartSheet = document.getElementById('cartSheet');
+  var checkoutSheet = document.getElementById('checkoutSheet');
+  var statusSheet = document.getElementById('statusSheet');
+
   /* ------------------------------------------------------- categorias -- */
   function renderCats() {
     var html = '';
@@ -420,7 +491,6 @@ document.addEventListener('DOMContentLoaded', function () {
   function scrollActiveCatIntoView() {
     var active = elCats.querySelector('.cat-btn[aria-pressed="true"]');
     if (!active) return;
-    // Centra la categoria activa sin arrastrar la pagina entera.
     var left = active.offsetLeft - (elCats.clientWidth - active.offsetWidth) / 2;
     try { elCats.scrollTo({ left: Math.max(0, left), behavior: 'smooth' }); }
     catch (e) { elCats.scrollLeft = Math.max(0, left); }
@@ -460,9 +530,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ------------------------------------------------------------ carta -- */
   function visibleItems() {
-    if (!query) {
-      return MENU.filter(function (d) { return d.cat === activeCat; });
-    }
+    if (!query) return MENU.filter(function (d) { return d.cat === activeCat; });
     return MENU.filter(function (d) {
       return (d.name + ' ' + (d.note || '') + ' ' + d.cat).toLowerCase().indexOf(query) !== -1;
     });
@@ -471,32 +539,30 @@ document.addEventListener('DOMContentLoaded', function () {
   function dishHTML(d) {
     var q = cart[d.id] ? cart[d.id].qty : 0;
     var ini = esc((d.name || '?').trim().charAt(0).toUpperCase());
-    var actions;
-    if (q > 0) {
-      actions =
-        '<button type="button" class="icon-btn" data-act="dec" data-id="' + esc(d.id) + '" ' +
-          'aria-label="Quitar uno de ' + esc(d.name) + '">&#8722;</button>' +
-        '<span class="qty-val" aria-hidden="true">' + q + '</span>' +
-        '<button type="button" class="icon-btn" data-act="inc" data-id="' + esc(d.id) + '" ' +
-          'aria-label="Agregar otro ' + esc(d.name) + '. Ahora hay ' + q + '">&#43;</button>';
-    } else {
-      actions =
-        '<button type="button" class="btn-add" data-act="inc" data-id="' + esc(d.id) + '" ' +
+    var actions = q > 0
+      ? '<div class="qty-row">' +
+          '<button type="button" class="icon-btn" data-act="dec" data-id="' + esc(d.id) + '" ' +
+            'aria-label="Quitar uno de ' + esc(d.name) + '">&#8722;</button>' +
+          '<span class="qty-val" aria-hidden="true">' + q + '</span>' +
+          '<button type="button" class="icon-btn" data-act="inc" data-id="' + esc(d.id) + '" ' +
+            'aria-label="Agregar otro ' + esc(d.name) + '. Ahora hay ' + q + '">&#43;</button>' +
+        '</div>'
+      : '<button type="button" class="btn-add" data-act="inc" data-id="' + esc(d.id) + '" ' +
           'aria-label="Agregar ' + esc(d.name) + ' al pedido">Agregar</button>';
-    }
+
     return '<article class="dish">' +
       '<div class="dish-media" data-ini="' + ini + '">' +
-        '<img src="' + LP.IMG_BASE + esc(d.photo) + '" alt="" width="72" height="72" ' +
+        '<img src="' + LP.IMG_BASE + esc(d.photo) + '" alt="" width="800" height="600" ' +
              'loading="lazy" decoding="async">' +
+        (d.tag ? '<span class="dish-tag">' + esc(d.tag) + '</span>' : '') +
       '</div>' +
-      '<div class="dish-info">' +
-        '<div class="dish-name">' + esc(d.name) +
-          (d.tag ? '<span class="dish-tag">' + esc(d.tag) + '</span>' : '') + '</div>' +
+      '<div class="dish-body">' +
+        '<div class="dish-name">' + esc(d.name) + '</div>' +
         (d.note ? '<div class="dish-note">' + esc(d.note) + '</div>' : '') +
         (query ? '<div class="dish-cat">' + esc(d.cat) + '</div>' : '') +
         '<div class="dish-price">' + money(d.price) + '</div>' +
+        '<div class="dish-actions">' + actions + '</div>' +
       '</div>' +
-      '<div class="dish-actions">' + actions + '</div>' +
     '</article>';
   }
 
@@ -510,7 +576,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var head = query
       ? '<p class="catlabel">' + items.length + (items.length === 1 ? ' resultado' : ' resultados') + '</p>'
       : '<p class="catlabel">' + esc(activeCat) + '</p>';
-    elMenu.innerHTML = head + '<div class="menu-grid">' + items.map(dishHTML).join('') + '</div>';
+    elMenu.innerHTML = repeatBoxHTML() + head +
+      '<div class="menu-grid">' + items.map(dishHTML).join('') + '</div>';
   }
 
   // Fallback de imagen. "error" no burbujea: se escucha en fase de captura.
@@ -522,10 +589,53 @@ document.addEventListener('DOMContentLoaded', function () {
   }, true);
 
   elMenu.addEventListener('click', function (ev) {
+    var rep = ev.target.closest('[data-repeat]');
+    if (rep) { repetirPedido(); return; }
     var btn = ev.target.closest('[data-act]');
     if (!btn) return;
     changeQty(btn.dataset.id, btn.dataset.act === 'inc' ? 1 : -1);
   });
+
+  /* --------------------------------------------------- volver a pedir -- */
+  var LAST_KEY = 'lp_ultimo_pedido';
+  var ultimo = null;
+  try { ultimo = JSON.parse(localStorage.getItem(LAST_KEY) || 'null'); } catch (e) {}
+
+  function repeatBoxHTML() {
+    // Solo arriba de todo, sin busqueda activa y si no hay nada en el carrito.
+    if (!ultimo || !ultimo.length || query || cartCount()) return '';
+    var resumen = ultimo.slice(0, 3).map(function (l) { return l.qty + ' x ' + l.name; }).join(', ');
+    if (ultimo.length > 3) resumen += ' y ' + (ultimo.length - 3) + ' mas';
+    return '<div class="repeat-box">' +
+      '<h2 class="serif">Lo de la ultima vez</h2>' +
+      '<p>' + esc(resumen) + '</p>' +
+      '<button type="button" class="btn btn-primary btn-block" data-repeat="1">' +
+        'Volver a pedir lo mismo</button>' +
+    '</div>';
+  }
+
+  function repetirPedido() {
+    if (!ultimo) return;
+    var puestos = 0;
+    ultimo.forEach(function (l) {
+      for (var i = 0; i < MENU.length; i++) {
+        if (MENU[i].id === l.id) {
+          cart[l.id] = { item: MENU[i], qty: Math.max(1, Math.min(99, l.qty)) };
+          puestos++;
+          break;
+        }
+      }
+    });
+    renderMenu(); renderCartBar();
+    if (puestos) {
+      elLive.textContent = 'Repetimos tu pedido anterior.';
+      LP.toast('Listo, pusimos lo de la ultima vez.', 'ok');
+      renderCartLines();
+      LP.openDialog(cartSheet);
+    } else {
+      LP.toast('Esos platos ya no estan en la carta.', 'err');
+    }
+  }
 
   /* ----------------------------------------------------------- carrito -- */
   function changeQty(id, delta) {
@@ -534,9 +644,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!item) return;
     var cur = cart[id] ? cart[id].qty : 0;
     var next = Math.max(0, Math.min(99, cur + delta));
+    var eraVacio = cartCount() === 0;
     if (next === 0) delete cart[id]; else cart[id] = { item: item, qty: next };
 
-    renderMenu();
+    // Si el carrito pasa de vacio a lleno (o al reves) cambia el bloque de
+    // "volver a pedir", asi que hay que repintar la lista entera.
+    if (eraVacio !== (cartCount() === 0)) renderMenu();
+    else repintarFicha(id, next);
+
     renderCartBar();
     if (LP.isDialogOpen(cartSheet)) renderCartLines();
     elLive.textContent = next === 0
@@ -544,15 +659,37 @@ document.addEventListener('DOMContentLoaded', function () {
       : next + ' x ' + item.name + ' en el pedido.';
   }
 
-  function cartValues() {
-    return Object.keys(cart).map(function (k) { return cart[k]; });
+  // Repinta solo la ficha tocada: evita perder el scroll de la carta.
+  function repintarFicha(id, qty) {
+    // Busqueda directa: CSS.escape esta pensado para identificadores, no para
+    // el interior de un selector de atributo entrecomillado, y ahi escapa de mas.
+    var btn = null;
+    var todos = elMenu.querySelectorAll('[data-act][data-id]');
+    for (var k = 0; k < todos.length; k++) {
+      if (todos[k].dataset.id === id) { btn = todos[k]; break; }
+    }
+    if (!btn) { renderMenu(); return; }
+    var art = btn.closest('.dish');
+    if (!art) { renderMenu(); return; }
+    var item = null;
+    for (var i = 0; i < MENU.length; i++) if (MENU[i].id === id) { item = MENU[i]; break; }
+    if (!item) { renderMenu(); return; }
+    var cont = art.querySelector('.dish-actions');
+    cont.innerHTML = qty > 0
+      ? '<div class="qty-row">' +
+          '<button type="button" class="icon-btn" data-act="dec" data-id="' + esc(id) + '" ' +
+            'aria-label="Quitar uno de ' + esc(item.name) + '">&#8722;</button>' +
+          '<span class="qty-val" aria-hidden="true">' + qty + '</span>' +
+          '<button type="button" class="icon-btn" data-act="inc" data-id="' + esc(id) + '" ' +
+            'aria-label="Agregar otro ' + esc(item.name) + '. Ahora hay ' + qty + '">&#43;</button>' +
+        '</div>'
+      : '<button type="button" class="btn-add" data-act="inc" data-id="' + esc(id) + '" ' +
+          'aria-label="Agregar ' + esc(item.name) + ' al pedido">Agregar</button>';
   }
-  function cartTotal() {
-    return cartValues().reduce(function (s, l) { return s + l.item.price * l.qty; }, 0);
-  }
-  function cartCount() {
-    return cartValues().reduce(function (s, l) { return s + l.qty; }, 0);
-  }
+
+  function cartValues() { return Object.keys(cart).map(function (k) { return cart[k]; }); }
+  function cartTotal() { return cartValues().reduce(function (s, l) { return s + l.item.price * l.qty; }, 0); }
+  function cartCount() { return cartValues().reduce(function (s, l) { return s + l.qty; }, 0); }
 
   var elCartbar = document.getElementById('cartbar');
   function renderCartBar() {
@@ -574,7 +711,7 @@ document.addEventListener('DOMContentLoaded', function () {
         '<div class="line-right">' +
           '<button type="button" class="icon-btn" data-act="dec" data-id="' + esc(l.item.id) + '" ' +
             'aria-label="Quitar uno de ' + esc(l.item.name) + '">&#8722;</button>' +
-          '<span class="qty-val" aria-hidden="true">' + l.qty + '</span>' +
+          '<span class="qty-val" aria-hidden="true" style="min-width:26px;font-size:17px">' + l.qty + '</span>' +
           '<button type="button" class="icon-btn" data-act="inc" data-id="' + esc(l.item.id) + '" ' +
             'aria-label="Agregar otro ' + esc(l.item.name) + '">&#43;</button>' +
           '<span class="line-total">' + money(l.item.price * l.qty) + '</span>' +
@@ -591,10 +728,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!btn) return;
     changeQty(btn.dataset.id, btn.dataset.act === 'inc' ? 1 : -1);
   });
-
-  var cartSheet = document.getElementById('cartSheet');
-  var checkoutSheet = document.getElementById('checkoutSheet');
-  var statusSheet = document.getElementById('statusSheet');
 
   document.getElementById('cartbarBtn').addEventListener('click', function () {
     renderCartLines();
@@ -613,7 +746,7 @@ document.addEventListener('DOMContentLoaded', function () {
     LP.closeDialog(cartSheet);
     document.getElementById('checkoutTotal').textContent = money(cartTotal());
     renderPayFields();
-    LP.openDialog(checkoutSheet, { focus: '#clienteNombre' });
+    LP.openDialog(checkoutSheet);
   });
 
   document.getElementById('backToCart').addEventListener('click', function () {
@@ -625,12 +758,14 @@ document.addEventListener('DOMContentLoaded', function () {
   /* ---------------------------------------------------------- checkout -- */
   function selectedMetodo() {
     var el = document.querySelector('input[name="pago"]:checked');
-    return el ? el.value : 'Tarjeta';
+    return el ? el.value : 'QR';
   }
 
   function renderPayFields() {
     var metodo = selectedMetodo();
     var el = document.getElementById('payFields');
+    var btn = document.getElementById('payBtn');
+
     if (metodo === 'Tarjeta') {
       el.innerHTML =
         '<p class="demo-note"><strong>Pago simulado para esta demostracion.</strong> ' +
@@ -652,12 +787,16 @@ document.addEventListener('DOMContentLoaded', function () {
                    'maxlength="4" placeholder="123" aria-describedby="cardCvvErr">' +
             '<p class="field-err" id="cardCvvErr"></p></div>' +
         '</div>';
-      document.getElementById('payBtn').textContent = 'Pagar ' + money(cartTotal()) + ' y enviar a cocina';
+      btn.textContent = 'Pagar ' + money(cartTotal());
       wireCardMasks();
+    } else if (metodo === 'QR') {
+      el.innerHTML = '<p class="demo-note">Cuando mandes el pedido, alguien del salon te acerca ' +
+        'el codigo QR para que lo escanees con tu billetera. Podes pagar desde cualquier app o banco.</p>';
+      btn.textContent = 'Enviar pedido y pagar con QR';
     } else {
       el.innerHTML = '<p class="demo-note">Vas a pagar en efectivo cuando te acerquen el pedido. ' +
         'Igual lo mandamos a la cocina ahora.</p>';
-      document.getElementById('payBtn').textContent = 'Enviar pedido a cocina';
+      btn.textContent = 'Enviar pedido a cocina';
     }
   }
 
@@ -745,6 +884,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var lines = cartValues().map(function (l) {
       return { name: l.item.name, qty: l.qty, price: l.item.price };
     });
+    var paraRepetir = cartValues().map(function (l) {
+      return { id: l.item.id, name: l.item.name, qty: l.qty };
+    });
     var payload = {
       mesa: 'Mesa ' + MESA,
       modo: 'Salon',
@@ -752,7 +894,7 @@ document.addEventListener('DOMContentLoaded', function () {
       lines: lines,
       total: cartTotal(),
       estado: 'Nuevo',
-      pagado: metodo === 'Tarjeta',
+      pagado: metodo === 'Tarjeta',      // QR y efectivo se cobran despues
       metodo_pago: metodo
     };
 
@@ -764,6 +906,10 @@ document.addEventListener('DOMContentLoaded', function () {
         submitting = false;
         btn.disabled = false;
         LP.closeDialog(checkoutSheet);
+
+        ultimo = paraRepetir;
+        try { localStorage.setItem(LAST_KEY, JSON.stringify(paraRepetir)); } catch (e) {}
+
         Object.keys(cart).forEach(function (k) { delete cart[k]; });
         renderMenu(); renderCartBar();
         setActiveOrder(res.data.id);
@@ -806,7 +952,6 @@ document.addEventListener('DOMContentLoaded', function () {
     try { localStorage.removeItem(ORDER_KEY); } catch (e) {}
     updateTrackChip();
   }
-
   function updateTrackChip() {
     document.getElementById('trackChip').hidden = !currentOrderId || LP.isDialogOpen(statusSheet);
   }
@@ -833,12 +978,19 @@ document.addEventListener('DOMContentLoaded', function () {
       '</div>';
     }).join('');
 
-    var pago = order.pagado ? 'Pagado' : 'Paga en efectivo';
+    var pago = order.pagado ? 'Pagado'
+             : (order.metodo_pago === 'QR' ? 'Pagas con QR' : 'Paga en efectivo');
+    var avisoQR = (!order.pagado && order.metodo_pago === 'QR')
+      ? '<div class="qr-aviso"><strong>Te acercamos el QR</strong>' +
+        'Alguien del salon va a pasar con el codigo para que lo escanees con tu billetera.</div>'
+      : '';
+
     document.getElementById('statusScreen').innerHTML =
       '<div class="check" aria-hidden="true">&#10003;</div>' +
-      '<h3 class="serif" style="margin:0;font-size:26px">Pedido enviado</h3>' +
+      '<h3 class="serif" style="margin:0;font-size:28px">Pedido enviado</h3>' +
       '<p class="order-no">Pedido #' + esc(order.id) + ' &middot; ' + esc(order.mesa) +
         ' &middot; ' + esc(pago) + '</p>' +
+      avisoQR +
       '<div class="track">' + steps + '</div>' +
       '<button type="button" class="btn btn-secondary btn-block" id="keepBrowsing" style="margin-top:18px">' +
         'Seguir mirando la carta</button>';
@@ -902,7 +1054,6 @@ document.addEventListener('DOMContentLoaded', function () {
   renderCartBar();
   updateScrollHint();
 
-  // Recupera el pedido activo tras una recarga.
   var saved = null;
   try { saved = localStorage.getItem(ORDER_KEY); } catch (e) {}
   if (saved && sb) {
