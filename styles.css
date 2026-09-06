@@ -229,9 +229,13 @@ body.sheet-open{overflow:hidden}
 
 /* --------------------------------------------------- barra de conexion -- */
 .conn{
-  display:inline-flex;align-items:center;gap:8px;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
   font-size:14px;padding:6px 12px;border-radius:var(--r-pill);
   border:1px solid transparent;
+  /* Ancho fijo, medido sobre la etiqueta mas larga ("Reconectando...").
+     Si el badge cambiara de ancho al cambiar de estado, la cabecera
+     volveria a decidir su salto de linea y arrastraria toda la pagina. */
+  min-width:152px;
 }
 .conn .dot{width:9px;height:9px;border-radius:50%;flex:none}
 .conn-live{background:var(--ok-soft);color:var(--ok);border-color:#bfe0ce}

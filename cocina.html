@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#14100e">
+<meta name="description" content="Panel interno de cocina de La Positiva: los pedidos y su estado en vivo.">
 <title>La Positiva - Cocina y equipo</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
@@ -113,6 +114,15 @@
   }
   .more-btn:hover{background:#2c221d;color:#fff}
 
+  /* Esqueleto de carga: el tablero ocupa su sitio desde el primer pintado,
+     asi la llegada de los datos no empuja el layout (CLS). */
+  .skel{
+    background:#241c18;border:1px solid #3a2f28;
+    border-radius:var(--r-md);margin-bottom:12px;
+    /* Medido sobre tarjetas reales (224-244px): si el marcador es mas bajo,
+       el tablero crece al llegar los datos y eso cuenta como CLS. */
+    height:234px;
+  }
   .board-state{color:var(--dark-ink);text-align:center;padding:50px 20px}
   .board-state h3{color:#fff;font-size:22px;margin:0 0 6px}
   .board-state p{color:var(--dark-muted);margin:0 0 4px}
@@ -146,13 +156,51 @@
       <p class="sub">Panel de cocina y equipo</p>
     </div>
     <div class="head-right">
-      <span class="conn" id="conn"></span>
+      <!-- Nace con su contenido puesto: si lo llenara solo el JS, el badge
+           creceria despues del primer pintado y empujaria el tablero. -->
+      <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
+        <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
+      </span>
       <a class="back-link" href="./">Volver al inicio</a>
     </div>
   </header>
 
-  <div class="tabs" id="tabs" role="group" aria-label="Estados del pedido"></div>
-  <div class="cols" id="cols"></div>
+  <!-- Las cuatro columnas van escritas en el HTML, no generadas por JS:
+       los scripts cargan con defer, asi que si el tablero naciera vacio
+       todo saltaria al llegar los datos (era un CLS de 0.166). -->
+  <div class="tabs" id="tabs" role="group" aria-label="Estados del pedido">
+    <span class="tab" aria-hidden="true">Nuevos</span>
+    <span class="tab" aria-hidden="true">Cocinando</span>
+    <span class="tab" aria-hidden="true">Listos</span>
+    <span class="tab" aria-hidden="true">Entregados</span>
+  </div>
+
+  <div class="cols" id="cols">
+    <section class="col is-active" data-col="Nuevo" aria-labelledby="h-Nuevo">
+      <div class="col-head"><h2 id="h-Nuevo">Nuevos</h2><span class="n" data-count="Nuevo">0</span></div>
+      <div class="col-body" data-body="Nuevo" data-mode="skel">
+        <div class="skel"></div><div class="skel"></div>
+      </div>
+    </section>
+    <section class="col" data-col="Cocinando" aria-labelledby="h-Cocinando">
+      <div class="col-head"><h2 id="h-Cocinando">Cocinando</h2><span class="n" data-count="Cocinando">0</span></div>
+      <div class="col-body" data-body="Cocinando" data-mode="skel">
+        <div class="skel"></div><div class="skel"></div>
+      </div>
+    </section>
+    <section class="col" data-col="Listo" aria-labelledby="h-Listo">
+      <div class="col-head"><h2 id="h-Listo">Listos</h2><span class="n" data-count="Listo">0</span></div>
+      <div class="col-body" data-body="Listo" data-mode="skel">
+        <div class="skel"></div><div class="skel"></div>
+      </div>
+    </section>
+    <section class="col" data-col="Entregado" aria-labelledby="h-Entregado">
+      <div class="col-head"><h2 id="h-Entregado">Entregados</h2><span class="n" data-count="Entregado">0</span></div>
+      <div class="col-body" data-body="Entregado" data-mode="skel">
+        <div class="skel"></div><div class="skel"></div>
+      </div>
+    </section>
+  </div>
   <div id="boardState"></div>
 </div>
 
@@ -481,7 +529,6 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   /* ------------------------------------------------------------ inicio -- */
-  elState.innerHTML = '<div class="board-state"><div class="spinner"></div><p>Cargando pedidos...</p></div>';
   conn.set(navigator.onLine ? 'connecting' : 'off');
   load().then(function () { subscribe(); scheduleBackup(); });
 
