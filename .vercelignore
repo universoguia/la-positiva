@@ -9,4 +9,7 @@ CLAVES.md
 .claude/
 scripts/serve.js
 scripts/generar-vapid.js
-scripts/make-icons.js
+scripts/make-icons.py
+# El logo original no hace falta servirlo: de el salen los PNG de icons/.
+icons/origen
+icons/origen/**
