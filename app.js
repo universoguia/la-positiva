@@ -206,7 +206,10 @@
   /* --- Web Push -----------------------------------------------------------
      La clave publica VAPID es publica por definicion: identifica al emisor
      y viaja al navegador. La privada vive solo en la Edge Function.      */
-  var VAPID_PUBLIC = 'BJI6zNTZGccfBNfA0U0-difiHHYW1rNPU-YVhThhX2g3K51nHdcWCOdI8EiCtD8lgygfiKiU18zN8_GF-IMnSSI';
+  // Tiene que ser el par de la VAPID_PRIVATE_KEY cargada como secreto de la
+  // Edge Function. Si se rota una, hay que rotar la otra y volver a
+  // suscribir los dispositivos.
+  var VAPID_PUBLIC = 'BNgN_0JBHeZH_kGqjSNBELQXFYOkgOjFjS3SxCG5AwuBaC12q2sPqyKRTp3UMnjEnS2H6m0TX7PjtZrxMqeF4Sk';
 
   function urlBase64ToUint8Array(base64String) {
     var padding = '='.repeat((4 - base64String.length % 4) % 4);

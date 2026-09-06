@@ -3,3 +3,6 @@ node_modules/
 .DS_Store
 
 .vercel
+
+# Claves VAPID generadas: nunca al repo.
+VAPID-NUEVAS.txt

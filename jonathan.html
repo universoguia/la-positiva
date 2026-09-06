@@ -88,22 +88,11 @@ document.addEventListener('DOMContentLoaded', function () {
   var sb = LP.client();
 
   var EMPLEADO = 'Jonathan';
-  var VAPID_PUBLIC = 'BJI6zNTZGccfBNfA0U0-difiHHYW1rNPU-YVhThhX2g3K51nHdcWCOdI8EiCtD8lgygfiKiU18zN8_GF-IMnSSI';
 
   var btn = document.getElementById('activarBtn');
   var testBtn = document.getElementById('testBtn');
   var box = document.getElementById('statusBox');
   var guide = document.getElementById('guideBox');
-
-  var reg = null;
-
-  /* ------------------------------------------------------- plataforma -- */
-  var ua = navigator.userAgent || '';
-  var isIOS = /iPad|iPhone|iPod/.test(ua) ||
-              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  var isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
-                     window.navigator.standalone === true;
-  var supported = ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
 
   function setStatus(kind, title, text) {
     box.innerHTML = '<div class="status ' + kind + '"><strong>' + esc(title) + '</strong>' +
@@ -122,51 +111,35 @@ document.addEventListener('DOMContentLoaded', function () {
     btn.disabled = !!disabled;
   }
 
-  /* ------------------------------------------------------- estado real -- */
+  /* ------------------------------------------------------- estado real --
+     La deteccion de plataforma, la suscripcion y el guardado sin duplicar
+     viven en app.js: los comparte con el panel de cocina. Asi la clave
+     VAPID publica queda en un solo lugar.                               */
   function refresh() {
-    // 1. Navegador incompatible.
-    if (!supported) {
-      setBtn('No disponible en este navegador', true);
-      setStatus('err', 'Este navegador no puede recibir avisos',
-        'Necesitas Chrome en Android, o Safari en iPhone con la app agregada a la pantalla de inicio.');
-      guideForPlatform();
-      return;
-    }
-
-    // 2. iPhone sin instalar: Web Push exige la app en la pantalla de inicio.
-    if (isIOS && !isStandalone) {
-      setBtn('Primero agrega la app al inicio', true);
-      setStatus('warn', 'Falta un paso en el iPhone',
-        'En iPhone los avisos solo funcionan si abris esta pagina como app instalada.');
-      guideForPlatform();
-      return;
-    }
-
-    // 3. Permiso bloqueado por el usuario.
-    if (Notification.permission === 'denied') {
-      setBtn('Permiso bloqueado', true);
-      setStatus('err', 'Bloqueaste los avisos en este celular',
-        'Hay que volver a habilitarlos desde los ajustes del navegador.');
-      guideForBlocked();
-      return;
-    }
-
-    // 4. Ya hay suscripcion activa.
-    navigator.serviceWorker.getRegistration().then(function (r) {
-      reg = r || null;
-      if (!reg) { offerActivate(); return; }
-      return reg.pushManager.getSubscription().then(function (sub) {
-        if (sub && Notification.permission === 'granted') {
-          markActive();
-          // Se asegura de que este guardada, sin duplicar la fila.
-          saveSubscription(sub);
-        } else {
-          offerActivate();
-        }
-      });
-    }).catch(function (e) {
-      LP.humanError(e);
-      offerActivate();
+    LP.estadoPush().then(function (st) {
+      if (st === 'no-soportado') {
+        setBtn('No disponible en este navegador', true);
+        setStatus('err', 'Este navegador no puede recibir avisos',
+          'Necesitas Chrome en Android, o Safari en iPhone con la app agregada a la pantalla de inicio.');
+        guideForPlatform();
+      } else if (st === 'ios-sin-instalar') {
+        setBtn('Primero agrega la app al inicio', true);
+        setStatus('warn', 'Falta un paso en el iPhone',
+          'En iPhone los avisos solo funcionan si abris esta pagina como app instalada.');
+        guideForPlatform();
+      } else if (st === 'denegado') {
+        setBtn('Permiso bloqueado', true);
+        setStatus('err', 'Bloqueaste los avisos en este celular',
+          'Hay que volver a habilitarlos desde los ajustes del navegador.');
+        guideForBlocked();
+      } else if (st === 'activo') {
+        markActive();
+        // El permiso ya esta dado, asi que esto no vuelve a preguntar nada:
+        // solo se asegura de que la fila siga existiendo en la base.
+        LP.suscribirPush(sb, EMPLEADO);
+      } else {
+        offerActivate();
+      }
     });
   }
 
@@ -188,14 +161,14 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function guideForPlatform() {
-    if (isIOS && !isStandalone) {
+    if (LP.esIOS() && !LP.esInstalada()) {
       setGuide('Como activarlo en iPhone', [
         'Toca el boton Compartir en la barra de Safari.',
         'Elegi "Agregar a pantalla de inicio" y confirma.',
         'Cerra Safari y abri La Positiva desde el icono nuevo.',
         'Ahi si toca "Activar notificaciones" y permiti los avisos.'
       ]);
-    } else if (!isIOS) {
+    } else if (!LP.esIOS()) {
       setGuide('Como activarlo en Android', [
         'Toca "Activar notificaciones".',
         'Cuando Chrome pregunte, elegi "Permitir".',
@@ -207,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function guideForBlocked() {
-    if (isIOS) {
+    if (LP.esIOS()) {
       setGuide('Como desbloquear los avisos en iPhone', [
         'Abri Ajustes del iPhone.',
         'Entra en Notificaciones y busca La Positiva.',
@@ -225,94 +198,34 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   /* ---------------------------------------------------------- activar -- */
-  function urlBase64ToUint8Array(base64String) {
-    var padding = '='.repeat((4 - base64String.length % 4) % 4);
-    var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    var raw = atob(base64);
-    var out = new Uint8Array(raw.length);
-    for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-    return out;
-  }
-
   btn.addEventListener('click', function () {
     if (btn.disabled) return;
-    activar();
-  });
-
-  function activar() {
     setBtn('Activando...', true);
     clearStatus();
 
-    LP.registerSW().then(function (r) {
-      if (!r) throw new Error('sw');
-      reg = r;
-      return navigator.serviceWorker.ready;
-    }).then(function () {
-      return Notification.requestPermission();
-    }).then(function (perm) {
-      if (perm === 'denied') {
+    LP.suscribirPush(sb, EMPLEADO).then(function (st) {
+      if (st === 'activo') {
+        markActive();
+      } else if (st === 'denegado') {
         setBtn('Permiso bloqueado', true);
         setStatus('err', 'No diste permiso',
           'Sin el permiso de notificaciones no te podemos avisar.');
         guideForBlocked();
-        return null;
-      }
-      if (perm !== 'granted') {
+      } else if (st === 'sin-decidir') {
         setBtn('Activar notificaciones', false);
         setStatus('warn', 'Quedo sin decidir',
           'Toca de nuevo "Activar notificaciones" y elegi Permitir.');
-        return null;
+      } else if (st === 'no-guardado') {
+        setBtn('Reintentar', false);
+        setStatus('err', 'No pudimos guardar la activacion',
+          'El celular quedo listo, pero no se registro en el sistema. Proba de nuevo.');
+      } else {
+        setBtn('Reintentar', false);
+        setStatus('err', 'No se pudo activar',
+          'Algo fallo al activar los avisos. Revisa la conexion y proba de nuevo.');
       }
-      return reg.pushManager.getSubscription().then(function (sub) {
-        if (sub) return sub;
-        return reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC)
-        });
-      });
-    }).then(function (sub) {
-      if (!sub) return;
-      return saveSubscription(sub).then(function (ok) {
-        if (ok) markActive();
-        else {
-          setBtn('Reintentar', false);
-          setStatus('err', 'No pudimos guardar la activacion',
-            'El celular quedo listo, pero no se registro en el sistema. Proba de nuevo.');
-        }
-      });
-    }).catch(function (e) {
-      LP.humanError(e);
-      setBtn('Reintentar', false);
-      setStatus('err', 'No se pudo activar',
-        'Algo fallo al activar los avisos. Revisa la conexion y proba de nuevo.');
     });
-  }
-
-  /* --------------------------------------------------------- guardado --
-     La tabla no tiene UNIQUE sobre empleado, asi que un upsert por conflicto
-     no es posible sin cambiar el esquema. Se deduplica por endpoint.      */
-  function saveSubscription(sub) {
-    if (!sb) return Promise.resolve(false);
-    var json = sub.toJSON();
-    var endpoint = json && json.endpoint;
-    if (!endpoint) return Promise.resolve(false);
-
-    return sb.from(LP.PUSH_TABLE)
-      .select('id')
-      .eq('empleado', EMPLEADO)
-      .eq('subscription->>endpoint', endpoint)
-      .limit(1)
-      .then(function (res) {
-        if (res.error) { LP.humanError(res.error); return false; }
-        if (res.data && res.data.length) return true;   // ya estaba: no duplica
-        return sb.from(LP.PUSH_TABLE)
-          .insert({ empleado: EMPLEADO, subscription: json })
-          .then(function (ins) {
-            if (ins.error) { LP.humanError(ins.error); return false; }
-            return true;
-          });
-      }, function (e) { LP.humanError(e); return false; });
-  }
+  });
 
   /* ------------------------------------------------------------ prueba -- */
   testBtn.addEventListener('click', function () {
