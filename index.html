@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La Positiva — Demo en vivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .wrap{max-width:520px;margin:0 auto;padding:60px 24px;text-align:center}
+  h1{font-size:34px;margin-bottom:4px}
+  p.lead{color:var(--muted3);margin-bottom:36px}
+  .opt{display:block;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:16px;text-align:left}
+  .opt .tag{color:var(--accent);font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:500}
+  .opt h2{margin:6px 0 6px;font-size:24px}
+  .opt p{margin:0;color:var(--muted3);font-size:14px}
+  .opt .go{display:inline-block;margin-top:12px;background:var(--ink);color:#fff;padding:9px 16px;border-radius:20px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>La Positiva</h1>
+  <p class="lead">Demo en vivo del pedido en la mesa</p>
+
+  <a class="opt" href="pedir.html?mesa=7">
+    <div class="tag">Vista del cliente</div>
+    <h2>Pedir desde la Mesa 7</h2>
+    <p>Así es lo que ve alguien que escanea el QR de la mesa: mira la carta, arma el pedido y paga.</p>
+    <span class="go">Abrir como cliente →</span>
+  </a>
+
+  <a class="opt" href="cocina.html">
+    <div class="tag">Vista del equipo</div>
+    <h2>Panel de cocina</h2>
+    <p>Acá aparecen los pedidos apenas se envían, en vivo, con su estado.</p>
+    <span class="go">Abrir panel del equipo →</span>
+  </a>
+
+  <a class="opt" href="caja.html">
+    <div class="tag">Vista de caja</div>
+    <h2>Confirmar un pago</h2>
+    <p>Desde acá la caja confirma que un pago entró — y le avisa al celular de Jonathan al instante.</p>
+    <span class="go">Abrir caja →</span>
+  </a>
+
+  <a class="opt" href="jonathan.html">
+    <div class="tag">Vista del empleado</div>
+    <h2>Notificaciones de Jonathan</h2>
+    <p>Esto se abre una sola vez en el celular de Jonathan para activar los avisos.</p>
+    <span class="go">Abrir como Jonathan →</span>
+  </a>
+</div>
+</body>
+</html>

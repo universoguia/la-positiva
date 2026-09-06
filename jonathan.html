@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La Positiva — Avisos de Jonathan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  .wrap{max-width:460px;margin:0 auto;padding:50px 24px;text-align:center}
+  .avatar{width:84px;height:84px;border-radius:50%;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:34px}
+  h1{font-size:30px;margin:0 0 4px}
+  p.lead{color:var(--muted3);margin-bottom:30px;font-size:14.5px;line-height:1.5}
+  .btn{width:100%;padding:16px;border-radius:14px;font-size:15.5px;font-weight:500}
+  .btn-on{background:var(--accent);color:#fff}
+  .btn-off{background:var(--card);color:var(--muted3);border:1px solid var(--border)}
+  .status{margin-top:18px;padding:14px;border-radius:12px;font-size:13.5px}
+  .status.ok{background:var(--ok-bg);color:#1c6b48}
+  .status.warn{background:var(--warn-bg);color:#8a5c14}
+  .test{margin-top:10px;background:transparent;color:var(--muted3);text-decoration:underline;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="avatar">🔔</div>
+  <h1>Hola, Jonathan</h1>
+  <p class="lead">Activá los avisos en este celular. Cuando la caja confirme un pago, te va a llegar una notificación acá, aunque tengas la pantalla apagada.</p>
+  <button class="btn btn-on" id="activarBtn">Activar notificaciones</button>
+  <div id="statusBox"></div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://abjonztvstyieukmrikx.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiam9uenR2c3R5aWV1a21yaWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NzUyNDksImV4cCI6MjEwMzM1MTI0OX0.bGpeGAFtBvy_I-np7N8mBmK59Yk_t60UEboei7QZ4rY";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const EMPLEADO = "Jonathan";
+const VAPID_PUBLIC = "BJI6zNTZGccfBNfA0U0-difiHHYW1rNPU-YVhThhX2g3K51nHdcWCOdI8EiCtD8lgygfiKiU18zN8_GF-IMnSSI";
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+const box = document.getElementById('statusBox');
+const btn = document.getElementById('activarBtn');
+
+function showStatus(msg, ok){
+  box.innerHTML = `<div class="status ${ok?'ok':'warn'}">${msg}</div>`;
+}
+
+async function activar(){
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)){
+    showStatus('Este navegador no soporta notificaciones push. Probá con Chrome en Android.', false);
+    return;
+  }
+  btn.textContent = 'Activando…';
+  btn.disabled = true;
+  try {
+    const reg = await navigator.serviceWorker.register('sw.js');
+    await navigator.serviceWorker.ready;
+
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted'){
+      showStatus('No diste permiso de notificaciones. Sin eso no te puede avisar.', false);
+      btn.textContent = 'Activar notificaciones';
+      btn.disabled = false;
+      return;
+    }
+
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub){
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC)
+      });
+    }
+
+    await sb.from('la_positiva_push_subs').insert({ empleado: EMPLEADO, subscription: sub.toJSON() });
+
+    btn.classList.remove('btn-on');
+    btn.classList.add('btn-off');
+    btn.textContent = '✓ Notificaciones activadas';
+    showStatus('Listo. Ahora cuando la caja confirme un pago, te va a llegar el aviso a este celular.', true);
+  } catch (e) {
+    showStatus('No se pudo activar: ' + e.message, false);
+    btn.textContent = 'Activar notificaciones';
+    btn.disabled = false;
+  }
+}
+
+btn.onclick = activar;
+</script>
+</body>
+</html>

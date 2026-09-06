@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>La Positiva — Pedir en la mesa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="menu-data.js"></script>
+<style>
+  header.top{position:sticky;top:0;z-index:20;background:rgba(243,236,226,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--border);padding:14px 18px}
+  .brand{display:flex;align-items:center;justify-content:space-between}
+  .brand h1{margin:0;font-size:26px}
+  .mesa-pill{background:var(--ink);color:var(--dark-ink);font-size:12px;padding:6px 12px;border-radius:20px;letter-spacing:.04em}
+  .cats{display:flex;gap:8px;overflow-x:auto;margin-top:12px;padding-bottom:2px;scrollbar-width:none}
+  .cats::-webkit-scrollbar{display:none}
+  .cat-btn{flex:none;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:var(--muted3);font-size:13px;white-space:nowrap}
+  .cat-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  main{padding:16px 16px 8px}
+  .dish{display:flex;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:10px;margin-bottom:10px;align-items:center}
+  .dish img{width:68px;height:68px;border-radius:10px;object-fit:cover;background:var(--border);flex:none}
+  .dish .info{flex:1;min-width:0}
+  .dish .name{font-weight:500;font-size:15px}
+  .dish .note{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .dish .price{color:var(--accent);font-weight:600;margin-top:4px;font-size:14px}
+  .qty{display:flex;align-items:center;gap:8px;flex:none}
+  .qty button{width:30px;height:30px;border-radius:50%;background:var(--bg);border:1px solid var(--border);font-size:16px;color:var(--ink)}
+  .qty button.add{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .qty span{min-width:16px;text-align:center;font-weight:500}
+  .catlabel{margin:18px 4px 8px;color:var(--muted3);font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+
+  .cartbar{position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;padding:12px 16px;z-index:30}
+  .cartbar-inner{background:var(--ink);color:#fff;border-radius:16px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .cartbar-inner b{color:var(--gold)}
+  .hidden{display:none !important}
+
+  .sheet{position:fixed;inset:0;z-index:50;background:rgba(20,16,14,.55);display:flex;align-items:flex-end}
+  .sheet-panel{background:var(--bg);width:100%;max-width:520px;margin:0 auto;border-radius:20px 20px 0 0;max-height:88vh;overflow:auto;padding:20px}
+  .sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .close-x{width:34px;height:34px;border-radius:50%;background:var(--card);border:1px solid var(--border);font-size:16px}
+  .line{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+  .line .l-name{font-size:14px}
+  .totals{margin-top:14px;padding-top:10px;border-top:1px dashed var(--border);display:flex;justify-content:space-between;font-size:17px;font-weight:600}
+  .btn-primary{width:100%;background:var(--accent);color:#fff;padding:15px;border-radius:12px;font-size:15px;font-weight:500;margin-top:16px}
+  .btn-secondary{width:100%;background:transparent;color:var(--muted3);padding:10px;border-radius:12px;font-size:13px;margin-top:6px;text-align:center}
+
+  .pay-opt{display:flex;gap:10px;margin-top:14px}
+  .pay-opt label{flex:1;border:1px solid var(--border);background:var(--card);border-radius:12px;padding:12px;font-size:13.5px;text-align:center}
+  .pay-opt input{display:none}
+  .pay-opt input:checked + span{color:var(--accent);font-weight:600}
+  .pay-opt label:has(input:checked){border-color:var(--accent);background:#fbf1ec}
+  .field{margin-top:12px}
+  .field label{display:block;font-size:12px;color:var(--muted3);margin-bottom:5px}
+  .field input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:#fff;font-family:inherit;font-size:14px}
+  .field-row{display:flex;gap:10px}
+
+  .status-screen{padding:40px 24px;text-align:center}
+  .check{width:76px;height:76px;border-radius:50%;background:var(--ok-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:38px;color:var(--ok)}
+  .track{margin-top:26px;text-align:left;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
+  .track-step{display:flex;align-items:center;gap:10px;padding:8px 0;color:var(--muted2);font-size:14px}
+  .track-step.done{color:var(--ink)}
+  .track-dot{width:10px;height:10px;border-radius:50%;background:var(--border);flex:none}
+  .track-step.done .track-dot{background:var(--ok)}
+  .track-step.current .track-dot{background:var(--accent)}
+  .track-step.current{color:var(--accent);font-weight:500}
+  .order-no{color:var(--muted3);font-size:13px;margin-top:4px}
+  .spinner{width:46px;height:46px;border-radius:50%;border:4px solid var(--border);border-top-color:var(--accent);animation:spin 1s linear infinite;margin:30px auto}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <header class="top">
+    <div class="brand">
+      <h1>La Positiva</h1>
+      <span class="mesa-pill" id="mesaPill">MESA 7</span>
+    </div>
+    <div class="cats" id="cats"></div>
+  </header>
+
+  <main id="menuList"></main>
+</div>
+
+<div class="cartbar hidden" id="cartbar">
+  <div class="cartbar-inner" id="cartbarInner" onclick="openCart()">
+    <span id="cartCount">0 ítems</span>
+    <b id="cartTotal">$0</b>
+  </div>
+</div>
+
+<div class="sheet hidden" id="cartSheet">
+  <div class="sheet-panel">
+    <div class="sheet-head">
+      <h2 style="margin:0;font-size:22px">Tu pedido</h2>
+      <button class="close-x" onclick="closeSheet('cartSheet')">✕</button>
+    </div>
+    <div id="cartLines"></div>
+    <div class="totals"><span>Total</span><span id="cartSheetTotal">$0</span></div>
+    <button class="btn-primary" onclick="goCheckout()">Continuar</button>
+  </div>
+</div>
+
+<div class="sheet hidden" id="checkoutSheet">
+  <div class="sheet-panel">
+    <div class="sheet-head">
+      <h2 style="margin:0;font-size:22px">Confirmar pedido</h2>
+      <button class="close-x" onclick="closeSheet('checkoutSheet')">✕</button>
+    </div>
+    <div class="field">
+      <label>Tu nombre (opcional)</label>
+      <input id="clienteNombre" placeholder="Para llamarte cuando esté listo">
+    </div>
+    <div class="pay-opt">
+      <label><input type="radio" name="pago" value="Tarjeta" checked onchange="renderPayFields()"><span>💳 Tarjeta</span></label>
+      <label><input type="radio" name="pago" value="Efectivo" onchange="renderPayFields()"><span>💵 Efectivo al mozo</span></label>
+    </div>
+    <div id="payFields"></div>
+    <div class="totals"><span>Total a pagar</span><span id="checkoutTotal">$0</span></div>
+    <button class="btn-primary" id="payBtn" onclick="confirmarPago()">Pagar y enviar a cocina</button>
+    <div class="btn-secondary" onclick="closeSheet('checkoutSheet');openCart()">Volver al pedido</div>
+  </div>
+</div>
+
+<div class="sheet hidden" id="statusSheet">
+  <div class="sheet-panel" style="border-radius:20px;margin:auto;max-height:none">
+    <div class="status-screen" id="statusScreen"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://abjonztvstyieukmrikx.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiam9uenR2c3R5aWV1a21yaWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NzUyNDksImV4cCI6MjEwMzM1MTI0OX0.bGpeGAFtBvy_I-np7N8mBmK59Yk_t60UEboei7QZ4rY";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const TABLE = "la_positiva_pedidos";
+
+const params = new URLSearchParams(location.search);
+const MESA = params.get('mesa') || '7';
+document.getElementById('mesaPill').textContent = 'MESA ' + MESA;
+
+const fmt = n => '$' + Math.round(n).toLocaleString('es-AR');
+const cart = {}; // id -> {item, qty}
+
+const CATS = [...new Set(MENU.map(d => d.cat))];
+const catsEl = document.getElementById('cats');
+let activeCat = CATS[0];
+
+function renderCats(){
+  catsEl.innerHTML = CATS.map(c => `<button class="cat-btn ${c===activeCat?'active':''}" data-c="${c}">${c}</button>`).join('');
+  [...catsEl.querySelectorAll('.cat-btn')].forEach(b => b.onclick = () => { activeCat = b.dataset.c; renderCats(); renderMenu(); });
+}
+
+function renderMenu(){
+  const items = MENU.filter(d => d.cat === activeCat);
+  document.getElementById('menuList').innerHTML = items.map(d => {
+    const q = cart[d.id]?.qty || 0;
+    return `<div class="dish">
+      <img src="https://la-positiva-phi.vercel.app/${d.photo}" onerror="this.style.visibility='hidden'">
+      <div class="info">
+        <div class="name">${d.name}</div>
+        ${d.note ? `<div class="note">${d.note}</div>` : ''}
+        <div class="price">${fmt(d.price)}</div>
+      </div>
+      <div class="qty">
+        ${q>0 ? `<button onclick="changeQty('${d.id}',-1)">−</button><span>${q}</span>` : ''}
+        <button class="add" onclick="changeQty('${d.id}',1)">${q>0?'+':'Agregar'}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function changeQty(id, delta){
+  const item = MENU.find(d => d.id === id);
+  const cur = cart[id]?.qty || 0;
+  const next = Math.max(0, cur + delta);
+  if (next === 0) delete cart[id];
+  else cart[id] = { item, qty: next };
+  renderMenu();
+  renderCartBar();
+}
+
+function cartTotal(){ return Object.values(cart).reduce((s,l)=>s+l.item.price*l.qty,0); }
+function cartCount(){ return Object.values(cart).reduce((s,l)=>s+l.qty,0); }
+
+function renderCartBar(){
+  const n = cartCount();
+  document.getElementById('cartbar').classList.toggle('hidden', n===0);
+  document.getElementById('cartCount').textContent = n + (n===1?' ítem':' ítems');
+  document.getElementById('cartTotal').textContent = fmt(cartTotal());
+}
+
+function openCart(){
+  document.getElementById('cartLines').innerHTML = Object.values(cart).map(l => `
+    <div class="line">
+      <div class="l-name">${l.item.name} × ${l.qty}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span>${fmt(l.item.price*l.qty)}</span>
+      </div>
+    </div>`).join('') || '<p style="color:var(--muted)">Todavía no agregaste nada.</p>';
+  document.getElementById('cartSheetTotal').textContent = fmt(cartTotal());
+  show('cartSheet');
+}
+
+function goCheckout(){
+  closeSheet('cartSheet');
+  document.getElementById('checkoutTotal').textContent = fmt(cartTotal());
+  renderPayFields();
+  show('checkoutSheet');
+}
+
+function renderPayFields(){
+  const metodo = document.querySelector('input[name="pago"]:checked').value;
+  const el = document.getElementById('payFields');
+  if (metodo === 'Tarjeta'){
+    el.innerHTML = `
+      <div class="field"><label>Número de tarjeta</label><input id="cardNum" inputmode="numeric" placeholder="4242 4242 4242 4242" maxlength="19"></div>
+      <div class="field field-row">
+        <div style="flex:1"><label>Vencimiento</label><input id="cardExp" placeholder="MM/AA" maxlength="5"></div>
+        <div style="flex:1"><label>CVV</label><input id="cardCvv" inputmode="numeric" placeholder="123" maxlength="3"></div>
+      </div>`;
+    document.getElementById('payBtn').textContent = 'Pagar ' + fmt(cartTotal()) + ' y enviar a cocina';
+  } else {
+    el.innerHTML = `<p style="color:var(--muted3);font-size:13.5px;margin-top:14px">Vas a pagar en efectivo cuando te acerquen el pedido. Igual lo mandamos a la cocina ahora.</p>`;
+    document.getElementById('payBtn').textContent = 'Enviar pedido a cocina';
+  }
+}
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function closeSheet(id){ document.getElementById(id).classList.add('hidden'); }
+
+let currentOrderId = null;
+let pollTimer = null;
+
+async function confirmarPago(){
+  const metodo = document.querySelector('input[name="pago"]:checked').value;
+  const btn = document.getElementById('payBtn');
+  btn.disabled = true;
+  btn.textContent = metodo === 'Tarjeta' ? 'Procesando pago…' : 'Enviando…';
+
+  const lines = Object.values(cart).map(l => ({ name: l.item.name, qty: l.qty, price: l.item.price }));
+  const total = cartTotal();
+  const cliente = document.getElementById('clienteNombre').value.trim() || null;
+
+  const finish = async () => {
+    const { data, error } = await sb.from(TABLE).insert({
+      mesa: 'Mesa ' + MESA,
+      modo: 'Salón',
+      cliente,
+      lines,
+      total,
+      estado: 'Nuevo',
+      pagado: metodo === 'Tarjeta',
+      metodo_pago: metodo
+    }).select().single();
+
+    closeSheet('checkoutSheet');
+    btn.disabled = false;
+
+    if (error){
+      document.getElementById('statusScreen').innerHTML = `<h2 class="serif">No pudimos enviar el pedido</h2><p style="color:var(--muted3)">${error.message}</p>`;
+      show('statusSheet');
+      return;
+    }
+    currentOrderId = data.id;
+    Object.keys(cart).forEach(k => delete cart[k]);
+    renderMenu(); renderCartBar();
+    renderStatus(data);
+    startPolling();
+  };
+
+  if (metodo === 'Tarjeta'){
+    setTimeout(finish, 1400); // simula pasarela de pago
+  } else {
+    finish();
+  }
+}
+
+const STEPS = ['Nuevo','Cocinando','Listo','Entregado'];
+const STEP_LABEL = { Nuevo:'Recibido', Cocinando:'En la cocina', Listo:'Listo para retirar / servir', Entregado:'Entregado' };
+
+function renderStatus(order){
+  const idx = STEPS.indexOf(order.estado);
+  document.getElementById('statusScreen').innerHTML = `
+    <div class="check">✓</div>
+    <h2 class="serif" style="margin:0 0 4px">¡Pedido enviado!</h2>
+    <div class="order-no">Pedido #${order.id} · ${order.mesa}${order.pagado ? ' · Pagado' : ' · Paga en efectivo'}</div>
+    <div class="track" id="trackBox">
+      ${STEPS.map((s,i) => `
+        <div class="track-step ${i<idx?'done':''} ${i===idx?'current':''}">
+          <div class="track-dot"></div><div>${STEP_LABEL[s]}</div>
+        </div>`).join('')}
+    </div>
+    <div class="btn-secondary" onclick="closeSheet('statusSheet')" style="margin-top:18px">Seguir mirando la carta</div>
+  `;
+  show('statusSheet');
+}
+
+function startPolling(){
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    if (!currentOrderId) return;
+    const { data } = await sb.from(TABLE).select('*').eq('id', currentOrderId).single();
+    if (data) renderStatus(data);
+    if (data && data.estado === 'Entregado') clearInterval(pollTimer);
+  }, 2000);
+}
+
+renderCats();
+renderMenu();
+renderCartBar();
+</script>
+</body>
+</html>

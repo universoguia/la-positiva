@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La Positiva — Caja</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  .wrap{max-width:640px;margin:0 auto;padding:24px 20px 60px}
+  header{margin-bottom:20px}
+  header h1{margin:0;font-size:30px}
+  header .sub{color:var(--muted3);font-size:13.5px;margin-top:2px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px}
+  .row{display:flex;justify-content:space-between;align-items:flex-start}
+  .mesa{font-family:'Cormorant Garamond';font-style:italic;font-size:22px}
+  .meta{color:var(--muted);font-size:12px;margin-top:2px}
+  .lines{margin:10px 0;border-top:1px dashed var(--border);border-bottom:1px dashed var(--border);padding:8px 0}
+  .lines div{font-size:13.5px;display:flex;justify-content:space-between;padding:2px 0}
+  .total{font-weight:600;font-size:16px;text-align:right}
+  .metodo{font-size:12px;color:var(--muted3);margin-top:2px}
+  .confirm-btn{width:100%;margin-top:12px;padding:13px;border-radius:10px;background:var(--accent);color:#fff;font-weight:500;font-size:14.5px}
+  .paid-badge{background:var(--ok-bg);color:#1c6b48;font-size:11.5px;padding:5px 12px;border-radius:20px;font-weight:500}
+  .toast{position:fixed;left:16px;right:16px;bottom:20px;max-width:600px;margin:0 auto;background:var(--ink);color:#fff;padding:14px 18px;border-radius:12px;font-size:14px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.3);transition:opacity .3s}
+  .toast.hidden{opacity:0;pointer-events:none}
+  .empty{color:var(--muted2);text-align:center;padding:40px 0;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Caja</h1>
+    <div class="sub">Confirmá el pago y avisale a Jonathan sin que tenga que venir a preguntar.</div>
+  </header>
+  <div id="list"></div>
+</div>
+<div class="toast hidden" id="toast"></div>
+
+<script>
+const SUPABASE_URL = "https://abjonztvstyieukmrikx.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiam9uenR2c3R5aWV1a21yaWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NzUyNDksImV4cCI6MjEwMzM1MTI0OX0.bGpeGAFtBvy_I-np7N8mBmK59Yk_t60UEboei7QZ4rY";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const TABLE = "la_positiva_pedidos";
+const fmt = n => '$' + Math.round(n).toLocaleString('es-AR');
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), 3200);
+}
+
+function card(o){
+  return `<div class="card" id="card-${o.id}">
+    <div class="row">
+      <div>
+        <div class="mesa">${o.mesa}</div>
+        <div class="meta">${o.cliente ? o.cliente + ' · ' : ''}Pedido #${o.id}</div>
+        <div class="metodo">${o.metodo_pago === 'Efectivo' ? '💵 Paga en efectivo' : '💳 Tarjeta'}</div>
+      </div>
+      ${o.pagado ? '<span class="paid-badge">✓ Pago confirmado</span>' : ''}
+    </div>
+    <div class="lines">${o.lines.map(l => `<div><span>${l.qty} × ${l.name}</span></div>`).join('')}</div>
+    <div class="total">${fmt(o.total)}</div>
+    ${o.pagado ? '' : `<button class="confirm-btn" onclick="confirmarPago(${o.id}, '${o.mesa}', ${o.total})">Confirmar pago y avisar a Jonathan</button>`}
+  </div>`;
+}
+
+async function load(){
+  const { data, error } = await sb.from(TABLE).select('*').order('created_at', { ascending: false }).limit(30);
+  if (error) { console.error(error); return; }
+  document.getElementById('list').innerHTML = data.length
+    ? data.map(card).join('')
+    : '<div class="empty">Todavía no hay pedidos.</div>';
+}
+
+async function confirmarPago(id, mesa, total){
+  const btn = document.querySelector(`#card-${id} .confirm-btn`);
+  if (btn){ btn.disabled = true; btn.textContent = 'Confirmando…'; }
+
+  await sb.from(TABLE).update({ pagado: true, updated_at: new Date().toISOString() }).eq('id', id);
+
+  const { data: fnData, error: fnError } = await sb.functions.invoke('notify-empleado', {
+    body: {
+      empleado: 'Jonathan',
+      title: 'Pago confirmado ✅',
+      body: `${mesa} pagó ${fmt(total)}. Ya podés seguir.`,
+      pedidoId: id
+    }
+  });
+
+  if (fnError || (fnData && fnData.ok === false)) {
+    toast('Pago confirmado. Aviso: ' + (fnData?.error || 'Jonathan todavía no activó las notificaciones en su celular.'));
+  } else {
+    toast('Pago confirmado. Notificación enviada al celular de Jonathan 📲');
+  }
+  load();
+}
+window.confirmarPago = confirmarPago;
+
+load();
+setInterval(load, 3000);
+</script>
+</body>
+</html>
