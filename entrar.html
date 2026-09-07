@@ -3,190 +3,32 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#5d2326">
-<meta name="description" content="Entrada del equipo de La Positiva: toca quien sos y entras.">
+<meta name="theme-color" content="#14100e">
+<meta name="description" content="Entrada del equipo de La Positiva.">
 <title>La Positiva - Quien sos</title>
-<link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="La Positiva">
-<link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
+<!-- La eleccion de quien sos vive en la portada: es lo primero que se ve al
+     entrar al sistema. Esta pagina existia como una segunda puerta a lo
+     mismo, y dos puertas a lo mismo es una de mas.
+
+     No se borra el archivo: hay celulares con esta direccion guardada en la
+     pantalla de inicio y links viejos apuntando aca. Redirige y listo. -->
+<meta http-equiv="refresh" content="0; url=./">
+<link rel="canonical" href="./">
 <link rel="stylesheet" href="styles.css">
-<style>
-  /* ------------------------------------------------------------------------
-     Todo lo esencial entra en la primera pantalla, sin scroll: el titulo y
-     las seis personas. Lo demas -que hace cada uno, cambiar de persona- vive
-     mas abajo y solo lo busca quien lo necesita.
-     Se usa dvh y no vh: en el celular, vh cuenta la barra del navegador y
-     la ultima fila queda cortada.                                        */
-  body{background:var(--ink)}
-  .wrap{
-    max-width:820px;
-    min-height:100dvh;
-    padding-top:calc(20px + var(--sa-t));
-    padding-bottom:calc(20px + var(--sa-b));
-    display:flex;flex-direction:column;
-  }
-
-  .cabecera{text-align:center;margin-bottom:18px;flex:none}
-  .marca{width:52px;height:52px;border-radius:12px;margin:0 auto 10px;display:block}
-  .cabecera h1{color:#fff;margin:0;font-size:26px;line-height:1.15}
-  .cabecera p{color:var(--dark-muted);margin:4px 0 0;font-size:15px}
-
-  /* La grilla ocupa lo que sobra y reparte a las personas adentro. */
-  .gente{
-    flex:1;display:grid;gap:10px;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    align-content:center;margin:0;padding:0;list-style:none;
-  }
-  @media (min-width:620px){.gente{grid-template-columns:repeat(3,minmax(0,1fr))}}
-
-  .quien{
-    width:100%;height:100%;min-height:104px;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:7px;padding:14px 10px;
-    background:#221a16;border:1px solid #3a2f28;border-radius:var(--r-lg);
-    color:#fff;text-align:center;
-    transition:border-color .16s,background-color .16s,transform .06s;
-  }
-  .quien:hover{background:#2c221d;border-color:var(--gold)}
-  .quien:active{transform:scale(.98)}
-  .quien:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-
-  .inicial{
-    width:46px;height:46px;border-radius:50%;flex:none;
-    display:flex;align-items:center;justify-content:center;
-    background:var(--accent);color:#fff;
-    font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;
-  }
-  .quien.duenio .inicial{background:var(--gold);color:var(--ink)}
-  .quien.cocina .inicial{background:#3a2f28;color:var(--gold)}
-
-  .nombre{font-size:18px;font-weight:500;line-height:1.2}
-  .rol{
-    font-family:'Jost',sans-serif;font-size:11px;letter-spacing:.1em;
-    text-transform:uppercase;color:var(--dark-muted);
-  }
-
-  .pie{flex:none;margin-top:18px;text-align:center}
-  .pie a{color:var(--dark-muted);font-size:14px;text-decoration:underline}
-  .pie a:hover{color:#fff}
-
-  /* Lo que solo mira quien lo busca: debajo del pliegue a proposito. */
-  .detalle{
-    margin-top:34px;background:#1c1512;border:1px solid #3a2f28;
-    border-radius:var(--r-lg);padding:18px 20px;
-  }
-  .detalle h2{
-    color:#fff;font-family:'Jost',sans-serif;font-style:normal;font-size:13px;
-    letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin:0 0 12px;
-  }
-  .detalle dl{margin:0;display:grid;gap:10px}
-  .detalle dt{color:var(--gold);font-size:15px;font-weight:500}
-  .detalle dd{margin:2px 0 0;color:var(--dark-muted);font-size:14px;line-height:1.5}
-
-  .cargando{color:var(--dark-muted);text-align:center;padding:40px 0;grid-column:1/-1}
-</style>
 </head>
 <body class="dark">
-<div class="wrap">
-  <div class="cabecera">
-    <img class="marca" src="icons/icon-192.png" alt="" width="52" height="52">
-    <h1>&iquest;Qui&eacute;n sos?</h1>
-    <p>Toc&aacute; tu nombre para entrar</p>
-  </div>
-
-  <ul class="gente" id="gente">
-    <li class="cargando">Cargando...</li>
-  </ul>
-
-  <div class="pie">
-    <a href="index.html">Ver todas las pantallas</a>
-  </div>
-
-  <section class="detalle">
-    <h2>Qu&eacute; ve cada uno</h2>
-    <dl>
-      <dt>Nelly y Oscar</dt>
-      <dd>Las mesas abiertas del sal&oacute;n, con lo facturado y lo que falta cobrar.</dd>
-      <dt>Jonathan y Miguel</dt>
-      <dd>Los pedidos que esperan aprobaci&oacute;n, para mandar la comanda a la cocina.</dd>
-      <dt>Cecilia</dt>
-      <dd>La caja: confirmar los pagos que entran.</dd>
-      <dt>Cocina</dt>
-      <dd>Las comandas aprobadas y su estado hasta que salen a la mesa.</dd>
-    </dl>
-  </section>
+<div class="wrap" style="max-width:520px;padding-top:80px;text-align:center">
+  <img src="icons/icon-192.png" alt="" width="58" height="58"
+       style="border-radius:14px;margin:0 auto 14px;display:block">
+  <p style="color:var(--dark-muted);font-size:16px;line-height:1.6">
+    La entrada del equipo ahora es la portada.
+  </p>
+  <p style="margin-top:18px">
+    <a class="btn btn-primary" href="./" style="min-height:44px;display:inline-flex;
+       align-items:center;padding:0 22px">Ir a la portada</a>
+  </p>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
-<script src="config.js" defer></script>
-<script src="app.js" defer></script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  'use strict';
-  var esc = LP.esc;
-  var sb = LP.client();
-  var cont = document.getElementById('gente');
-
-  /* La etiqueta sale de 'nota', no del rol: Nelly es duenia y Oscar duenio,
-     y el rol es el mismo para los dos. El rol sirve para enrutar, no para
-     mostrarselo a la persona.                                            */
-  function etiquetaDe(p) { return p.nota || p.rol; }
-
-  /* Si ya entro antes, se le ofrece seguir como esa persona sin volver a
-     elegir. No lo hace solo: cambiar de turno es normal y adivinar mal es
-     peor que preguntar.                                                  */
-  var previo = LP.quienSoy();
-
-  function pintar(lista) {
-    if (!lista.length) {
-      cont.innerHTML = '<li class="cargando">No pudimos cargar el equipo. ' +
-                       'Revisa la conexion.</li>';
-      return;
-    }
-    cont.innerHTML = lista.map(function (p) {
-      var clase = p.rol === 'Duenio' ? ' duenio' : (p.rol === 'Cocina' ? ' cocina' : '');
-      var yo = previo && previo.nombre === p.nombre;
-      return '<li>' +
-        '<button type="button" class="quien' + clase + '" data-nombre="' + esc(p.nombre) + '"' +
-          (yo ? ' autofocus' : '') + '>' +
-          '<span class="inicial" aria-hidden="true">' + esc(p.nombre.charAt(0)) + '</span>' +
-          '<span class="nombre">' + esc(p.nombre) + '</span>' +
-          '<span class="rol">' + esc(etiquetaDe(p)) + '</span>' +
-        '</button>' +
-      '</li>';
-    }).join('');
-  }
-
-  var equipo = [];
-
-  cont.addEventListener('click', function (ev) {
-    var b = ev.target.closest('[data-nombre]');
-    if (!b) return;
-    var elegido = null;
-    for (var i = 0; i < equipo.length; i++) {
-      if (equipo[i].nombre === b.dataset.nombre) elegido = equipo[i];
-    }
-    if (!elegido) return;
-
-    b.disabled = true;
-    LP.entrarComo(elegido);
-    location.href = LP.pantallaDe(elegido.rol);
-  });
-
-  if (!sb) {
-    cont.innerHTML = '<li class="cargando">No hay conexion con el sistema.</li>';
-    return;
-  }
-
-  LP.personas(sb).then(function (lista) {
-    equipo = lista;
-    pintar(lista);
-  });
-});
-</script>
+<script>location.replace('./');</script>
 </body>
 </html>

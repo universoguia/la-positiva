@@ -3,177 +3,299 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f3ece2">
-<meta name="description" content="Demo en vivo del sistema de pedidos en la mesa de La Positiva.">
-<title>La Positiva - Demo en vivo</title>
+<meta name="theme-color" content="#14100e">
+<meta name="description" content="La Positiva: toca tu nombre y entras directo a tu pantalla.">
+<title>La Positiva</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="La Positiva">
 <link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 <style>
-  .wrap{max-width:1040px;padding-top:calc(44px + var(--sa-t))}
-  .intro{text-align:center;margin-bottom:32px}
-  .intro h1{font-size:38px;margin:0 0 6px}
-  .intro p{color:var(--muted);margin:0;font-size:17px}
-
-  /* Celular: una tarjeta por fila. Escritorio: dos columnas parejas. */
-  .opts{display:grid;gap:16px}
-  @media (min-width:760px){.opts{grid-template-columns:repeat(2,minmax(0,1fr))}}
-
-  .opt{
+  /* ------------------------------------------------------------------------
+     La puerta del local. Lo primero y lo unico que se ve al entrar es quien
+     sos: las seis personas entran en la primera pantalla, sin scroll.
+     Todo lo demas -la carta del cliente, las otras pantallas- vive abajo y
+     solo lo busca quien lo necesita.
+     Se usa dvh y no vh: en el celular, vh cuenta la barra del navegador y la
+     ultima fila queda cortada.                                           */
+  body{background:var(--ink)}
+  .wrap{
+    max-width:860px;
+    min-height:100dvh;
+    padding-top:calc(22px + var(--sa-t));
+    padding-bottom:calc(22px + var(--sa-b));
     display:flex;flex-direction:column;
-    background:var(--card);border:1px solid var(--border);
-    border-radius:var(--r-lg);padding:22px 20px;
-    transition:border-color .18s,box-shadow .18s,transform .06s;
   }
-  /* La tarjeta entera es el enlace, asi que hereda el foco visible. */
-  .opt:hover{border-color:var(--accent);box-shadow:var(--shadow)}
-  .opt:active{transform:translateY(1px)}
-  .opt .tag{
-    color:var(--accent);font-size:13px;letter-spacing:.1em;
-    text-transform:uppercase;font-weight:600;
-  }
-  .opt h2{margin:8px 0 8px;font-size:25px}
-  .opt p{margin:0;color:var(--muted);font-size:16px;line-height:1.5;flex:1}
-  .opt .who{
-    margin-top:12px;font-size:14px;color:var(--muted-strong);
-    padding-top:12px;border-top:1px dashed var(--border);
-  }
-  .opt .go{
-    display:inline-flex;align-items:center;justify-content:center;
-    align-self:flex-start;min-height:var(--tap);margin-top:14px;
-    background:var(--ink);color:#fff;padding:10px 18px;
-    border-radius:var(--r-pill);font-size:15px;font-weight:500;
-    transition:background-color .18s;
-  }
-  .opt:hover .go{background:var(--accent)}
 
-  .note{
-    margin-top:34px;padding:16px 18px;border-radius:var(--r-md);
-    background:var(--warn-soft);border:1px solid #e8d3a8;
-    color:var(--warn);font-size:14px;line-height:1.55;
+  .cabecera{text-align:center;margin-bottom:16px;flex:none}
+  .marca{
+    width:58px;height:58px;border-radius:14px;margin:0 auto 12px;display:block;
+    box-shadow:0 0 0 1px #3a2f28, 0 10px 30px rgba(0,0,0,.45);
   }
-  .note strong{display:block;margin-bottom:4px}
+  .cabecera h1{color:#fff;margin:0;font-size:29px;line-height:1.1}
+  .cabecera p{color:var(--dark-muted);margin:5px 0 0;font-size:15px}
+
+  /* ------------------------------------------------------- seguir como -- */
+  .seguir{
+    flex:none;margin-bottom:14px;
+    display:flex;align-items:center;gap:13px;width:100%;
+    padding:13px 15px;min-height:var(--tap);
+    background:linear-gradient(180deg,#2b211b,#241b16);
+    border:1px solid var(--gold);border-radius:var(--r-lg);
+    color:#fff;text-align:left;cursor:pointer;
+    transition:transform .06s,box-shadow .16s;
+  }
+  .seguir:hover{box-shadow:0 8px 26px rgba(0,0,0,.4)}
+  .seguir:active{transform:scale(.995)}
+  .seguir .inicial{width:42px;height:42px;font-size:21px}
+  .seguir .txt{flex:1;min-width:0}
+  .seguir .txt b{display:block;font-size:17px;font-weight:500}
+  .seguir .txt span{
+    display:block;font-family:'Jost',sans-serif;font-size:11px;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-top:2px;
+  }
+  .seguir .flecha{flex:none;color:var(--gold);font-size:20px}
+  .seguir[hidden]{display:none}
+
+  /* ----------------------------------------------------------- la gente -- */
+  .gente{
+    flex:1;display:grid;gap:10px;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    align-content:center;margin:0;padding:0;list-style:none;
+  }
+  @media (min-width:620px){.gente{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+  .quien{
+    width:100%;height:100%;min-height:108px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:8px;padding:15px 10px;
+    background:#221a16;border:1px solid #3a2f28;border-radius:var(--r-lg);
+    color:#fff;text-align:center;
+    transition:border-color .16s,background-color .16s,transform .08s,box-shadow .16s;
+  }
+  .quien:hover{background:#2c221d;border-color:var(--gold);transform:translateY(-2px);
+               box-shadow:0 10px 24px rgba(0,0,0,.35)}
+  .quien:active{transform:translateY(0) scale(.98)}
+  .quien:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+  .inicial{
+    width:48px;height:48px;border-radius:50%;flex:none;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--accent);color:#fff;
+    font-family:'Cormorant Garamond',Georgia,serif;font-size:25px;font-weight:600;
+    box-shadow:0 0 0 3px rgba(255,255,255,.06);
+  }
+  .quien.duenio .inicial{background:var(--gold);color:var(--ink)}
+  .quien.cocina .inicial{background:#3a2f28;color:var(--gold)}
+
+  .nombre{font-size:18px;font-weight:500;line-height:1.2}
+  .rol{
+    font-family:'Jost',sans-serif;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--dark-muted);
+  }
+
+  /* Entran escalonadas: le da un momento de vida a la puerta sin hacerla
+     lenta. Se apaga si la persona pidio menos movimiento. */
+  @keyframes subir{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .gente li{animation:subir .32s ease both}
+  @media (prefers-reduced-motion:reduce){.gente li{animation:none}}
+
+  /* --------------------------------------------------------- el cliente -- */
+  .cliente{flex:none;margin-top:18px}
+  .cliente h2{
+    color:var(--dark-muted);font-family:'Jost',sans-serif;font-style:normal;
+    font-size:12px;letter-spacing:.11em;text-transform:uppercase;font-weight:600;
+    margin:0 0 9px;text-align:center;
+  }
+  .mesas-demo{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .mesa-demo{
+    display:inline-flex;align-items:center;gap:8px;min-height:var(--tap);
+    padding:0 17px;border-radius:var(--r-pill);
+    background:transparent;border:1px solid #3a2f28;color:var(--dark-muted);
+    font-size:15px;text-decoration:none;transition:border-color .16s,color .16s;
+  }
+  .mesa-demo:hover{border-color:var(--gold);color:#fff}
+
+  /* -------------------------------------------------- todas las vistas -- */
+  .todas{
+    flex:none;margin-top:20px;background:#1c1512;
+    border:1px solid #3a2f28;border-radius:var(--r-lg);
+  }
+  .todas summary{
+    list-style:none;cursor:pointer;padding:15px 18px;min-height:var(--tap);
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    color:#fff;font-size:15px;
+  }
+  .todas summary::-webkit-details-marker{display:none}
+  .todas summary .mas{color:var(--gold);font-size:13px;flex:none}
+  .todas[open] summary{border-bottom:1px solid #3a2f28}
+  .todas .cuerpo{padding:6px 18px 16px}
+  .todas ul{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+  @media (min-width:620px){.todas ul{grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 18px}}
+  .todas a{
+    display:flex;align-items:center;gap:10px;min-height:var(--tap);
+    color:var(--dark-muted);font-size:15px;text-decoration:none;
+    border-bottom:1px dashed #2a221d;
+  }
+  .todas a:hover{color:#fff}
+  .todas a b{color:#fff;font-weight:500}
+  .todas a em{font-style:normal;color:#5f524a;font-size:13px;margin-left:auto;flex:none}
+  .todas .nota{
+    margin:14px 0 0;color:#5f524a;font-size:13px;line-height:1.55;
+    padding-top:12px;border-top:1px solid #2a221d;
+  }
+  .todas .nota strong{color:var(--dark-muted)}
+
+  /* Pantalla baja -o con el atajo de "segui como" ocupando lugar arriba-: se
+     achica todo un poco para que las seis personas sigan entrando enteras.
+     Sin esto la ultima fila quedaba cortada por unos 85px, que es
+     exactamente el problema que este archivo dice evitar. */
+  @media (max-height:760px){
+    .marca{width:46px;height:46px;margin-bottom:8px}
+    .cabecera{margin-bottom:10px}
+    .cabecera h1{font-size:25px}
+    .cabecera p{font-size:14px}
+    .quien{min-height:86px;gap:5px;padding:10px 8px}
+    .inicial{width:38px;height:38px;font-size:20px}
+    .nombre{font-size:16px}
+    .cliente{margin-top:12px}
+    .todas{margin-top:12px}
+  }
+
+  .cargando{color:var(--dark-muted);text-align:center;padding:40px 0;grid-column:1/-1}
 </style>
 </head>
-<body>
+<body class="dark">
 <div class="wrap">
-  <div class="intro">
-    <h1>La Positiva</h1>
-    <p>Demo en vivo del pedido en la mesa</p>
+  <div class="cabecera">
+    <img class="marca" src="icons/icon-192.png" alt="" width="58" height="58">
+    <h1>&iquest;Qui&eacute;n sos?</h1>
+    <p>Toc&aacute; tu nombre para entrar. Sin contrase&ntilde;a ni correo.</p>
   </div>
 
-  <nav class="opts" aria-label="Vistas de la demo">
-    <a class="opt" href="entrar.html" style="grid-column:1/-1">
-      <span class="tag">Entrada del equipo</span>
-      <h2>&iquest;Qui&eacute;n sos?</h2>
-      <p>La puerta de entrada del personal: toc&aacute;s tu nombre y entr&aacute;s directo
-         a tu pantalla. Sin contrase&ntilde;a ni correo.</p>
-      <span class="who">Nelly, Oscar, Jonathan, Miguel, Cecilia y la cocina.</span>
-      <span class="go">Entrar</span>
-    </a>
+  <!-- Si ya entro antes, se le ofrece seguir sin volver a elegir. No entra
+       solo: cambiar de turno es normal y adivinar mal es peor que preguntar. -->
+  <button type="button" class="seguir" id="seguir" hidden>
+    <span class="inicial" id="seguirIni" aria-hidden="true"></span>
+    <span class="txt"><b id="seguirNom"></b><span id="seguirRol"></span></span>
+    <span class="flecha" aria-hidden="true">&#8594;</span>
+  </button>
 
-    <a class="opt" href="pedir.html?mesa=7">
-      <span class="tag">Vista del cliente</span>
-      <h2>Pedir desde la Mesa 7</h2>
-      <p>Lo que ve alguien que escanea el QR de la mesa: mira la carta, arma el pedido y paga.</p>
-      <span class="who">La usa el cliente, desde su propio celular.</span>
-      <span class="go">Abrir como cliente</span>
-    </a>
+  <ul class="gente" id="gente">
+    <li class="cargando">Cargando...</li>
+  </ul>
 
-    <!-- Dos mesas para poder mostrar que cada una lleva su propia cuenta:
-         se pide desde las dos a la vez y en el panel del mozo aparecen
-         separadas, sin mezclarse. -->
-    <a class="opt" href="pedir.html?mesa=8">
-      <span class="tag">Vista del cliente</span>
-      <h2>Pedir desde la Mesa 8</h2>
-      <p>La misma carta, otra mesa. Sirve para ver que cada mesa arma su propia cuenta
-         y no se mezcla con la de al lado.</p>
-      <span class="who">Abrila en otro celular o en otra pestania.</span>
-      <span class="go">Abrir como cliente</span>
-    </a>
+  <div class="cliente">
+    <h2>Ver la carta como un cliente</h2>
+    <div class="mesas-demo">
+      <a class="mesa-demo" href="pedir.html?mesa=7">Mesa 7</a>
+      <a class="mesa-demo" href="pedir.html?mesa=8">Mesa 8</a>
+    </div>
+  </div>
 
-    <a class="opt" href="mozo.html">
-      <span class="tag">Vista del mozo</span>
-      <h2>Aprobar los pedidos</h2>
-      <p>Lo que pide la mesa llega aca primero. El mozo lo revisa, suma lo que el
-         comensal dijo de palabra, y recien ahi manda la comanda a la cocina.</p>
-      <span class="who">La usa el mozo desde su celular, durante todo el servicio.</span>
-      <span class="go">Abrir como mozo</span>
-    </a>
-
-    <a class="opt" href="cocina.html">
-      <span class="tag">Vista del equipo</span>
-      <h2>Panel de cocina</h2>
-      <p>Los pedidos aparecen apenas se envian, suenan en la pantalla y se van moviendo
-         de estado hasta la mesa.</p>
-      <span class="who">La usan cocina y los mozos, en la tablet o el celular del local.
-         Dejala abierta durante el servicio: es la que avisa.</span>
-      <span class="go">Abrir panel del equipo</span>
-    </a>
-
-    <a class="opt" href="admin.html">
-      <span class="tag">Vista del encargado</span>
-      <h2>C&oacute;mo viene el sal&oacute;n</h2>
-      <p>Las mesas abiertas, lo que falta aprobar, lo que est&aacute; en cocina y lo que
-         falta cobrar. Y qui&eacute;n recibe los avisos, con el alta de cada rol.</p>
-      <span class="who">La usan Nelly y Oscar, de reojo entre mesa y mesa.</span>
-      <span class="go">Abrir</span>
-    </a>
-
-    <a class="opt" href="mesas.html">
-      <span class="tag">Vista del salon</span>
-      <h2>Mesas abiertas</h2>
-      <p>Una cuenta por mesa con todas sus rondas. Una mesa que pide tres veces es
-         una sola cuenta, no tres pedidos sueltos.</p>
-      <span class="who">La usan mozos y encargados para cobrar y liberar la mesa.</span>
-      <span class="go">Ver las mesas</span>
-    </a>
-
-    <a class="opt" href="caja.html">
-      <span class="tag">Vista de caja</span>
-      <h2>Confirmar un pago</h2>
-      <p>Desde aca se confirma que un pago entro y le avisa al celular de Jonathan al instante.</p>
-      <span class="who">La usa quien atiende la caja.</span>
-      <span class="go">Abrir caja</span>
-    </a>
-
-    <a class="opt" href="cobrar.html">
-      <span class="tag">Vista del salon</span>
-      <h2>Mostrar el QR de cobro</h2>
-      <p>Cualquier empleado abre esto en su celular y le muestra el codigo al cliente, que paga con la billetera que use.</p>
-      <span class="who">La usan mozos y encargados, en planta baja y en planta alta.</span>
-      <span class="go">Abrir para cobrar</span>
-    </a>
-
-    <a class="opt" href="carta-fotos.html">
-      <span class="tag">Ajustes del local</span>
-      <h2>Fotos de la carta</h2>
-      <p>Saca la foto de cada plato con el celular o eleg&iacute;la de la galer&iacute;a.
-         Se ve en la carta al instante, sin publicar nada.</p>
-      <span class="who">La usa el encargado o el mozo, desde su tel&eacute;fono.</span>
-      <span class="go">Cargar fotos</span>
-    </a>
-
-    <a class="opt" href="qr-mesa.html">
-      <span class="tag">Antes de abrir</span>
-      <h2>QR de las mesas</h2>
-      <p>Genera e imprime el codigo de cada mesa. Es por donde entra el cliente:
-         lo escanea y le abre la carta con su mesa ya cargada.</p>
-      <span class="who">Se imprime una vez por mesa y queda sobre la mesa.</span>
-      <span class="go">Generar los QR</span>
-    </a>
-
-  </nav>
-
-  <p class="note">
-    <strong>Esto es una demostracion.</strong>
-    El pago con tarjeta es simulado: no se cobra nada de verdad y los datos de la tarjeta
-    no salen del navegador. Las once vistas son de acceso libre a proposito, para que se
-    puedan mostrar sin usuarios ni claves.
-  </p>
+  <details class="todas">
+    <summary><span>Todas las pantallas del sistema</span><span class="mas">Ver</span></summary>
+    <div class="cuerpo">
+      <ul>
+        <li><a href="mozo.html"><b>Aprobar los pedidos</b><em>Mozo</em></a></li>
+        <li><a href="cocina.html"><b>Panel de cocina</b><em>Cocina</em></a></li>
+        <li><a href="mesas.html"><b>El sal&oacute;n</b><em>Mozos</em></a></li>
+        <li><a href="admin.html"><b>C&oacute;mo viene el sal&oacute;n</b><em>Encargado</em></a></li>
+        <li><a href="caja.html"><b>Confirmar un pago</b><em>Caja</em></a></li>
+        <li><a href="cobrar.html"><b>Mostrar el QR de cobro</b><em>Sal&oacute;n</em></a></li>
+        <li><a href="carta-fotos.html"><b>La carta</b><em>Ajustes</em></a></li>
+        <li><a href="qr-mesa.html"><b>QR de las mesas</b><em>Antes de abrir</em></a></li>
+        <li><a href="alta.html"><b>Recibir los avisos</b><em>Alta</em></a></li>
+      </ul>
+      <p class="nota">
+        <strong>Esto es una demostraci&oacute;n.</strong>
+        El pago con tarjeta es simulado: no se cobra nada de verdad y los datos de la
+        tarjeta no salen del navegador. Las pantallas son de acceso libre a
+        prop&oacute;sito, para poder mostrarlas sin usuarios ni claves.
+      </p>
+    </div>
+  </details>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+<script src="config.js" defer></script>
+<script src="app.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var esc = LP.esc;
+  var sb = LP.client();
+  var cont = document.getElementById('gente');
+  var equipo = [];
+
+  /* La etiqueta sale de 'nota', no del rol: Nelly es duenia y Oscar duenio,
+     y el rol es el mismo para los dos. El rol sirve para enrutar, no para
+     mostrarselo a la persona.                                            */
+  function etiquetaDe(p) { return p.nota || p.rol; }
+
+  function claseDe(p) {
+    return p.rol === 'Duenio' ? ' duenio' : (p.rol === 'Cocina' ? ' cocina' : '');
+  }
+
+  function entrar(p) {
+    LP.entrarComo(p);
+    location.href = LP.pantallaDe(p.rol);
+  }
+
+  var previo = LP.quienSoy();
+
+  function pintar(lista) {
+    if (!lista.length) {
+      cont.innerHTML = '<li class="cargando">No pudimos cargar el equipo. ' +
+                       'Revisa la conexion.</li>';
+      return;
+    }
+    cont.innerHTML = lista.map(function (p, i) {
+      var yo = previo && previo.nombre === p.nombre;
+      return '<li style="animation-delay:' + (i * 45) + 'ms">' +
+        '<button type="button" class="quien' + claseDe(p) + '" ' +
+          'data-nombre="' + esc(p.nombre) + '"' + (yo ? ' autofocus' : '') + '>' +
+          '<span class="inicial" aria-hidden="true">' + esc(p.nombre.charAt(0)) + '</span>' +
+          '<span class="nombre">' + esc(p.nombre) + '</span>' +
+          '<span class="rol">' + esc(etiquetaDe(p)) + '</span>' +
+        '</button>' +
+      '</li>';
+    }).join('');
+  }
+
+  cont.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-nombre]');
+    if (!b) return;
+    for (var i = 0; i < equipo.length; i++) {
+      if (equipo[i].nombre === b.dataset.nombre) { b.disabled = true; entrar(equipo[i]); return; }
+    }
+  });
+
+  /* El atajo de arriba. Se dibuja con lo guardado en el telefono y no espera
+     a la base: si la conexion esta lenta, el que ya entro antes igual pasa. */
+  if (previo) {
+    var s = document.getElementById('seguir');
+    document.getElementById('seguirIni').textContent = previo.nombre.charAt(0);
+    document.getElementById('seguirNom').textContent = 'Segui como ' + previo.nombre;
+    document.getElementById('seguirRol').textContent = etiquetaDe(previo);
+    s.hidden = false;
+    s.addEventListener('click', function () { entrar(previo); });
+  }
+
+  if (!sb) {
+    cont.innerHTML = '<li class="cargando">No hay conexion con el sistema.</li>';
+    return;
+  }
+
+  LP.personas(sb).then(function (lista) {
+    equipo = lista;
+    pintar(lista);
+  });
+});
+</script>
 </body>
 </html>
