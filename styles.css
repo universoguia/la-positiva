@@ -260,6 +260,22 @@ body.sheet-open{overflow:hidden}
 }
 
 /* --------------------------------------------------- barra de conexion -- */
+/* Quien sos, en la cabecera de cada pantalla de trabajo. Lo llena solo
+   LP.mostrarQuienSoy() buscando [data-quien]: asi ninguna pantalla se puede
+   olvidar de decirlo. Si no hay identidad guardada, se esconde.        */
+.soy{
+  display:inline-flex;align-items:center;gap:7px;
+  min-height:var(--tap);padding:0 14px;border-radius:var(--r-pill);
+  border:1px solid var(--border-strong);background:var(--card);
+  color:var(--ink);font-size:15px;text-decoration:none;
+}
+.soy::before{
+  content:"";width:8px;height:8px;border-radius:50%;
+  background:var(--accent);flex:none;
+}
+.soy:hover{border-color:var(--accent)}
+.soy[hidden]{display:none}
+
 .conn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   font-size:14px;padding:6px 12px;border-radius:var(--r-pill);

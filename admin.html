@@ -102,9 +102,12 @@
       <h1>Encargado</h1>
       <p class="sub">Cómo viene el salón y quién recibe los avisos</p>
     </div>
-    <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
-      <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
-    </span>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <a class="soy" href="./" data-quien hidden></a>
+      <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
+        <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
+      </span>
+    </div>
   </header>
 
   <h2>El salón ahora</h2>
@@ -129,7 +132,7 @@
       <span>Generar e imprimir el código de cada mesa.</span></a>
   </div>
 
-  <a class="back-link" href="./">Cambiar de persona</a>
+  <a class="back-link" href="./">Volver al inicio</a>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>

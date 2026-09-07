@@ -156,12 +156,13 @@
       <p class="sub">Aproba lo que piden las mesas y manda la comanda</p>
     </div>
     <div class="head-right">
+      <a class="soy" href="./" data-quien hidden></a>
       <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
         <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
       </span>
       <button type="button" class="btn btn-secondary" id="avisosBtn"
               style="padding:8px 15px;font-size:15px">Avisos</button>
-      <a class="back-link" href="./" id="salirLink">Cambiar</a>
+      <a class="back-link" href="./" id="salirLink">Volver al inicio</a>
     </div>
   </header>
 
@@ -234,12 +235,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
   LP.pantallaSiempreEncendida();
 
-  if (soy) {
-    document.getElementById('saludo').textContent = soy.nombre;
-    document.getElementById('salirLink').addEventListener('click', function () {
-      LP.salir();          // el link sigue: solo se olvida quien era
-    });
-  }
+  /* Antes, tocar "Volver al inicio" desde aca TAMBIEN cerraba la sesion, en
+     silencio. O sea que Jonathan volvia al inicio y la puerta le preguntaba
+     quien era otra vez, cada vez. Salir del panel no es terminar el turno:
+     terminar el turno se hace en un solo lugar, la puerta, con un boton que
+     lo dice. */
+  if (soy) document.getElementById('saludo').textContent = soy.nombre;
 
   var elAprobar = document.getElementById('porAprobar');
   var elCurso = document.getElementById('enCurso');

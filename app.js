@@ -719,6 +719,63 @@
 
   function pantallaDe(rol) { return PANTALLA_POR_ROL[rol] || 'index.html'; }
 
+  /* --- Que hace cada uno --------------------------------------------------
+     La regla del local: cada persona tiene UNA cosa que hacer bien, y como
+     mucho dos. Por eso el mozo no ve la caja y la cocina no ve la plata: no
+     es que no tengan permiso, es que no es su trabajo y les ocupa la
+     pantalla.
+
+     El duenio es la excepcion a proposito: Nelly y Oscar entran y ven todo.
+     Si no fuera asi, Nelly terminaria entrando como Jonathan para poder
+     hacer algo, y el rastro de quien hizo que se volveria mentira.
+
+     Los textos son la funcion en castellano, no el nombre del archivo: la
+     persona busca "los pagos", no "caja.html".                          */
+  var FUNCIONES_POR_ROL = {
+    Duenio: [
+      { url: 'admin.html',       texto: 'Como viene el salon' },
+      { url: 'mesas.html',       texto: 'El salon y las cuentas' },
+      { url: 'mozo.html',        texto: 'Los pedidos de las mesas' },
+      { url: 'cocina.html',      texto: 'Las comandas de la cocina' },
+      { url: 'caja.html',        texto: 'Los pagos' },
+      { url: 'cobrar.html',      texto: 'Mostrar el QR de cobro' },
+      { url: 'carta-fotos.html', texto: 'La carta y lo que se termino' },
+      { url: 'qr-mesa.html',     texto: 'Los QR de las mesas' }
+    ],
+    Mozo: [
+      { url: 'mozo.html',  texto: 'Los pedidos de las mesas' },
+      { url: 'mesas.html', texto: 'El salon y las cuentas' }
+    ],
+    Caja: [
+      { url: 'caja.html',   texto: 'Los pagos' },
+      { url: 'cobrar.html', texto: 'Mostrar el QR de cobro' }
+    ],
+    Cocina: [
+      { url: 'cocina.html',      texto: 'Las comandas' },
+      /* Va a la carta entera y NO al filtro de agotados: si preseleccionara
+         "solo los que se terminaron", el cocinero caeria en una lista vacia
+         justo cuando todavia no marco nada, que es siempre la primera vez. */
+      { url: 'carta-fotos.html', texto: 'Marcar lo que se termino' }
+    ]
+  };
+
+  function funcionesDe(rol) { return FUNCIONES_POR_ROL[rol] || []; }
+
+  /* Escribe quien sos en las pantallas que tengan un [data-quien].
+     Se llama sola al cargar app.js: asi ninguna pantalla se puede olvidar
+     de decirlo, que es lo que pidio el duenio.                          */
+  function mostrarQuienSoy() {
+    var nodos = document.querySelectorAll('[data-quien]');
+    if (!nodos.length) return;
+    var yo = quienSoy();
+    for (var i = 0; i < nodos.length; i++) {
+      if (!yo) { nodos[i].hidden = true; continue; }
+      nodos[i].hidden = false;
+      nodos[i].textContent = yo.nombre;
+      nodos[i].setAttribute('title', yo.nota || yo.rol);
+    }
+  }
+
   /* El rol al que le llegan los avisos. Duenio y Caja comparten los del
      encargado: en un local de este tamanio son la misma persona mirando. */
   var ROL_DE_AVISOS = {
@@ -1969,6 +2026,9 @@
     entrarComo: entrarComo,
     salir: salir,
     pantallaDe: pantallaDe,
+    FUNCIONES_POR_ROL: FUNCIONES_POR_ROL,
+    funcionesDe: funcionesDe,
+    mostrarQuienSoy: mostrarQuienSoy,
     rolDeAvisos: rolDeAvisos,
     mantenerDespierta: mantenerDespierta,
     pantallaSiempreEncendida: pantallaSiempreEncendida,
@@ -2016,4 +2076,14 @@
     describirDispositivo: describirDispositivo,
     avisar: avisar
   };
+
+  /* Decir quien sos no puede depender de que cada pantalla se acuerde de
+     pedirlo: se hace desde aca, una vez, para todas. Si la pantalla no
+     tiene donde ponerlo, no pasa nada. app.js va con defer, asi que el
+     documento ya suele estar armado; el listener cubre el caso contrario. */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mostrarQuienSoy);
+  } else {
+    mostrarQuienSoy();
+  }
 })(window);

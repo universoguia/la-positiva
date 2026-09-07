@@ -39,27 +39,46 @@
   .cabecera h1{color:#fff;margin:0;font-size:29px;line-height:1.1}
   .cabecera p{color:var(--dark-muted);margin:5px 0 0;font-size:15px}
 
-  /* ------------------------------------------------------- seguir como -- */
-  .seguir{
-    flex:none;margin-bottom:14px;
-    display:flex;align-items:center;gap:13px;width:100%;
-    padding:13px 15px;min-height:var(--tap);
-    background:linear-gradient(180deg,#2b211b,#241b16);
-    border:1px solid var(--gold);border-radius:var(--r-lg);
-    color:#fff;text-align:left;cursor:pointer;
-    transition:transform .06s,box-shadow .16s;
+  /* --------------------------------------------------------- ya se quien --
+     Cuando el telefono ya sabe quien sos, la puerta deja de preguntar y pasa
+     a mostrar TU trabajo: tu nombre arriba y abajo tus funciones, una o dos,
+     con la principal llena. No entra sola a ninguna: se ve quien sos, que es
+     lo que el duenio pidio, y despues elegis.                            */
+  .yo{flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center}
+  .yo[hidden]{display:none}
+  .yo .inicial{width:66px;height:66px;font-size:32px;margin:0 auto 12px}
+  .yo h2{color:#fff;margin:0;font-size:27px;font-weight:400}
+  .yo .rol-yo{
+    font-family:'Jost',sans-serif;font-size:11px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--gold);margin:4px 0 0;
   }
-  .seguir:hover{box-shadow:0 8px 26px rgba(0,0,0,.4)}
-  .seguir:active{transform:scale(.995)}
-  .seguir .inicial{width:42px;height:42px;font-size:21px}
-  .seguir .txt{flex:1;min-width:0}
-  .seguir .txt b{display:block;font-size:17px;font-weight:500}
-  .seguir .txt span{
-    display:block;font-family:'Jost',sans-serif;font-size:11px;
-    letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-top:2px;
+  .mis-cosas{display:grid;gap:9px;margin-top:20px}
+  .mis-cosas a{
+    display:flex;align-items:center;justify-content:center;
+    min-height:52px;padding:0 18px;border-radius:var(--r-lg);
+    font-size:17px;text-decoration:none;text-align:center;
+    border:1px solid #3a2f28;background:#221a16;color:#fff;
+    transition:border-color .16s,background-color .16s,transform .08s;
   }
-  .seguir .flecha{flex:none;color:var(--gold);font-size:20px}
-  .seguir[hidden]{display:none}
+  .mis-cosas a:hover{background:#2c221d;border-color:var(--gold);transform:translateY(-1px)}
+  .mis-cosas a:active{transform:none}
+  /* La primera es la que abre el 90% de las veces: va llena. */
+  .mis-cosas a.principal{
+    background:var(--accent);border-color:var(--accent);font-weight:500;
+  }
+  .mis-cosas a.principal:hover{background:#a33b32;border-color:#a33b32}
+  /* El duenio ve muchas: en dos columnas no se vuelve una escalera. */
+  @media (min-width:520px){
+    .mis-cosas.muchas{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .mis-cosas.muchas a.principal{grid-column:1/-1}
+  }
+  .terminar{
+    margin-top:20px;min-height:var(--tap);
+    display:inline-flex;align-items:center;justify-content:center;
+    background:none;border:0;cursor:pointer;font-family:inherit;
+    color:var(--dark-muted);font-size:14px;text-decoration:underline;
+  }
+  .terminar:hover{color:#fff}
 
   /* ----------------------------------------------------------- la gente -- */
   .gente{
@@ -177,13 +196,15 @@
     <p>Toc&aacute; tu nombre para entrar. Sin contrase&ntilde;a ni correo.</p>
   </div>
 
-  <!-- Si ya entro antes, se le ofrece seguir sin volver a elegir. No entra
-       solo: cambiar de turno es normal y adivinar mal es peor que preguntar. -->
-  <button type="button" class="seguir" id="seguir" hidden>
-    <span class="inicial" id="seguirIni" aria-hidden="true"></span>
-    <span class="txt"><b id="seguirNom"></b><span id="seguirRol"></span></span>
-    <span class="flecha" aria-hidden="true">&#8594;</span>
-  </button>
+  <!-- Dos estados de la misma puerta: o pregunta quien sos, o ya lo sabe y
+       te muestra tu trabajo. Nunca los dos. -->
+  <div class="yo" id="yo" hidden>
+    <span class="inicial" id="yoIni" aria-hidden="true"></span>
+    <h2 id="yoNom"></h2>
+    <p class="rol-yo" id="yoRol"></p>
+    <nav class="mis-cosas" id="misCosas" aria-label="Lo que hago"></nav>
+    <div><button type="button" class="terminar" id="terminar">Terminar mi turno</button></div>
+  </div>
 
   <ul class="gente" id="gente">
     <li class="cargando">Cargando...</li>
@@ -246,6 +267,43 @@ document.addEventListener('DOMContentLoaded', function () {
     location.href = LP.pantallaDe(p.rol);
   }
 
+  var elYo = document.getElementById('yo');
+  var misCosas = document.getElementById('misCosas');
+
+  /* Dibuja la puerta segun si el telefono ya sabe quien sos. Se llama al
+     entrar y cada vez que eso cambia (al terminar el turno).            */
+  function pintarPuerta() {
+    var yo = LP.quienSoy();
+    if (!yo) {
+      elYo.hidden = true;
+      cont.hidden = false;
+      return;
+    }
+    cont.hidden = true;
+    elYo.hidden = false;
+
+    document.getElementById('yoIni').textContent = yo.nombre.charAt(0);
+    document.getElementById('yoNom').textContent = 'Sos ' + yo.nombre;
+    document.getElementById('yoRol').textContent = etiquetaDe(yo);
+
+    var cosas = LP.funcionesDe(yo.rol);
+    misCosas.className = 'mis-cosas' + (cosas.length > 3 ? ' muchas' : '');
+    misCosas.innerHTML = cosas.map(function (f, i) {
+      return '<a href="' + esc(f.url) + '"' + (i === 0 ? ' class="principal"' : '') + '>' +
+        esc(f.texto) + '</a>';
+    }).join('');
+  }
+
+  /* Terminar el turno: se olvida el nombre y vuelven las seis caras, en la
+     misma pantalla. Sin confirmacion: si lo toco sin querer, vuelve a tocar
+     su nombre y listo.                                                   */
+  document.getElementById('terminar').addEventListener('click', function () {
+    LP.salir();
+    previo = null;
+    pintarPuerta();
+    pintar(equipo);
+  });
+
   var previo = LP.quienSoy();
 
   function pintar(lista) {
@@ -275,16 +333,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  /* El atajo de arriba. Se dibuja con lo guardado en el telefono y no espera
-     a la base: si la conexion esta lenta, el que ya entro antes igual pasa. */
-  if (previo) {
-    var s = document.getElementById('seguir');
-    document.getElementById('seguirIni').textContent = previo.nombre.charAt(0);
-    document.getElementById('seguirNom').textContent = 'Segui como ' + previo.nombre;
-    document.getElementById('seguirRol').textContent = etiquetaDe(previo);
-    s.hidden = false;
-    s.addEventListener('click', function () { entrar(previo); });
-  }
+  /* Se dibuja con lo guardado en el telefono y NO espera a la base: si
+     Supabase esta lento, el que ya entro antes igual ve sus botones. */
+  pintarPuerta();
 
   if (!sb) {
     cont.innerHTML = '<li class="cargando">No hay conexion con el sistema.</li>';
