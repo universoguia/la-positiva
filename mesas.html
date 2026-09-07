@@ -86,8 +86,55 @@
   }
   .ronda .que{flex:1;min-width:0;font-size:15px;line-height:1.45}
   .ronda .que b{display:block;font-size:13px;color:var(--muted);font-weight:500}
-  .ronda .cuanto{flex:none;font-weight:600}
-  .ronda .badge{font-size:11px;padding:2px 8px;margin-left:6px}
+  .ronda .cuanto{flex:none;font-weight:600;text-align:right}
+  .ronda .cuanto s{color:var(--muted);font-weight:400;display:block;font-size:13px}
+
+  /* Los platos de la ronda, uno por renglon, para poder tachar el que salio. */
+  .platos{list-style:none;margin:4px 0 0;padding:0}
+  .platos li{font-size:15px;line-height:1.5}
+  .platos li.fuera{color:var(--muted)}
+  .platos li.fuera .nom{text-decoration:line-through}
+  /* El tachado solo no alcanza: hay que poder leerlo sin distinguir estilos. */
+  .marca-fuera{
+    font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+    background:var(--err-bg);color:var(--err-ink);border-radius:var(--r-pill);
+    padding:2px 8px;margin-left:6px;white-space:nowrap;
+  }
+  .porque{display:block;font-size:12px;color:var(--muted);margin:1px 0 2px}
+
+  .sacar-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-height:var(--tap);padding:0 14px;margin-top:6px;
+    font-size:14px;font-family:inherit;cursor:pointer;
+    background:none;border:1px solid var(--border-strong);border-radius:var(--r-pill);
+    color:var(--muted-strong);
+  }
+  .sacar-btn:hover{border-color:var(--err);color:var(--err-ink)}
+  .reponer{
+    display:inline-flex;align-items:center;min-height:var(--tap);
+    font-size:13px;color:var(--muted-strong);text-decoration:underline;
+    background:none;border:0;cursor:pointer;font-family:inherit;padding:0;
+  }
+  .reponer:hover{color:var(--ink)}
+
+  /* --------------------------------------------------------- la hoja --- */
+  .opcion{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    width:100%;min-height:var(--tap);padding:12px 15px;margin-bottom:8px;
+    background:var(--card);border:1px solid var(--border-strong);
+    border-radius:var(--r-md);font-size:16px;font-family:inherit;
+    color:var(--ink);text-align:left;cursor:pointer;
+  }
+  .opcion:hover{border-color:var(--accent);background:#fff}
+  .opcion .plata{flex:none;color:var(--muted-strong);font-size:15px}
+  .opcion.toda{border-style:dashed;margin-top:10px}
+  .hoja-sub{font-size:14px;color:var(--muted);margin:-6px 0 14px}
+  .hoja-et{font-size:14px;color:var(--muted-strong);margin:0 0 8px;font-weight:500}
+  .banda-pago{
+    margin:0 0 14px;padding:12px 14px;border-radius:var(--r-md);
+    background:var(--warn-soft);color:var(--warn);border:1px solid #e8d3a8;
+    font-size:14px;line-height:1.5;
+  }
 
   .totales{
     margin-top:14px;padding-top:13px;border-top:1px solid var(--border-strong);
@@ -145,6 +192,19 @@
   <a class="back-link" href="./">Volver al inicio</a>
 </div>
 
+<!-- La hoja de sacar. Dos pasos: que sale, y por que. Elegir el motivo ES la
+     confirmacion: no hay un "estas seguro?" arriba de otro toque. -->
+<div class="sheet" id="hoja" hidden role="dialog" aria-modal="true" aria-labelledby="hojaTit">
+  <div class="sheet-panel">
+    <div class="sheet-head">
+      <h2 id="hojaTit">Sacar de la cuenta</h2>
+      <button type="button" class="close-x" id="hojaX" aria-label="Cerrar">&#10005;</button>
+    </div>
+    <p class="hoja-sub" id="hojaSub"></p>
+    <div id="hojaCuerpo"></div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
 <script src="config.js" defer></script>
 <script src="app.js" defer></script>
@@ -159,11 +219,13 @@ document.addEventListener('DOMContentLoaded', function () {
   var resumen = document.getElementById('resumen');
   var conn = new LP.ConnBadge(document.getElementById('conn'));
 
-  /* Las claves tienen que ser los estados REALES: con las viejas, un pedido
-     'Por aprobar' o 'En cocina' salia sin color. */
-  var BADGE = { 'Por aprobar': 'b-nuevo', 'En cocina': 'b-nuevo',
-                Cocinando: 'b-cocinando', Listo: 'b-listo',
-                Entregado: 'b-entregado', Rechazado: 'b-entregado' };
+  /* El badge de estado por ronda se saco a proposito. El salon es para la
+     plata y para saber si la mesa esta libre; el estado plato por plato es
+     trabajo del panel del mozo. Encima pintaba 'Rechazado' igual que
+     'Entregado', o sea que un plato sacado se veia como uno servido. Ese
+     lugar ahora lo ocupa el motivo de lo que salio.                      */
+
+  var puedoSacar = LP.puedeSacar();
 
   var soy = LP.quienSoy();
   var YO = (soy && soy.nombre) || 'Salon';
@@ -274,15 +336,43 @@ document.addEventListener('DOMContentLoaded', function () {
        primer pedido-; ahora el mozo la abre cuando llegan.               */
     var sinPedir = m.rondas === 0;
     var rondas = m.pedidos.map(function (p, i) {
-      var items = (p.lines || []).map(function (l) {
-        return l.qty + '× ' + l.name;
-      }).join(', ');
+      var lineas = LP.lineasDe(p);
+      var cobra = LP.cobrable(p);
+      var salioAlgo = cobra < (Number(p.total) || 0);
+
+      /* Un renglon por plato, no todos apelmazados en una linea: hace falta
+         para poder tachar el que salio y decir por que salio. */
+      var platos = lineas.length
+        ? '<ul class="platos">' + lineas.map(function (l, j) {
+            var fuera = LP.lineaSacada(l);
+            return '<li' + (fuera ? ' class="fuera"' : '') + '>' +
+                '<span class="nom">' + l.qty + '\u00d7 ' + esc(l.name) + '</span>' +
+                (fuera ? '<span class="marca-fuera">Sacado</span>' : '') +
+                (fuera
+                  ? '<span class="porque">' + esc(l.motivo || 'Sin motivo') +
+                    (l.por ? ' \u00b7 lo saco ' + esc(l.por) : '') +
+                    (l.devuelto ? ' \u00b7 ya se devolvio' : '') + '</span>' +
+                    (l.devuelto ? '' :
+                      '<button type="button" class="reponer" data-reponer="' +
+                        esc(p.id) + ':' + j + '">Volver a ponerlo</button>')
+                  : '') +
+              '</li>';
+          }).join('') + '</ul>'
+        : '<div class="platos">Sin detalle</div>';
+
       return '<li class="ronda">' +
-          '<span class="que"><b>Ronda ' + (i + 1) + ' · ' + esc(LP.timeAgo(p.created_at)) +
-            '</b>' + esc(items || 'Sin detalle') +
-            '<span class="badge ' + (BADGE[p.estado] || '') + '">' + esc(p.estado) + '</span>' +
+          '<span class="que">' +
+            '<b>Ronda ' + (i + 1) + ' \u00b7 ' + esc(LP.timeAgo(p.created_at)) + '</b>' +
+            platos +
+            (puedoSacar && cobra > 0
+              ? '<button type="button" class="sacar-btn" data-sacar="' + esc(p.id) + '">' +
+                'Sacar un plato</button>'
+              : '') +
           '</span>' +
-          '<span class="cuanto">' + money(p.total) + '</span>' +
+          '<span class="cuanto">' +
+            (salioAlgo ? '<s>' + money(p.total) + '</s>' : '') +
+            money(cobra) +
+          '</span>' +
         '</li>';
     }).join('');
 
@@ -325,6 +415,162 @@ document.addEventListener('DOMContentLoaded', function () {
         '</div>' +
       '</li>';
   }
+
+  /* -------------------------------------------------------- sacar ----- */
+  var hoja = document.getElementById('hoja');
+  var hojaTit = document.getElementById('hojaTit');
+  var hojaSub = document.getElementById('hojaSub');
+  var hojaCuerpo = document.getElementById('hojaCuerpo');
+  var sacando = null;               // el pedido con el que se abrio la hoja
+  var enVueloSacar = false;
+
+  function pedidoPorId(id) {
+    for (var i = 0; i < plano.length; i++) {
+      var c = plano[i].cuenta;
+      if (!c) continue;
+      for (var j = 0; j < c.pedidos.length; j++) {
+        if (String(c.pedidos[j].id) === String(id)) return c.pedidos[j];
+      }
+    }
+    return null;
+  }
+
+  function cerrarHoja() {
+    hoja.hidden = true;
+    document.body.classList.remove('sheet-open');
+    hojaCuerpo.innerHTML = '';
+    sacando = null;
+  }
+
+  function abrirHoja(pedido) {
+    sacando = pedido;
+    hoja.hidden = false;
+    document.body.classList.add('sheet-open');
+
+    var vivas = [];
+    LP.lineasDe(pedido).forEach(function (l, i) {
+      if (!LP.lineaSacada(l)) vivas.push({ l: l, i: i });
+    });
+
+    /* Un solo plato vivo: no tiene sentido preguntar cual. Se saltea el paso
+       y se va derecho al motivo. Es el caso mas comun. */
+    if (vivas.length === 1) { pasoMotivo(vivas[0].i, vivas[0].l); return; }
+    pasoQue(vivas);
+  }
+
+  function pasoQue(vivas) {
+    hojaTit.textContent = 'Sacar de la cuenta';
+    hojaSub.textContent = sacando.mesa + ' \u00b7 ' + money(LP.cobrable(sacando));
+    hojaCuerpo.innerHTML =
+      '<p class="hoja-et">Que sale?</p>' +
+      vivas.map(function (v) {
+        return '<button type="button" class="opcion" data-linea="' + v.i + '">' +
+            '<span>' + v.l.qty + '\u00d7 ' + esc(v.l.name) + '</span>' +
+            '<span class="plata">' + money(LP.importeDeLinea(v.l)) + '</span>' +
+          '</button>';
+      }).join('') +
+      '<button type="button" class="opcion toda" data-linea="todo">' +
+        '<span>Toda la ronda</span>' +
+        '<span class="plata">' + money(LP.cobrable(sacando)) + '</span>' +
+      '</button>';
+  }
+
+  function pasoMotivo(indice, linea) {
+    var todo = indice === 'todo';
+    var cuanto = todo ? LP.cobrable(sacando) : LP.importeDeLinea(linea);
+    var queSale = todo
+      ? 'Toda la ronda'
+      : (linea.qty + '\u00d7 ' + linea.name);
+
+    hojaTit.textContent = 'Por que sale?';
+    hojaSub.textContent = queSale + ' \u00b7 ' + money(cuanto);
+
+    /* Si ya esta pago, se dice ANTES de tocar el motivo. No frena nada: el
+       mozo tiene que poder sacarlo igual, pero enterarse ahora y no despues. */
+    var banda = sacando.pagado
+      ? '<div class="banda-pago">Esto ya est&aacute; pagado. Cuando lo saques, ' +
+        'la caja tiene que devolverle ' + money(cuanto) + '.</div>'
+      : '';
+
+    hojaCuerpo.innerHTML = banda +
+      LP.MOTIVOS_SACAR.map(function (m) {
+        return '<button type="button" class="opcion" data-motivo="' + esc(m) + '" ' +
+          'data-indice="' + esc(String(indice)) + '">' + esc(m) + '</button>';
+      }).join('');
+  }
+
+  // Abrir la hoja desde la ronda
+  lista.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-sacar]');
+    if (!b) return;
+    var p = pedidoPorId(b.dataset.sacar);
+    if (!p) { LP.toast('Ese pedido ya no esta. Recargamos.', 'err'); cargar(true); return; }
+    abrirHoja(p);
+  });
+
+  // Elegir que sale
+  hojaCuerpo.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-linea]');
+    if (!b || !sacando) return;
+    var idx = b.dataset.linea;
+    if (idx === 'todo') { pasoMotivo('todo', null); return; }
+    pasoMotivo(Number(idx), LP.lineasDe(sacando)[Number(idx)]);
+  });
+
+  /* Elegir el motivo EJECUTA. No hay un "estas seguro?" arriba: son dos
+     pantallas de botones grandes y un toque perdido abre la hoja pero no
+     saca nada. Si igual se equivoco, la linea queda con "Volver a ponerlo". */
+  hojaCuerpo.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-motivo]');
+    if (!b || !sacando || enVueloSacar) return;
+    enVueloSacar = true;
+
+    var motivo = b.dataset.motivo;
+    var crudo = b.dataset.indice;
+    var pedido = sacando;
+    var todo = crudo === 'todo';
+
+    [].forEach.call(hojaCuerpo.querySelectorAll('button'), function (x) { x.disabled = true; });
+    b.textContent = 'Sacando...';
+
+    var accion = todo
+      ? LP.sacarRonda(sb, pedido, motivo, YO)
+      : LP.sacarPlato(sb, pedido, Number(crudo), motivo, YO);
+
+    accion.then(function (r) {
+      enVueloSacar = false;
+      cerrarHoja();
+      if (!r.ok) { LP.toast(r.motivo, 'err'); cargar(true); return; }
+      LP.toast(r.devolver > 0
+        ? 'Listo. Hay que devolverle ' + money(r.devolver) + ' a ' + pedido.mesa +
+          ' \u2014 lo hace la caja.'
+        : 'Listo, lo sacamos de la cuenta de ' + pedido.mesa + '.', 'ok');
+      cargar(true);
+    });
+  });
+
+  document.getElementById('hojaX').addEventListener('click', cerrarHoja);
+  hoja.addEventListener('click', function (ev) { if (ev.target === hoja) cerrarHoja(); });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape' && !hoja.hidden) cerrarHoja();
+  });
+
+  /* Volver a poner. Es la unica salida de un toque errado: sacar no pide
+     confirmacion y el mozo no tiene desde donde volver a cargar un plato. */
+  lista.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-reponer]');
+    if (!b || b.disabled) return;
+    var partes = b.dataset.reponer.split(':');
+    var p = pedidoPorId(partes[0]);
+    if (!p) { cargar(true); return; }
+    b.disabled = true;
+    b.textContent = 'Poniendo...';
+    LP.volverAPoner(sb, p, Number(partes[1]), YO).then(function (r) {
+      if (!r.ok) { LP.toast(r.motivo, 'err'); }
+      else { LP.toast('Volvio a la cuenta.', 'ok'); }
+      cargar(true);
+    });
+  });
 
   /* ------------------------------------------------ sentar y reservar -- */
   lista.addEventListener('click', function (ev) {

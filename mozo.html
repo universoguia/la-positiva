@@ -79,6 +79,24 @@
 
   .acciones{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
   .acciones .btn{flex:1 1 auto;min-height:var(--tap);padding:0 18px;font-size:15px}
+  .opcion{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    width:100%;min-height:var(--tap);padding:12px 15px;margin-bottom:8px;
+    background:var(--card);border:1px solid var(--border-strong);
+    border-radius:var(--r-md);font-size:16px;font-family:inherit;
+    color:var(--ink);text-align:left;cursor:pointer;
+  }
+  .opcion:hover{border-color:var(--accent);background:#fff}
+  .opcion .plata{flex:none;color:var(--muted-strong);font-size:15px}
+  .opcion.toda{border-style:dashed;margin-top:10px}
+  .hs-sub{font-size:14px;color:var(--muted);margin:-6px 0 14px}
+  .hs-et{font-size:14px;color:var(--muted-strong);margin:0 0 8px;font-weight:500}
+  .banda-pago{
+    margin:0 0 14px;padding:12px 14px;border-radius:var(--r-md);
+    background:var(--warn-soft);color:var(--warn);border:1px solid #e8d3a8;
+    font-size:14px;line-height:1.5;
+  }
+
   .btn-rechazar{
     flex:0 0 auto;min-height:var(--tap);padding:0 16px;border-radius:var(--r-pill);
     border:1px solid var(--border-strong);background:transparent;color:var(--err-ink);font-size:15px;
@@ -183,6 +201,21 @@
   </div>
 </div>
 
+<!-- La hoja de sacar. Es la MISMA de mesas.html, a proposito: el mozo
+     aprende un gesto solo y no tiene que preguntarse si esto se "rechaza"
+     o se "saca" segun donde este parado. -->
+<div class="sheet" id="hojaSacar" hidden role="dialog" aria-modal="true"
+     aria-labelledby="hsTit">
+  <div class="sheet-panel">
+    <div class="sheet-head">
+      <h2 id="hsTit">Sacar de la cuenta</h2>
+      <button type="button" class="close-x" id="hsX" aria-label="Cerrar">&#10005;</button>
+    </div>
+    <p class="hs-sub" id="hsSub"></p>
+    <div id="hsCuerpo"></div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
 <script src="config.js" defer></script>
 <script src="app.js" defer></script>
@@ -274,7 +307,9 @@ document.addEventListener('DOMContentLoaded', function () {
         '<div class="acciones">' +
           '<button type="button" class="btn btn-primary" data-aprobar="' + p.id + '">' +
             'Enviar a cocina</button>' +
-          '<button type="button" class="btn-rechazar" data-rechazar="' + p.id + '">Rechazar</button>' +
+          /* Dice SACAR y no "Rechazar": es la misma palabra y el mismo gesto
+             que en el salon, en cualquier punto del pedido. */
+          '<button type="button" class="btn-rechazar" data-sacar="' + p.id + '">Sacar</button>' +
         '</div>' +
       '</li>';
   }
@@ -349,19 +384,12 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
-    if (b.dataset.rechazar) {
-      var idR = b.dataset.rechazar;
-      if (ocupado[idR]) return;
-      var motivo = window.prompt('Por que se rechaza? (queda anotado)');
-      if (motivo === null) return;
-      ocupado[idR] = true;
-      b.disabled = true;
-      LP.rechazarPedido(sb, idR, YO, motivo).then(function (r) {
-        delete ocupado[idR];
-        if (!r.ok) { b.disabled = false; LP.toast(r.motivo, 'err'); return; }
-        LP.toast('Pedido rechazado.', 'ok');
-        cargar(true);
-      });
+    if (b.dataset.sacar) {
+      /* Antes esto era un window.prompt: cuadrito gris del sistema, letra
+         chica y teclado libre, en el salon y con una mano. Ahora son cuatro
+         botones grandes, los mismos que en el salon. */
+      var pS = buscar(b.dataset.sacar);
+      if (pS) abrirSacar(pS);
       return;
     }
 
@@ -398,6 +426,103 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   /* --------------------------------------------------------------- carga -- */
+  /* ------------------------------------------------------------ sacar -- */
+  var hs = document.getElementById('hojaSacar');
+  var hsTit = document.getElementById('hsTit');
+  var hsSub = document.getElementById('hsSub');
+  var hsCuerpo = document.getElementById('hsCuerpo');
+  var sacando = null;
+  var sacarEnVuelo = false;
+
+  function cerrarSacar() {
+    hs.hidden = true;
+    document.body.classList.remove('sheet-open');
+    hsCuerpo.innerHTML = '';
+    sacando = null;
+  }
+
+  function abrirSacar(p) {
+    sacando = p;
+    hs.hidden = false;
+    document.body.classList.add('sheet-open');
+    var vivas = [];
+    LP.lineasDe(p).forEach(function (l, i) {
+      if (!LP.lineaSacada(l)) vivas.push({ l: l, i: i });
+    });
+    if (vivas.length <= 1) {
+      pasoMotivo(vivas.length ? vivas[0].i : 'todo', vivas.length ? vivas[0].l : null);
+      return;
+    }
+    hsTit.textContent = 'Sacar de la cuenta';
+    hsSub.textContent = p.mesa + ' \u00b7 ' + money(LP.cobrable(p));
+    hsCuerpo.innerHTML = '<p class="hs-et">Que sale?</p>' +
+      vivas.map(function (v) {
+        return '<button type="button" class="opcion" data-linea="' + v.i + '">' +
+            '<span>' + v.l.qty + '\u00d7 ' + esc(v.l.name) + '</span>' +
+            '<span class="plata">' + money(LP.importeDeLinea(v.l)) + '</span>' +
+          '</button>';
+      }).join('') +
+      '<button type="button" class="opcion toda" data-linea="todo">' +
+        '<span>Todo el pedido</span>' +
+        '<span class="plata">' + money(LP.cobrable(p)) + '</span>' +
+      '</button>';
+  }
+
+  function pasoMotivo(indice, linea) {
+    var todo = indice === 'todo';
+    var cuanto = todo ? LP.cobrable(sacando) : LP.importeDeLinea(linea);
+    hsTit.textContent = 'Por que sale?';
+    hsSub.textContent = (todo ? 'Todo el pedido' : linea.qty + '\u00d7 ' + linea.name) +
+      ' \u00b7 ' + money(cuanto);
+    hsCuerpo.innerHTML =
+      (sacando.pagado
+        ? '<div class="banda-pago">Esto ya est&aacute; pagado. Cuando lo saques, ' +
+          'la caja tiene que devolverle ' + money(cuanto) + '.</div>'
+        : '') +
+      LP.MOTIVOS_SACAR.map(function (m) {
+        return '<button type="button" class="opcion" data-motivo="' + esc(m) + '" ' +
+          'data-indice="' + esc(String(indice)) + '">' + esc(m) + '</button>';
+      }).join('');
+  }
+
+  hsCuerpo.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-linea]');
+    if (!b || !sacando) return;
+    var idx = b.dataset.linea;
+    if (idx === 'todo') { pasoMotivo('todo', null); return; }
+    pasoMotivo(Number(idx), LP.lineasDe(sacando)[Number(idx)]);
+  });
+
+  hsCuerpo.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-motivo]');
+    if (!b || !sacando || sacarEnVuelo) return;
+    sacarEnVuelo = true;
+    var pedido = sacando, motivo = b.dataset.motivo, crudo = b.dataset.indice;
+    [].forEach.call(hsCuerpo.querySelectorAll('button'), function (x) { x.disabled = true; });
+    b.textContent = 'Sacando...';
+
+    var accion = (crudo === 'todo')
+      ? LP.sacarRonda(sb, pedido, motivo, YO)
+      : LP.sacarPlato(sb, pedido, Number(crudo), motivo, YO);
+
+    accion.then(function (r) {
+      sacarEnVuelo = false;
+      cerrarSacar();
+      if (!r.ok) { LP.toast(r.motivo, 'err'); cargar(true); return; }
+      LP.toast(r.devolver > 0
+        ? 'Listo. Hay que devolverle ' + money(r.devolver) + ' a ' + pedido.mesa +
+          ' \u2014 lo hace la caja.'
+        : 'Listo, lo sacamos de la cuenta de ' + pedido.mesa + '.', 'ok');
+      cargar(true);
+    });
+  });
+
+  document.getElementById('hsX').addEventListener('click', cerrarSacar);
+  hs.addEventListener('click', function (ev) { if (ev.target === hs) cerrarSacar(); });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape' && !hs.hidden) cerrarSacar();
+  });
+
   var enVuelo = false, otraPendiente = false;
 
   function cargar(silencioso) {

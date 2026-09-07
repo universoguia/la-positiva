@@ -754,6 +754,296 @@
     return !!pedido && NO_SE_COBRA.indexOf(pedido.estado) === -1;
   }
 
+  /* --- Sacar un plato de la cuenta ----------------------------------------
+     Cuando vuelve un plato -salio frio, se arrepintieron, no hay
+     ingrediente- hay que sacarlo de lo que se cobra. Antes no se podia:
+     aprobado el pedido, no habia forma, y el plato devuelto se facturaba
+     igual.
+
+     COMO ESTA HECHO, y por que asi:
+
+     La linea NO se borra: se le pone una marca adentro de `lines`. Asi la
+     comanda que vio la cocina se sigue leyendo entera, se sabe que paso, y
+     se puede volver atras.
+
+     La columna `total` NO se toca NUNCA despues del insert: sigue queriendo
+     decir "lo que se pidio". Lo que se cobra se calcula con cobrable(). Se
+     puede porque total === suma de price*qty exacta (lo arma pedir.html),
+     asi que los dos numeros nunca se contradicen. Mutar `total` habria
+     borrado el dato de lo que la mesa pidio de verdad.
+
+     No hay estado nuevo: cuando NO queda ninguna linea viva, el pedido pasa
+     a 'Rechazado', que ya quiere decir "esto no se cobra" y que ya esta
+     contemplado en liberarSiPagado, en SIN_TERMINAR, en admin y en la carta
+     del comensal. Un estado nuevo habria obligado a revisar cada consulta
+     que existe y cada una que se escriba despues.                       */
+
+  var ROLES_QUE_SACAN = ['Mozo', 'Duenio'];
+
+  /* Cocina y Caja no sacan: la cocina no decide que se le cobra al cliente,
+     y la caja cobra lo que el salon le pasa. El duenio si, porque si no
+     Nelly termina entrando como Jonathan y el rastro miente.            */
+  function puedeSacar(persona) {
+    var yo = persona || quienSoy();
+    return !!yo && ROLES_QUE_SACAN.indexOf(yo.rol) !== -1;
+  }
+
+  /* Cuatro, cerrados, en este orden. Sin campo de texto libre: el mozo esta
+     parado en el salon con el celular en una mano. */
+  var MOTIVOS_SACAR = [
+    'Se arrepintieron',
+    'Salio mal o frio',
+    'No hay ingrediente',
+    'Lo cargue en la mesa equivocada'
+  ];
+
+  function lineasDe(pedido) {
+    var ls = pedido && pedido.lines;
+    return Object.prototype.toString.call(ls) === '[object Array]' ? ls : [];
+  }
+
+  function importeDeLinea(l) {
+    return (Number(l.price) || 0) * (Number(l.qty) || 1);
+  }
+
+  function lineaSacada(l) { return !!(l && l.anulada); }
+
+  function lineasVivas(pedido) {
+    var vivas = [];
+    lineasDe(pedido).forEach(function (l) { if (!lineaSacada(l)) vivas.push(l); });
+    return vivas;
+  }
+
+  /* Lo que se le cobra al cliente por este pedido, hoy. */
+  function cobrable(pedido) {
+    if (!pedido || !seCobra(pedido)) return 0;
+    var todas = lineasDe(pedido);
+    // Sin detalle de platos no hay de donde restar: vale el total.
+    if (!todas.length) return Number(pedido.total) || 0;
+    var suma = 0;
+    todas.forEach(function (l) { if (!lineaSacada(l)) suma += importeDeLinea(l); });
+    return suma;
+  }
+
+  /* Plata que YA entro por platos que despues se sacaron y que todavia nadie
+     devolvio.
+
+     Ojo con esto, que es la parte facil de arruinar: NO se puede mirar el
+     booleano `pagado` del pedido en el momento de preguntar, porque no dice
+     cuando se pago. Si se mirara asi, este caso normal inventaria una
+     devolucion que nunca existio:
+
+       pedido de 18.200 sin pagar -> vuelve la milanesa, se saca (no se
+       debe nada, todavia no pago nada) -> la caja cobra los 8.400 que
+       quedaron y marca pagado -> de golpe la milanesa sacada "figura
+       pagada" y el sistema pide devolver 9.800 que nunca entraron.
+
+     Por eso al sacar se congela en la linea si ESE plato ya estaba cobrado
+     (clave `cobrada`). Las lineas viejas, de antes de esto, no la tienen:
+     para esas se cae al booleano del pedido, que es lo unico que hay.   */
+  function pendienteDeDevolver(pedido) {
+    if (!pedido) return 0;
+    var todas = lineasDe(pedido);
+    if (!todas.length) {
+      return (!seCobra(pedido) && pedido.pagado) ? (Number(pedido.total) || 0) : 0;
+    }
+    var suma = 0;
+    todas.forEach(function (l) {
+      if (!lineaSacada(l) || l.devuelto) return;
+      var estabaCobrada = (l.cobrada === undefined) ? !!pedido.pagado : !!l.cobrada;
+      if (estabaCobrada) suma += importeDeLinea(l);
+    });
+    return suma;
+  }
+
+  /* Saca UNA linea del pedido. indice es la posicion dentro de lines.
+     Devuelve { ok, pedido, sacoTodo, devolver } o { ok:false, motivo }.  */
+  function sacarPlato(sb, pedido, indice, motivo, quien) {
+    if (!sb || !pedido) {
+      return Promise.resolve({ ok: false, motivo: 'No hay conexion con el sistema.' });
+    }
+    var todas = lineasDe(pedido);
+    // 'indice' puede ser uno solo o varios: sacar la ronda entera es lo mismo
+    // en una sola escritura, no N updates seguidos.
+    var indices = (Object.prototype.toString.call(indice) === '[object Array]')
+      ? indice : [indice];
+    var linea = todas[indices[0]];
+    if (!linea) return Promise.resolve({ ok: false, motivo: 'Ese plato ya no esta.' });
+    if (indices.every(function (i) { return lineaSacada(todas[i]); })) {
+      return Promise.resolve({ ok: false, motivo: 'Eso ya estaba sacado.' });
+    }
+
+    var nuevas = todas.map(function (l, i) {
+      if (indices.indexOf(i) === -1 || lineaSacada(l)) return l;
+      var copia = {};
+      for (var k in l) if (Object.prototype.hasOwnProperty.call(l, k)) copia[k] = l[k];
+      copia.anulada = true;
+      copia.motivo = motivo || 'Sin motivo';
+      copia.por = (quien || 'Salon').slice(0, 40);
+      copia.en = new Date().toISOString();
+      copia.era = pedido.estado;          // en que punto estaba cuando salio
+      copia.cobrada = !!pedido.pagado;    // ver el comentario de arriba
+      return copia;
+    });
+
+    var quedanVivas = 0;
+    nuevas.forEach(function (l) { if (!lineaSacada(l)) quedanVivas++; });
+    var sacoTodo = quedanVivas === 0;
+
+    var parche = {
+      lines: nuevas,
+      updated_at: new Date().toISOString(),
+      rechazado_motivo: ((motivo || 'Sin motivo') +
+                         (quien ? ' - lo saco ' + quien : '')).slice(0, 200)
+    };
+    if (sacoTodo) parche.estado = 'Rechazado';
+
+    /* El .eq('estado', ...) es el mismo candado que cambiarEstado: si entre
+       que se pinto la pantalla y el toque la cocina movio la comanda, el
+       update no pega y se avisa, en vez de escribir sobre un pedido que ya
+       no esta donde el mozo cree.                                       */
+    return sb.from(TABLE).update(parche)
+      .eq('id', pedido.id).eq('estado', pedido.estado)
+      .select()
+      .then(function (res) {
+        if (res.error) {
+          humanError(res.error);
+          return { ok: false, motivo: 'No pudimos sacarlo. Proba de nuevo.' };
+        }
+        var fila = (res.data || [])[0];
+        if (!fila) {
+          return { ok: false, choque: true,
+                   motivo: 'Ese pedido lo acaba de cambiar otra persona. Fijate como quedo.' };
+        }
+        avisarSacado(sb, fila, linea, sacoTodo);
+        liberarSiPagado(sb, fila);   // puede haber quedado la mesa sin deuda
+        return { ok: true, pedido: fila, sacoTodo: sacoTodo,
+                 devolver: pendienteDeDevolver(fila) };
+      }, function (e) {
+        humanError(e);
+        return { ok: false, motivo: 'No pudimos sacarlo. Proba de nuevo.' };
+      });
+  }
+
+  /* Saca la ronda entera: todas las lineas que sigan vivas, de un saque. */
+  function sacarRonda(sb, pedido, motivo, quien) {
+    var indices = [];
+    lineasDe(pedido).forEach(function (l, i) { if (!lineaSacada(l)) indices.push(i); });
+    if (!indices.length) {
+      return Promise.resolve({ ok: false, motivo: 'Esa ronda ya estaba sacada.' });
+    }
+    return sacarPlato(sb, pedido, indices, motivo, quien);
+  }
+
+  /* Volver a poner un plato sacado. Existe porque sacar no tiene "estas
+     seguro?" -elegir el motivo ES la confirmacion- y porque el mozo no tiene
+     ninguna manera de volver a cargar un plato desde su panel: sin esto, un
+     toque errado a las 22:30 no se puede arreglar.
+
+     Si el pedido habia quedado en 'Rechazado' por no tener lineas vivas,
+     vuelve al estado que tenia cuando lo sacaron, que quedo guardado en la
+     linea (`era`).                                                       */
+  function volverAPoner(sb, pedido, indice, quien) {
+    if (!sb || !pedido) {
+      return Promise.resolve({ ok: false, motivo: 'No hay conexion con el sistema.' });
+    }
+    var todas = lineasDe(pedido);
+    var linea = todas[indice];
+    if (!linea || !lineaSacada(linea)) {
+      return Promise.resolve({ ok: false, motivo: 'Ese plato no estaba sacado.' });
+    }
+    if (linea.devuelto) {
+      return Promise.resolve({ ok: false,
+        motivo: 'La caja ya devolvio esa plata. Cargalo como un pedido nuevo.' });
+    }
+
+    var nuevas = todas.map(function (l, i) {
+      if (i !== indice) return l;
+      var copia = {};
+      for (var k in l) if (Object.prototype.hasOwnProperty.call(l, k)) copia[k] = l[k];
+      delete copia.anulada; delete copia.motivo; delete copia.por;
+      delete copia.en; delete copia.era; delete copia.cobrada;
+      return copia;
+    });
+
+    var parche = { lines: nuevas, updated_at: new Date().toISOString() };
+    if (!seCobra(pedido)) parche.estado = linea.era || 'Por aprobar';
+
+    return sb.from(TABLE).update(parche)
+      .eq('id', pedido.id).eq('estado', pedido.estado)
+      .select()
+      .then(function (res) {
+        if (res.error) {
+          humanError(res.error);
+          return { ok: false, motivo: 'No pudimos volver a ponerlo.' };
+        }
+        var fila = (res.data || [])[0];
+        if (!fila) {
+          return { ok: false, choque: true,
+                   motivo: 'Ese pedido lo acaba de cambiar otra persona. Fijate como quedo.' };
+        }
+        /* Si volvio a la vida y la cocina lo tenia, hay que avisarle: dejo de
+           estar tachado y hay que hacerlo.                               */
+        if (parche.estado && SIN_TERMINAR.indexOf(parche.estado) !== -1) {
+          avisar(sb, 'Cocina', 'Volvio un plato a la comanda',
+                 fila.mesa + ' - ' + (linea.name || 'un plato') + ': hay que hacerlo.',
+                 fila.id, 'cocina.html', true);
+        }
+        return { ok: true, pedido: fila };
+      }, function (e) {
+        humanError(e);
+        return { ok: false, motivo: 'No pudimos volver a ponerlo.' };
+      });
+  }
+
+  /* La caja marca que ya le devolvio la plata al cliente. */
+  function marcarDevuelto(sb, pedido, quien) {
+    if (!sb || !pedido) return Promise.resolve(false);
+    var nuevas = lineasDe(pedido).map(function (l) {
+      if (!lineaSacada(l) || l.devuelto) return l;
+      var estabaCobrada = (l.cobrada === undefined) ? !!pedido.pagado : !!l.cobrada;
+      if (!estabaCobrada) return l;
+      var copia = {};
+      for (var k in l) if (Object.prototype.hasOwnProperty.call(l, k)) copia[k] = l[k];
+      copia.devuelto = true;
+      copia.devuelto_por = (quien || 'Caja').slice(0, 40);
+      copia.devuelto_en = new Date().toISOString();
+      return copia;
+    });
+    return sb.from(TABLE)
+      .update({ lines: nuevas, updated_at: new Date().toISOString() })
+      .eq('id', pedido.id)
+      .then(function (res) { return !res.error; }, function () { return false; });
+  }
+
+  /* A quien se le avisa cuando sale un plato.
+
+     A la cocina SOLO si llego a verlo: aprobado_en lo escribe unicamente
+     aprobarPedido, asi que null quiere decir que la comanda nunca salio del
+     panel del mozo y no hay a quien frenar.
+
+     A la caja (rol 'Jonathan', que comparten Caja y Duenio) SOLO si hay
+     plata para devolver. Sin este aviso la devolucion no le llega a nadie:
+     la ficha queda esperando en una pantalla que Cecilia puede no estar
+     mirando.                                                             */
+  function avisarSacado(sb, pedido, linea, sacoTodo) {
+    var plato = (linea && linea.name) || 'un plato';
+
+    if (pedido.aprobado_en) {
+      avisar(sb, 'Cocina',
+             sacoTodo ? 'Anularon una comanda' : 'Sacaron un plato de una comanda',
+             pedido.mesa + ' - ' + (sacoTodo ? 'no la hagas' : plato + ': no lo hagas'),
+             pedido.id, 'cocina.html', true);
+    }
+
+    var devolver = pendienteDeDevolver(pedido);
+    if (devolver > 0) {
+      avisar(sb, 'Jonathan', 'Hay que devolver plata',
+             pedido.mesa + ' - ' + money(devolver) + ' de ' + plato + '.',
+             pedido.id, 'caja.html', true);
+    }
+  }
+
   /* Quien se entera de cada paso. Esta tabla es la UNICA fuente: si un estado
      esta aca, avisa; si no, no. Antes cada pantalla decidia por su cuenta y
      por eso habia pasos mudos.                                           */
@@ -1150,6 +1440,12 @@
     pedidos.forEach(function (p) {
       var t = Number(p.total) || 0;
 
+      var cobra = cobrable(p);
+      var aDevolver = pendienteDeDevolver(p);
+      devolver += aDevolver;
+      // Lo que salio de la cuenta: la diferencia entre lo pedido y lo cobrable.
+      sacado += Math.max(0, t - cobra);
+
       if (!seCobra(p)) {
         /* Sacado de la cuenta: no se cobra. Antes SI se cobraba -este era el
            bug-: el boton Rechazar existia desde siempre y el plato rechazado
@@ -1159,13 +1455,13 @@
            pagado (pedir.html), asi que un rechazado pagado es plata que YA
            entro y hay que devolver. Si se descartara a ciegas, esa plata no
            aparecia en ninguna pantalla.                                  */
-        sacado += t;
-        if (p.pagado) devolver += t;
         return;
       }
 
-      total += t;
-      if (p.pagado) pagado += t;
+      /* Se cobra lo que quedo vivo, no el total del insert: si volvio una
+         milanesa de tres, se cobran las otras dos.                       */
+      total += cobra;
+      if (p.pagado) pagado += cobra;
       if (p.estado !== 'Entregado') sinEntregar++;
       // Distinto de 'sinEntregar': lo sacado no esta entregado, pero tampoco
       // esta en curso. Esto cuenta lo que la cocina todavia debe.
@@ -1680,6 +1976,18 @@
     NO_SE_COBRA: NO_SE_COBRA,
     NO_SE_COBRA_SQL: NO_SE_COBRA_SQL,
     seCobra: seCobra,
+    MOTIVOS_SACAR: MOTIVOS_SACAR,
+    puedeSacar: puedeSacar,
+    lineasDe: lineasDe,
+    lineasVivas: lineasVivas,
+    lineaSacada: lineaSacada,
+    importeDeLinea: importeDeLinea,
+    cobrable: cobrable,
+    pendienteDeDevolver: pendienteDeDevolver,
+    sacarPlato: sacarPlato,
+    sacarRonda: sacarRonda,
+    volverAPoner: volverAPoner,
+    marcarDevuelto: marcarDevuelto,
     AVISOS: AVISOS,
     avisarEstado: avisarEstado,
     avisarPago: avisarPago,
