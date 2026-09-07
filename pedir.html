@@ -156,6 +156,17 @@
   }
   .dish-actions{flex:none}
 
+  /* Agotado: se muestra igual, apagado y sin boton. No se esconde a
+     proposito: si el plato desaparece, el comensal no sabe si existe y
+     termina preguntandole al mozo, que es lo que se queria evitar. */
+  .dish.agotado{opacity:.62}
+  .dish.agotado .dish-media{filter:grayscale(1)}
+  .sin-stock{
+    font-size:13px;font-weight:600;color:var(--muted-strong);
+    background:var(--border);border-radius:var(--r-pill);padding:6px 13px;
+    display:inline-flex;align-items:center;white-space:nowrap;
+  }
+
   /* Ya no ocupa el ancho, pero se mantiene por encima de los 44px de area
      tactil: se toca de pie y apurado. */
   .btn-add{
@@ -508,6 +519,10 @@ document.addEventListener('DOMContentLoaded', function () {
      a la consulta. Cuando llegan las propias, se repinta.                 */
   var fotosPropias = {};
 
+  /* Lo que hoy no hay. Llega de la base y se refresca en vivo: si el mozo
+     apaga un plato, la carta abierta en la mesa se entera sin recargar. */
+  var agotados = {};
+
   /* El carrito vive en localStorage. Antes, recargar la pagina -o que el
      navegador descartara la pestania, que en un celular con poca memoria
      pasa- borraba el pedido entero y habia que armarlo de nuevo desde cero.  */
@@ -635,8 +650,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function dishHTML(d) {
     var q = cart[d.id] ? cart[d.id].qty : 0;
+    var noHay = !!agotados[d.id];
     var ini = esc((d.name || '?').trim().charAt(0).toUpperCase());
-    var actions = q > 0
+    var actions = noHay
+      ? '<span class="sin-stock">Se termino por hoy</span>'
+      : q > 0
       ? '<div class="qty-row">' +
           '<button type="button" class="icon-btn" data-act="dec" data-id="' + esc(d.id) + '" ' +
             'aria-label="Quitar uno de ' + esc(d.name) + '">&#8722;</button>' +
@@ -647,7 +665,7 @@ document.addEventListener('DOMContentLoaded', function () {
       : '<button type="button" class="btn-add" data-act="inc" data-id="' + esc(d.id) + '" ' +
           'aria-label="Agregar ' + esc(d.name) + ' al pedido">Agregar</button>';
 
-    return '<article class="dish">' +
+    return '<article class="dish' + (noHay ? ' agotado' : '') + '">' +
       '<div class="dish-media" data-ini="' + ini + '">' +
         '<img src="' + esc(LP.fotoDePlato(fotosPropias, d) || '') + '" alt="" ' +
              'width="800" height="600" loading="lazy" decoding="async">' +
@@ -739,6 +757,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ----------------------------------------------------------- carrito -- */
   function changeQty(id, delta) {
+    // Ni por accidente: si no hay, no se suma al carrito.
+    if (agotados[id] && delta > 0) return;
     var item = null;
     for (var i = 0; i < MENU.length; i++) if (MENU[i].id === id) { item = MENU[i]; break; }
     if (!item) return;
@@ -984,12 +1004,41 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   function enviarPedido() {
-    var yaFallo = false;
     var metodo = selectedMetodo();
     var btn = document.getElementById('payBtn');
+
+    /* El boton se traba ANTES de la consulta, no despues: si no, durante los
+       milisegundos que tarda entran dos toques y salen dos pedidos. Es el
+       mismo duplicado que se arreglo con la clave de envio.              */
     submitting = true;
     btn.disabled = true;
     btn.textContent = metodo === 'Tarjeta' ? 'Procesando pago...' : 'Enviando...';
+
+    /* Ultima defensa. Entre que armo el carrito y toco Enviar pueden haber
+       pasado veinte minutos. Se pregunta a la base, no al estado local: con
+       tarjeta el pedido se marca pagado enseguida, asi que sin esto se podia
+       pagar algo que ya no habia.                                        */
+    var enCarrito = cartValues().map(function (l) { return { id: l.item.id }; });
+    LP.agotadosEnElCarrito(sb, enCarrito).then(function (faltan) {
+      if (!faltan.length) { seguirEnviando(metodo, btn); return; }
+
+      // Se devuelve el control: esto lo arregla el comensal, no un reintento.
+      submitting = false;
+      btn.disabled = false;
+      btn.textContent = metodo === 'Tarjeta' ? 'Pagar ' + money(cartTotal())
+                      : (metodo === 'QR' ? 'Enviar pedido y pagar con QR'
+                                         : 'Enviar pedido a cocina');
+      var caja = document.getElementById('formErr');
+      caja.textContent = (faltan.length === 1
+        ? 'Se termino: ' + faltan[0] + '. Sacalo del pedido para continuar.'
+        : 'Se terminaron: ' + faltan.join(', ') + '. Sacalos del pedido para continuar.');
+      caja.scrollIntoView({ block: 'nearest' });
+      LP.platosAgotados(sb).then(function (m) { agotados = m || {}; renderMenu(); });
+    });
+  }
+
+  function seguirEnviando(metodo, btn) {
+    var yaFallo = false;
 
     // Solo viajan nombre, lineas y total. Los datos de tarjeta NUNCA salen del navegador.
     var lines = cartValues().map(function (l) {
@@ -1272,6 +1321,27 @@ document.addEventListener('DOMContentLoaded', function () {
   renderMenu();
   renderCartBar();
   updateScrollHint();
+
+  /* Lo agotado, y despues atento a los cambios: el mozo puede apagar un plato
+     mientras la mesa esta mirando la carta.                              */
+  if (sb) {
+    LP.platosAgotados(sb).then(function (m) {
+      agotados = m || {};
+      renderMenu();
+    });
+
+    var canalStock = sb.channel('stock-' + Date.now())
+      .on('postgres_changes', { event: '*', schema: 'public', table: LP.AGOTADOS_TABLE },
+          function () {
+            LP.platosAgotados(sb).then(function (m) {
+              agotados = m || {};
+              renderMenu();
+              renderCartBar();
+            });
+          })
+      .subscribe();
+    LP.onCleanup(function () { try { sb.removeChannel(canalStock); } catch (e) {} });
+  }
 
   /* Las fotos propias llegan aparte. Si la consulta falla, la carta se queda
      con las fotos originales: nunca deja al cliente sin ver los platos.  */

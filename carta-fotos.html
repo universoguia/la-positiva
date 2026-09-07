@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f3ece2">
 <meta name="description" content="Carga las fotos de los platos de La Positiva desde el celular.">
-<title>La Positiva - Fotos de la carta</title>
+<title>La Positiva - La carta</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -89,6 +89,21 @@
   .estado.ok{color:var(--ok)}
   .estado:empty{display:none}
 
+  /* El interruptor de si hay o no hay. Es la accion que mas se usa de esta
+     pantalla -al empezar el turno se apagan tres o cuatro platos-, asi que
+     va primero y se lee sin pensar. */
+  .stock{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-height:40px;padding:0 15px;border-radius:var(--r-pill);
+    font-size:14px;font-weight:500;cursor:pointer;
+    border:1px solid var(--border-strong);background:transparent;color:var(--muted-strong);
+  }
+  .stock.no{background:var(--err-bg);border-color:#f0cfc9;color:var(--err-ink)}
+  .stock:hover{border-color:var(--accent)}
+
+  .plato.agotado .miniatura{filter:grayscale(1);opacity:.6}
+  .plato.agotado .datos b{color:var(--muted)}
+
   .vacio{padding:30px 10px;text-align:center;color:var(--muted)}
 
   .back-link{
@@ -101,9 +116,9 @@
 <body>
 <div class="wrap">
   <div class="intro">
-    <h1>Fotos de la carta</h1>
-    <p>Saca la foto con el celular o eleg&iacute;la de la galer&iacute;a. Se guarda al toque
-       y el cliente la ve en la carta, sin publicar nada.</p>
+    <h1>La carta</h1>
+    <p>Apag&aacute; lo que se termin&oacute; y saca las fotos. Los dos cambios se ven en la
+       mesa al instante, sin publicar nada.</p>
   </div>
 
   <div class="filtros">
@@ -113,6 +128,7 @@
       <option value="">Todos los platos</option>
       <option value="propias">Solo los que ya tienen foto propia</option>
       <option value="sin">Solo los que faltan</option>
+      <option value="agotados">Solo los que se terminaron</option>
     </select>
     <p class="cuenta" id="cuenta"></p>
   </div>
@@ -141,6 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var selSin = document.getElementById('soloSin');
 
   var propias = {};          // { plato_id: url } de las cargadas por el local
+  var agotados = {};         // { plato_id: true } de los que hoy no hay
 
   /* -------------------------------------------------------- categorias -- */
   var cats = [];
@@ -162,6 +179,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (cat && p.cat !== cat) return false;
       if (modo === 'propias' && !propias[p.id]) return false;
       if (modo === 'sin' && propias[p.id]) return false;
+      if (modo === 'agotados' && !agotados[p.id]) return false;
       if (q && normalizar(p.name + ' ' + (p.note || '')).indexOf(q) === -1) return false;
       return true;
     });
@@ -171,8 +189,10 @@ document.addEventListener('DOMContentLoaded', function () {
   function pintar() {
     var items = filtrados();
     var conPropia = MENU.filter(function (p) { return propias[p.id]; }).length;
+    var sinStock = MENU.filter(function (p) { return agotados[p.id]; }).length;
     cuenta.textContent = items.length + ' de ' + MENU.length + ' platos · ' +
-                         conPropia + ' con foto propia';
+                         conPropia + ' con foto propia' +
+                         (sinStock ? ' · ' + sinStock + ' sin stock hoy' : '');
 
     vacio.hidden = items.length > 0;
     lista.innerHTML = items.map(function (p) { return filaHTML(p); }).join('');
@@ -180,12 +200,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function filaHTML(p) {
     var propia = propias[p.id];
+    var noHay = !!agotados[p.id];
     var url = LP.fotoDePlato(propias, p);
     var mini = url
       ? '<img src="' + esc(url) + '" alt="" loading="lazy" decoding="async">'
       : '<div class="sinfoto">Sin foto</div>';
 
-    return '<li class="plato" data-plato="' + esc(p.id) + '">' +
+    return '<li class="plato' + (noHay ? ' agotado' : '') + '" data-plato="' + esc(p.id) + '">' +
         '<div class="miniatura">' + mini +
           (propia ? '<span class="propia">Propia</span>' : '') +
         '</div>' +
@@ -193,6 +214,9 @@ document.addEventListener('DOMContentLoaded', function () {
           '<b>' + esc(p.name) + '</b>' +
           '<div class="cat">' + esc(p.cat) + (p.note ? ' · ' + esc(p.note) : '') + '</div>' +
           '<div class="acciones">' +
+            '<button type="button" class="stock' + (noHay ? ' no' : '') + '" ' +
+              'data-stock="' + esc(p.id) + '">' +
+              (noHay ? 'Se termino' : 'Hay') + '</button>' +
             '<label class="subir">' +
               '<input type="file" accept="image/*" data-subir="' + esc(p.id) + '">' +
               '<span>' + (propia ? 'Cambiar foto' : 'Cargar foto') + '</span>' +
@@ -232,6 +256,36 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  /* ------------------------------------------------------- hay / no hay -- */
+  lista.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-stock]');
+    if (!b) return;
+    var platoId = b.dataset.stock;
+    var plato = null;
+    for (var i = 0; i < MENU.length; i++) if (MENU[i].id === platoId) plato = MENU[i];
+    if (!plato) return;
+
+    var apagar = !agotados[platoId];
+    b.disabled = true;
+    b.textContent = apagar ? 'Apagando...' : 'Prendiendo...';
+
+    var accion = apagar ? LP.agotarPlato(sb, plato, 'Carta')
+                        : LP.reponerPlato(sb, platoId);
+
+    accion.then(function (ok) {
+      b.disabled = false;
+      if (!ok) {
+        b.textContent = apagar ? 'Hay' : 'Se termino';
+        decir(platoId, 'No pudimos cambiarlo. Proba de nuevo.', 'err');
+        return;
+      }
+      if (apagar) agotados[platoId] = true; else delete agotados[platoId];
+      pintar();
+      LP.toast(apagar ? plato.name + ': ya no se puede pedir.'
+                      : plato.name + ': vuelve a la carta.', 'ok');
+    });
+  });
+
   /* ------------------------------------------------------------ quitar -- */
   lista.addEventListener('click', function (ev) {
     var b = ev.target.closest('[data-quitar]');
@@ -264,6 +318,10 @@ document.addEventListener('DOMContentLoaded', function () {
   LP.fotosDePlatos(sb).then(function (mapa) {
     propias = mapa || {};
     pintar();                                // y repinta cuando llegan las propias
+  });
+  LP.platosAgotados(sb).then(function (mapa) {
+    agotados = mapa || {};
+    pintar();
   });
 });
 </script>

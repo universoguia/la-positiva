@@ -22,6 +22,7 @@
   var COBROS_TABLE = CFG.COBROS_TABLE;
   var WA_TABLE = CFG.WA_TABLE || 'la_positiva_whatsapp';
   var FOTOS_TABLE = CFG.FOTOS_TABLE || 'la_positiva_fotos';
+  var AGOTADOS_TABLE = CFG.AGOTADOS_TABLE || 'la_positiva_agotados';
   var SESIONES_TABLE = CFG.SESIONES_TABLE || 'la_positiva_sesiones';
   var NOTAS_TABLE = CFG.NOTAS_TABLE || 'la_positiva_notas';
   var PERSONAS_TABLE = CFG.PERSONAS_TABLE || 'la_positiva_personas';
@@ -1068,6 +1069,61 @@
       }, function (e) { humanError(e); return false; });
   }
 
+  /* --- Platos agotados ----------------------------------------------------
+     menu-data.js es un archivo, no un dato: sin esto, cuando se acaba la
+     provoleta no hay forma de sacarla de la carta salvo volver a publicar el
+     sitio. Y con tarjeta el pedido se marca pagado antes de que nadie del
+     local lo vea, asi que se podia pagar algo que no habia.
+
+     Se guardan SOLO los agotados: lo normal es que el plato este.          */
+
+  /* Devuelve un objeto { plato_id: true } con los que hoy no hay. */
+  function platosAgotados(sb) {
+    if (!sb) return Promise.resolve({});
+    return sb.from(AGOTADOS_TABLE).select('plato_id').then(function (res) {
+      if (res.error) { humanError(res.error); return {}; }
+      var m = {};
+      (res.data || []).forEach(function (f) { m[f.plato_id] = true; });
+      return m;
+    }, function (e) { humanError(e); return {}; });
+  }
+
+  function agotarPlato(sb, plato, quien) {
+    if (!sb || !plato) return Promise.resolve(false);
+    return sb.from(AGOTADOS_TABLE).insert({
+      plato_id: plato.id,
+      nombre: (plato.name || '').slice(0, 120),
+      apagado_por: (quien || '').slice(0, 40) || null
+    }).then(function (res) {
+      // 23505 = ya estaba apagado. Es exito, no falla.
+      if (res.error && res.error.code !== '23505') { humanError(res.error); return false; }
+      return true;
+    }, function (e) { humanError(e); return false; });
+  }
+
+  function reponerPlato(sb, platoId) {
+    if (!sb || !platoId) return Promise.resolve(false);
+    return sb.from(AGOTADOS_TABLE).delete().eq('plato_id', platoId)
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return false; }
+        return true;
+      }, function (e) { humanError(e); return false; });
+  }
+
+  /* Ultima linea de defensa, en el momento de enviar: entre que el comensal
+     armo el carrito y toco Enviar pueden haber pasado veinte minutos y el
+     plato puede haberse acabado. Devuelve los nombres de lo que ya no hay. */
+  function agotadosEnElCarrito(sb, lineas) {
+    if (!sb || !lineas || !lineas.length) return Promise.resolve([]);
+    var ids = lineas.map(function (l) { return l.id; }).filter(Boolean);
+    if (!ids.length) return Promise.resolve([]);
+    return sb.from(AGOTADOS_TABLE).select('plato_id, nombre').in('plato_id', ids)
+      .then(function (res) {
+        if (res.error) return [];          // ante la duda, no frenar el pedido
+        return (res.data || []).map(function (f) { return f.nombre || f.plato_id; });
+      }, function () { return []; });
+  }
+
   /* --- Fotos de los platos ------------------------------------------------
      La carta trae una foto por plato en menu-data.js, pero apunta a OTRO
      deploy: cambiarla obligaba a publicar ese otro sitio, cosa que desde un
@@ -1418,6 +1474,11 @@
     borrarSub: borrarSub,
     WA_TABLE: WA_TABLE,
     FOTOS_TABLE: FOTOS_TABLE,
+    AGOTADOS_TABLE: AGOTADOS_TABLE,
+    platosAgotados: platosAgotados,
+    agotarPlato: agotarPlato,
+    reponerPlato: reponerPlato,
+    agotadosEnElCarrito: agotadosEnElCarrito,
     SESIONES_TABLE: SESIONES_TABLE,
     NOTAS_TABLE: NOTAS_TABLE,
     PERSONAS_TABLE: PERSONAS_TABLE,
