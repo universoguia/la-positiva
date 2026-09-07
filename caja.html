@@ -173,10 +173,15 @@
       </div>
 
       <label class="btn btn-primary btn-block" for="qrFile" id="qrLabel">
-        Subir o sacar foto del QR
+        Elegir de la galer&iacute;a o sacar la foto
       </label>
-      <!-- capture pide la camara en el celular; en escritorio abre el explorador. -->
-      <input type="file" id="qrFile" accept="image/*" capture="environment" class="visually-hidden">
+      <!-- SIN capture, a proposito. Con capture="environment" el celular abria la
+           camara de una y no habia manera de llegar al carrete: la cajera que ya
+           tenia guardada la captura del QR de su app de cobro quedaba trabada,
+           porque no se puede "sacarle una foto" a algo que ya es una captura.
+           Sin el atributo, el celular pregunta camara o galeria. En escritorio
+           abre el explorador igual que antes. -->
+      <input type="file" id="qrFile" accept="image/*" class="visually-hidden">
       <p class="qr-msg" id="qrMsg" role="status" aria-live="polite"></p>
 
       <!-- Bloque fijo en el HTML: si lo creara el JS, el panel creceria

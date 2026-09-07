@@ -19,19 +19,24 @@
   .intro p{color:var(--muted);margin:0;font-size:16px;line-height:1.55}
 
   .controles{
-    display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;
+    display:flex;gap:10px;flex-wrap:wrap;align-items:center;
     background:var(--card);border:1px solid var(--border);
     border-radius:var(--r-lg);padding:18px 20px;margin-bottom:22px;
   }
-  .campo{display:flex;flex-direction:column;gap:6px}
-  .campo label{font-size:14px;color:var(--muted-strong);font-weight:500}
-  .campo input{
-    min-height:var(--tap);padding:10px 13px;font-size:16px;width:150px;
-    border:1px solid var(--border-strong);border-radius:var(--r-md);
-    background:var(--bg);color:var(--ink);font-family:inherit;
-  }
-  .campo input:focus{outline:2px solid var(--accent);outline-offset:1px}
   .controles .btn{min-height:var(--tap);padding:0 20px;font-size:15px}
+  .controles .cuantas{font-size:14px;color:var(--muted-strong)}
+
+  /* Las piezas apiladas en pantalla, una debajo de la otra, con su boton
+     propio para reimprimir una sola cuando se mancha o se despega. */
+  .piezas{display:flex;flex-direction:column;gap:22px;align-items:center}
+  .sobre{width:100%;max-width:420px}
+  .sola{
+    display:flex;align-items:center;justify-content:center;
+    min-height:var(--tap);width:100%;margin-top:8px;font-size:14px;
+    color:var(--muted-strong);text-decoration:underline;cursor:pointer;
+    background:none;border:0;font-family:inherit;
+  }
+  .sola:hover{color:var(--ink)}
 
   /* --------------------------------------------------------- la pieza --- */
   .pieza{
@@ -80,11 +85,21 @@
     body{background:#fff}
     .no-imprimir{display:none !important}
     .wrap{max-width:none;padding:0}
+    .piezas{display:block}
+    .sobre{max-width:none;margin:0}
     .pieza{
       border:none;box-shadow:none;padding:0;max-width:none;
       break-inside:avoid;page-break-inside:avoid;
     }
+    /* Una mesa por hoja: se recorta y se deja sobre la mesa. La ultima no
+       lleva salto, si no sale una hoja en blanco al final. */
+    .sobre{break-after:page;page-break-after:always}
+    .sobre:last-child{break-after:auto;page-break-after:auto}
     .pieza .codigo{width:62mm;height:62mm}
+
+    /* Reimprimir una sola: se esconden las demas mientras dura la impresion. */
+    .una-sola .sobre{display:none}
+    .una-sola .sobre.elegida{display:block;break-after:auto;page-break-after:auto}
   }
 </style>
 </head>
@@ -93,31 +108,20 @@
   <div class="no-imprimir">
     <div class="intro">
       <h1>QR de las mesas</h1>
-      <p>Elegi el numero de mesa, imprimi y dejalo sobre la mesa. El codigo lleva
-         directo a la carta con esa mesa ya cargada.</p>
+      <p>Ya est&aacute;n los c&oacute;digos de todas las mesas del local. Imprim&iacute;,
+         recort&aacute; y dej&aacute; uno sobre cada mesa. Cada c&oacute;digo lleva a la
+         carta con esa mesa ya cargada.</p>
     </div>
 
     <div class="aviso" id="avisoLocal" hidden></div>
 
-    <form class="controles" id="form">
-      <div class="campo">
-        <label for="mesa">Numero de mesa</label>
-        <input type="text" id="mesa" name="mesa" value="7" inputmode="numeric"
-               maxlength="12" autocomplete="off">
-      </div>
-      <button type="submit" class="btn btn-secondary">Generar</button>
-      <button type="button" class="btn btn-primary" id="imprimir">Imprimir</button>
-    </form>
+    <div class="controles">
+      <button type="button" class="btn btn-primary" id="imprimir">Imprimir todas</button>
+      <span class="cuantas" id="cuantas">Generando los c&oacute;digos...</span>
+    </div>
   </div>
 
-  <div class="pieza" id="pieza">
-    <img class="marca" src="icons/icon-192.png" alt="" width="74" height="74">
-    <h2>La Positiva</h2>
-    <p class="mesa" id="piezaMesa">Mesa 7</p>
-    <div class="codigo" id="codigo"></div>
-    <p class="pedi">Escanea para ver la carta y pedir</p>
-    <p class="chico">Desde tu celular, sin instalar nada.</p>
-  </div>
+  <div class="piezas" id="piezas"></div>
 
   <div class="destino no-imprimir" id="destino"></div>
 
@@ -125,6 +129,9 @@
 </div>
 
 <script src="vendor/qrcode.js" defer></script>
+<!-- Supabase hace falta desde que las mesas salen del catalogo del local y no
+     de un numero tipeado a mano. Antes esta pantalla no hablaba con la base. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
 <script src="config.js" defer></script>
 <script src="app.js" defer></script>
 <script>
@@ -132,9 +139,9 @@ document.addEventListener('DOMContentLoaded', function () {
   'use strict';
   var esc = LP.esc;
 
-  var inputMesa = document.getElementById('mesa');
-  var piezaMesa = document.getElementById('piezaMesa');
-  var cajaCodigo = document.getElementById('codigo');
+  var sb = LP.client();
+  var caja = document.getElementById('piezas');
+  var cuantas = document.getElementById('cuantas');
   var cajaDestino = document.getElementById('destino');
   var avisoLocal = document.getElementById('avisoLocal');
 
@@ -157,59 +164,107 @@ document.addEventListener('DOMContentLoaded', function () {
     avisoLocal.hidden = false;
   }
 
-  function limpiar(v) {
-    // Se permite "12" y tambien "Barra 3": solo se sacan los caracteres que
-    // romperian la URL o el nombre que despues muestra la cocina.
-    return String(v || '').replace(/[^\w\s-]/g, '').trim().slice(0, 12);
-  }
-
-  function pintar() {
-    var mesa = limpiar(inputMesa.value) || '7';
-    inputMesa.value = mesa;
-    piezaMesa.textContent = 'Mesa ' + mesa;
-
-    var destino = urlDeMesa(mesa);
-
-    /* Correccion de errores alta: el QR sigue leyendose con una mancha de
-       grasa o un pliegue, que en un bodegon pasa. Tipo 0 = que la libreria
-       elija el tamanio minimo que entre.                                */
+  /* Devuelve el <svg> del codigo, o cadena vacia si la libreria no pudo.
+     Correccion de errores alta: el QR sigue leyendose con una mancha de grasa
+     o un pliegue, que en un bodegon pasa. Tipo 0 = que la libreria elija el
+     tamanio minimo que entre.                                            */
+  function svgDelCodigo(destino, etiqueta) {
     try {
       var qr = qrcode(0, 'H');
       qr.addData(destino);
       qr.make();
-      cajaCodigo.innerHTML = qr.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
-      var svg = cajaCodigo.querySelector('svg');
+      var html = qr.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
+      var tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      var svg = tmp.querySelector('svg');
       if (svg) {
         svg.setAttribute('role', 'img');
-        svg.setAttribute('aria-label', 'Codigo QR de la mesa ' + mesa);
+        svg.setAttribute('aria-label', 'Codigo QR de la ' + etiqueta);
         // El negro de la marca, no un negro puro cualquiera.
         var paths = svg.querySelectorAll('path, rect');
         for (var i = 0; i < paths.length; i++) {
-          if (paths[i].getAttribute('fill') === '#000000') paths[i].setAttribute('fill', '#14100e');
+          if (paths[i].getAttribute('fill') === '#000000') {
+            paths[i].setAttribute('fill', '#14100e');
+          }
         }
       }
+      return tmp.innerHTML;
     } catch (e) {
       LP.humanError(e);
-      cajaCodigo.innerHTML = '';
-      LP.toast('No pudimos generar el codigo. Proba con un numero mas corto.', 'err');
-      return;
+      return '';
     }
-
-    cajaDestino.innerHTML = '<b>A donde lleva este codigo</b>' + esc(destino);
   }
 
-  document.getElementById('form').addEventListener('submit', function (ev) {
-    ev.preventDefault();
-    pintar();
+  function piezaHTML(numero) {
+    var etiqueta = 'Mesa ' + numero;
+    var codigo = svgDelCodigo(urlDeMesa(numero), etiqueta);
+    return '<div class="sobre" data-mesa="' + esc(numero) + '">' +
+        '<div class="pieza">' +
+          '<img class="marca" src="icons/icon-192.png" alt="" width="74" height="74">' +
+          '<h2>La Positiva</h2>' +
+          '<p class="mesa">' + esc(etiqueta) + '</p>' +
+          '<div class="codigo">' + codigo + '</div>' +
+          '<p class="pedi">Escanea para ver la carta y pedir</p>' +
+          '<p class="chico">Desde tu celular, sin instalar nada.</p>' +
+        '</div>' +
+        '<button type="button" class="sola no-imprimir" data-sola="' + esc(numero) + '">' +
+          'Imprimir solo la ' + esc(etiqueta.toLowerCase()) + '</button>' +
+      '</div>';
+  }
+
+  function pintar(numeros) {
+    if (!numeros.length) {
+      caja.innerHTML = '';
+      cuantas.textContent = '';
+      cajaDestino.innerHTML = '<b>No hay mesas cargadas</b>' +
+        'Todavia no estan cargadas las mesas del local, asi que no hay codigos que generar.';
+      return;
+    }
+    caja.innerHTML = numeros.map(piezaHTML).join('');
+    cuantas.textContent = numeros.length === 1
+      ? 'Hay 1 mesa cargada'
+      : 'Hay ' + numeros.length + ' mesas cargadas, una por hoja';
+    cajaDestino.innerHTML = '<b>A donde llevan los codigos</b>' +
+      esc(urlDeMesa('N')) + ' , cambiando la N por el numero de cada mesa.';
+  }
+
+  document.getElementById('imprimir').addEventListener('click', function () {
+    document.body.classList.remove('una-sola');
+    window.print();
   });
-  inputMesa.addEventListener('input', pintar);
-  document.getElementById('imprimir').addEventListener('click', function () { window.print(); });
 
-  /* Permite llegar con la mesa puesta: qr-mesa.html?mesa=12 */
-  var params = new URLSearchParams(location.search);
-  if (params.get('mesa')) inputMesa.value = limpiar(params.get('mesa'));
+  /* Reimprimir una sola. Se marca cual y se saca la marca despues de imprimir,
+     asi la pantalla vuelve a mostrar todas.                              */
+  caja.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-sola]');
+    if (!b) return;
+    var sobre = b.closest('.sobre');
+    var previa = caja.querySelector('.sobre.elegida');
+    if (previa) previa.classList.remove('elegida');
+    sobre.classList.add('elegida');
+    document.body.classList.add('una-sola');
+    window.print();
+  });
 
-  pintar();
+  window.addEventListener('afterprint', function () {
+    document.body.classList.remove('una-sola');
+    var elegida = caja.querySelector('.sobre.elegida');
+    if (elegida) elegida.classList.remove('elegida');
+  });
+
+  /* Las mesas salen del catalogo del local, no de un numero tipeado a mano:
+     antes se podia imprimir el QR de una mesa que no existe, y ese codigo
+     abria una carta que despues no aparecia en ningun panel.             */
+  cuantas.textContent = 'Buscando las mesas del local...';
+  LP.mesasDelLocal(sb).then(function (mesas) {
+    if (mesas === null) {
+      cuantas.textContent = '';
+      cajaDestino.innerHTML = '<b>No pudimos leer las mesas</b>' +
+        'Revisa la conexion del local y volve a entrar.';
+      return;
+    }
+    pintar(mesas.map(function (m) { return String(m.numero); }));
+  });
 });
 </script>
 </body>
