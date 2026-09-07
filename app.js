@@ -25,6 +25,8 @@
   var AGOTADOS_TABLE = CFG.AGOTADOS_TABLE || 'la_positiva_agotados';
   var SESIONES_TABLE = CFG.SESIONES_TABLE || 'la_positiva_sesiones';
   var MESAS_TABLE = CFG.MESAS_TABLE || 'la_positiva_mesas';
+  var AJUSTES_TABLE = CFG.AJUSTES_TABLE || 'la_positiva_ajustes';
+  var PRECIOS_TABLE = CFG.PRECIOS_TABLE || 'la_positiva_precios';
   var NOTAS_TABLE = CFG.NOTAS_TABLE || 'la_positiva_notas';
   var PERSONAS_TABLE = CFG.PERSONAS_TABLE || 'la_positiva_personas';
   var BUCKET = CFG.BUCKET;
@@ -865,6 +867,16 @@
 
   function lineaSacada(l) { return !!(l && l.anulada); }
 
+  /* Lo que la cocina tiene que HACER: las lineas menos la de cubiertos, que
+     no es un plato. Sin esto la comanda decia "1x Cubiertos" como si fuera
+     algo que cocinar, y un pedido de solo cubiertos quedaba vivo en la
+     pantalla de la cocina sin nada que hacer.                           */
+  function lineasDeComanda(pedido) {
+    var out = [];
+    lineasDe(pedido).forEach(function (l) { if (!l.cubierto) out.push(l); });
+    return out;
+  }
+
   function lineasVivas(pedido) {
     var vivas = [];
     lineasDe(pedido).forEach(function (l) { if (!lineaSacada(l)) vivas.push(l); });
@@ -1125,7 +1137,7 @@
     var cfg = AVISOS[pedido.estado];
     if (!cfg || !cfg.a) return Promise.resolve(null);
 
-    var cuerpo = pedido.mesa + ' - ' + money(pedido.total) +
+    var cuerpo = pedido.mesa + ' - ' + money(cobrable(pedido)) +
                  (pedido.cliente ? ' - ' + pedido.cliente : '') +
                  (extra ? '\n' + extra : '');
 
@@ -1136,13 +1148,13 @@
        mismo. Aca es respaldo de lo que no se puede perder.
        Va aparte del push: que Twilio falle no toca el aviso que funciona. */
     if (cfg.wa) {
-      var detalle = (pedido.lines || []).map(function (l) {
+      var detalle = lineasDeComanda(pedido).map(function (l) {
         return l.qty + 'x ' + l.name;
       }).join(', ');
       avisarWhatsapp(sb, {
         rol: cfg.a,
         texto: cfg.titulo + ' - ' + pedido.mesa + '\n' + detalle +
-               '\nTotal: ' + money(pedido.total) +
+               '\nTotal: ' + money(cobrable(pedido)) +
                (pedido.detalle_comensal ? '\nOJO: ' + pedido.detalle_comensal : '')
       });
     }
@@ -1260,11 +1272,11 @@
 
     // Sin bloquear el aviso: que falle la liberacion no puede frenar el cobro.
     liberarSiPagado(sb, pedido);
-    var cuerpo = pedido.mesa + ' pago ' + money(pedido.total) + '. Ya podes seguir.';
+    var cuerpo = pedido.mesa + ' pago ' + money(cobrable(pedido)) + '. Ya podes seguir.';
 
     avisarWhatsapp(sb, {
       rol: 'Jonathan',
-      texto: 'Pago confirmado - ' + pedido.mesa + '\nTotal: ' + money(pedido.total)
+      texto: 'Pago confirmado - ' + pedido.mesa + '\nTotal: ' + money(cobrable(pedido))
     });
 
     return avisar(sb, 'Jonathan', 'Pago confirmado', cuerpo, pedido.id, 'caja.html', false)
@@ -1600,6 +1612,122 @@
         if (res.error) { humanError(res.error); return false; }
         return !!(res.data && res.data.length);
       }, function (e) { humanError(e); return false; });
+  }
+
+  /* --- Ajustes del local --------------------------------------------------
+     Un clave/valor, como el `ajustes` de Liderapp: los numeros del local que
+     el duenio cambia solo, sin tocar codigo ni volver a publicar.        */
+  function ajustes(sb) {
+    if (!sb) return Promise.resolve({});
+    return sb.from(AJUSTES_TABLE).select('clave, valor').then(function (res) {
+      if (res.error) { humanError(res.error); return {}; }
+      var m = {};
+      (res.data || []).forEach(function (a) { m[a.clave] = a.valor; });
+      return m;
+    }, function (e) { humanError(e); return {}; });
+  }
+
+  function guardarAjuste(sb, clave, valor, quien) {
+    if (!sb || !clave) return Promise.resolve(false);
+    return sb.from(AJUSTES_TABLE).upsert({
+      clave: clave,
+      valor: valor === null || valor === undefined ? null : String(valor),
+      actualizado_por: (quien || '').slice(0, 40) || null,
+      actualizado_en: new Date().toISOString()
+    }, { onConflict: 'clave' })
+      .then(function (res) { if (res.error) humanError(res.error); return !res.error; },
+            function (e) { humanError(e); return false; });
+  }
+
+  /* --- El cubierto ---------------------------------------------------------
+     Es fijo por mesa. NO es una regla de cobro nueva: es UNA LINEA MAS en el
+     primer pedido que se cobra de la mesa. Asi pasa por todo lo que ya
+     existe -cobrable, pagado, caja, QR, devoluciones, sacar- sin una sola
+     linea de logica de plata nueva. Se congela al pedir: cambiar el importe
+     no reescribe mesas abiertas. Y si Nelly lo quiere perdonar, lo saca con
+     "Sacar un plato", con motivo, como cualquier otra linea.
+
+     Se cuenta "primer pedido QUE SE COBRA": si el primer pedido se anulo
+     entero y la mesa vuelve a pedir, el cubierto entra de nuevo, porque el
+     anterior se fue con lo anulado.
+
+     Limite conocido: el chequeo se hace en el navegador justo antes del
+     insert. Dos comensales de la misma mesa tocando Enviar en el mismo
+     medio segundo pueden meter dos cubiertos. En un bodegon es raro, y si
+     pasa el mozo lo ve en la cuenta y saca uno: justo para eso es una linea.*/
+  var CUBIERTO_ID = 'cubiertos';
+
+  function importeCubierto(sb) {
+    return ajustes(sb).then(function (m) {
+      // Solo digitos: "1.500" escrito a mano en la base es 1500, no 1,5.
+      var n = Math.round(Number(String(m.cubierto_por_mesa || '').replace(/[^0-9]/g, '')));
+      return isFinite(n) && n > 0 ? n : 0;
+    });
+  }
+
+  function cubiertoParaSesion(sb, sesionId) {
+    if (!sb || !sesionId) return Promise.resolve(null);
+    return importeCubierto(sb).then(function (importe) {
+      if (!importe) return null;
+      return sb.from(TABLE).select('id', { count: 'exact', head: true })
+        .eq('sesion_id', sesionId)
+        .not('estado', 'in', NO_SE_COBRA_SQL)
+        .then(function (res) {
+          // Ante la duda (error), no se cobra: es mejor perder 1.500 que
+          // cobrarlos dos veces.
+          if (res.error || (res.count || 0) > 0) return null;
+          return { id: CUBIERTO_ID, name: 'Cubiertos', qty: 1, price: importe, cubierto: true };
+        }, function () { return null; });
+    });
+  }
+
+  /* --- Precios editables ---------------------------------------------------
+     Una capa sobre menu-data.js, igual que las fotos propias y los agotados:
+     la tabla guarda SOLO los platos cuyo precio se cambio respecto de la
+     carta impresa. Los pedidos viejos no se tocan: lines[].price quedo
+     congelado al pedir.                                                  */
+  function preciosDePlatos(sb) {
+    if (!sb) return Promise.resolve({});
+    return sb.from(PRECIOS_TABLE).select('plato_id, precio').then(function (res) {
+      if (res.error) { humanError(res.error); return {}; }
+      var m = {};
+      (res.data || []).forEach(function (f) { m[f.plato_id] = Number(f.precio); });
+      return m;
+    }, function (e) { humanError(e); return {}; });
+  }
+
+  function guardarPrecio(sb, platoId, precio, quien) {
+    var n = Math.round(Number(precio));
+    if (!sb || !platoId || !isFinite(n) || n < 0) return Promise.resolve(false);
+    return sb.from(PRECIOS_TABLE).upsert({
+      plato_id: platoId, precio: n,
+      actualizado_por: (quien || '').slice(0, 40) || null,
+      actualizado_en: new Date().toISOString()
+    }, { onConflict: 'plato_id' })
+      .then(function (res) { if (res.error) humanError(res.error); return !res.error; },
+            function (e) { humanError(e); return false; });
+  }
+
+  function quitarPrecio(sb, platoId) {
+    if (!sb || !platoId) return Promise.resolve(false);
+    return sb.from(PRECIOS_TABLE).delete().eq('plato_id', platoId)
+      .then(function (res) { if (res.error) humanError(res.error); return !res.error; },
+            function (e) { humanError(e); return false; });
+  }
+
+  /* Aplica la capa sobre el array de la carta, EN EL LUGAR. Es a proposito:
+     el carrito de pedir.html guarda la referencia al objeto del plato, asi
+     que al mutar price el total del carrito y el precio que viaja en el
+     pedido siguen solos, sin repintar nada a mano.
+     La primera vez guarda el precio de la carta impresa en precioCarta, para
+     poder mostrar "antes valia X" y para poder volver.                 */
+  function aplicarPrecios(menu, mapa) {
+    (menu || []).forEach(function (p) {
+      if (p.precioCarta === undefined) p.precioCarta = Number(p.price) || 0;
+      var nuevo = mapa && Object.prototype.hasOwnProperty.call(mapa, p.id) ? Number(mapa[p.id]) : NaN;
+      p.price = isFinite(nuevo) && nuevo >= 0 ? nuevo : p.precioCarta;
+    });
+    return menu;
   }
 
   /* --- Platos agotados ----------------------------------------------------
@@ -2008,6 +2136,17 @@
     WA_TABLE: WA_TABLE,
     FOTOS_TABLE: FOTOS_TABLE,
     AGOTADOS_TABLE: AGOTADOS_TABLE,
+    AJUSTES_TABLE: AJUSTES_TABLE,
+    PRECIOS_TABLE: PRECIOS_TABLE,
+    CUBIERTO_ID: CUBIERTO_ID,
+    ajustes: ajustes,
+    guardarAjuste: guardarAjuste,
+    importeCubierto: importeCubierto,
+    cubiertoParaSesion: cubiertoParaSesion,
+    preciosDePlatos: preciosDePlatos,
+    guardarPrecio: guardarPrecio,
+    quitarPrecio: quitarPrecio,
+    aplicarPrecios: aplicarPrecios,
     platosAgotados: platosAgotados,
     agotarPlato: agotarPlato,
     reponerPlato: reponerPlato,
@@ -2041,6 +2180,7 @@
     lineasDe: lineasDe,
     lineasVivas: lineasVivas,
     lineaSacada: lineaSacada,
+    lineasDeComanda: lineasDeComanda,
     importeDeLinea: importeDeLinea,
     cobrable: cobrable,
     pendienteDeDevolver: pendienteDeDevolver,

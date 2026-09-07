@@ -92,6 +92,33 @@
   /* El interruptor de si hay o no hay. Es la accion que mas se usa de esta
      pantalla -al empezar el turno se apagan tres o cuatro platos-, asi que
      va primero y se lee sin pensar. */
+  /* El precio, grande y a la vista: es lo que mas se cambia de esta
+     pantalla despues de apagar platos. Un solo boton lo abre a editar. */
+  .precio-linea{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin:3px 0 0}
+  .precio-num{font-size:19px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+  .precio-carta{font-size:12px;color:var(--muted)}
+  .precio-carta s{color:var(--muted)}
+  .precio-edit{
+    display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:8px;
+    padding:10px;border:1px dashed var(--border-strong);border-radius:var(--r-md);
+    background:var(--bg);
+  }
+  .precio-edit[hidden]{display:none}
+  .precio-edit .pesos{font-size:16px;color:var(--muted-strong)}
+  .precio-edit input{
+    width:120px;min-height:var(--tap);padding:0 12px;font-size:18px;
+    border:1px solid var(--border-strong);border-radius:var(--r-md);
+    background:#fff;color:var(--ink);font-family:inherit;
+    font-variant-numeric:tabular-nums;
+  }
+  .precio-edit input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .precio-edit .btn{min-height:var(--tap);padding:0 16px;font-size:15px}
+  .volver-carta{
+    background:none;border:0;padding:0;min-height:var(--tap);
+    color:var(--muted-strong);text-decoration:underline;font-size:13px;
+    cursor:pointer;font-family:inherit;
+  }
+
   .stock{
     display:inline-flex;align-items:center;justify-content:center;
     min-height:40px;padding:0 15px;border-radius:var(--r-pill);
@@ -146,7 +173,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   'use strict';
-  var esc = LP.esc;
+  var esc = LP.esc, money = LP.money;
   var sb = LP.client();
 
   var lista = document.getElementById('lista');
@@ -158,6 +185,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   var propias = {};          // { plato_id: url } de las cargadas por el local
   var agotados = {};         // { plato_id: true } de los que hoy no hay
+  var precios = {};          // { plato_id: precio } solo los cambiados
+  var soy = LP.quienSoy();
+  var YO = (soy && soy.nombre) || 'Carta';
 
   /* -------------------------------------------------------- categorias -- */
   var cats = [];
@@ -213,6 +243,7 @@ document.addEventListener('DOMContentLoaded', function () {
         '<div class="datos">' +
           '<b>' + esc(p.name) + '</b>' +
           '<div class="cat">' + esc(p.cat) + (p.note ? ' · ' + esc(p.note) : '') + '</div>' +
+          precioHTML(p) +
           '<div class="acciones">' +
             '<button type="button" class="stock' + (noHay ? ' no' : '') + '" ' +
               'data-stock="' + esc(p.id) + '">' +
@@ -227,6 +258,41 @@ document.addEventListener('DOMContentLoaded', function () {
           '<p class="estado" data-estado="' + esc(p.id) + '"></p>' +
         '</div>' +
       '</li>';
+  }
+
+  /* El precio vigente, y si se cambio, el de la carta impresa tachado al
+     lado y la manera de volver. Editar es un solo boton que abre un campo
+     numerico ahi mismo: sin pantalla nueva, sin decimales. */
+  function precioHTML(p) {
+    var cambiado = Object.prototype.hasOwnProperty.call(precios, p.id);
+    var vigente = cambiado ? precios[p.id] : (p.precioCarta !== undefined ? p.precioCarta : p.price);
+    var carta = p.precioCarta !== undefined ? p.precioCarta : p.price;
+    return '<div class="precio-linea">' +
+        '<span class="precio-num">' + money(vigente) + '</span>' +
+        (cambiado
+          ? '<span class="precio-carta">antes <s>' + money(carta) + '</s></span>'
+          : '') +
+        '<button type="button" class="stock" data-editar-precio="' + esc(p.id) + '">' +
+          'Cambiar precio</button>' +
+      '</div>' +
+      '<div class="precio-edit" data-edit="' + esc(p.id) + '" hidden>' +
+        '<span class="pesos">$</span>' +
+        '<input type="text" inputmode="numeric" pattern="[0-9]*" ' +
+          'aria-label="Precio nuevo de ' + esc(p.name) + '" ' +
+          'value="' + esc(String(Math.round(vigente))) + '" data-precio-input="' + esc(p.id) + '">' +
+        '<button type="button" class="btn btn-primary" data-guardar-precio="' + esc(p.id) + '">' +
+          'Guardar</button>' +
+        '<button type="button" class="volver-carta" data-cancelar-precio="' + esc(p.id) + '">' +
+          'Cancelar</button>' +
+        /* Lo que va a quedar, ya formateado, mientras escribe: un cero de mas
+           o de menos se ve ANTES de tocar Guardar. */
+        '<span class="precio-carta" style="flex-basis:100%" data-preview="' + esc(p.id) + '">' +
+          'Queda en ' + money(vigente) + '</span>' +
+        (cambiado
+          ? '<button type="button" class="volver-carta" data-volver-precio="' + esc(p.id) + '">' +
+            'Volver a ' + money(carta) + '</button>'
+          : '') +
+      '</div>';
   }
 
   function decir(platoId, texto, clase) {
@@ -254,6 +320,88 @@ document.addEventListener('DOMContentLoaded', function () {
       decir(platoId, 'Foto guardada.', 'ok');
       LP.toast('Foto actualizada.', 'ok');
     });
+  });
+
+  /* ------------------------------------------------------------ precio -- */
+  lista.addEventListener('input', function (ev) {
+    var inp = ev.target.closest('[data-precio-input]');
+    if (!inp) return;
+    var n = Math.round(Number(String(inp.value).replace(/[^0-9]/g, '')));
+    var prev = lista.querySelector('[data-preview="' + inp.dataset.precioInput + '"]');
+    if (prev) prev.textContent = isFinite(n) && n > 0 ? 'Queda en ' + money(n) : 'Pone un numero';
+  });
+
+  lista.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-editar-precio], [data-guardar-precio], [data-volver-precio], [data-cancelar-precio]');
+    if (!b || b.disabled) return;
+    var d = b.dataset;
+
+    if (d.cancelarPrecio) {
+      var cajaC = lista.querySelector('[data-edit="' + d.cancelarPrecio + '"]');
+      if (cajaC) cajaC.hidden = true;
+      return;
+    }
+
+    if (d.editarPrecio) {
+      var caja = lista.querySelector('[data-edit="' + d.editarPrecio + '"]');
+      if (!caja) return;
+      caja.hidden = !caja.hidden;
+      if (!caja.hidden) {
+        var inp = caja.querySelector('input');
+        inp.focus(); inp.select();
+      }
+      return;
+    }
+
+    if (d.guardarPrecio) {
+      var id = d.guardarPrecio;
+      var input = lista.querySelector('[data-precio-input="' + id + '"]');
+      // Solo digitos: "34.000" y "34000" valen lo mismo, "34,5" no existe.
+      var n = Math.round(Number(String(input.value).replace(/[^0-9]/g, '')));
+      if (!isFinite(n) || n <= 0) {
+        decir(id, 'Pone un numero mayor que cero, sin centavos.', 'err');
+        input.focus();
+        return;
+      }
+      /* Si escribio el mismo precio de la carta, no hay nada que cambiar: se
+         borra el cambio si lo habia, en vez de guardar uno igual. */
+      var platoG = null;
+      for (var g = 0; g < MENU.length; g++) if (MENU[g].id === id) platoG = MENU[g];
+      var deLaCarta = platoG && platoG.precioCarta !== undefined ? platoG.precioCarta : null;
+      if (deLaCarta !== null && n === deLaCarta) {
+        b.disabled = true;
+        LP.quitarPrecio(sb, id).then(function () {
+          b.disabled = false;
+          delete precios[id];
+          pintar();
+          LP.toast('Sigue en ' + money(n) + ', el de la carta.', 'ok');
+        });
+        return;
+      }
+      b.disabled = true;
+      b.textContent = 'Guardando...';
+      LP.guardarPrecio(sb, id, n, YO).then(function (ok) {
+        b.disabled = false;
+        b.textContent = 'Guardar';
+        if (!ok) { decir(id, 'No pudimos guardar el precio. Proba de nuevo.', 'err'); return; }
+        precios[id] = n;
+        pintar();
+        LP.toast('Precio guardado: ' + money(n) + '. Ya se ve en la mesa.', 'ok');
+      });
+      return;
+    }
+
+    if (d.volverPrecio) {
+      var idV = d.volverPrecio;
+      b.disabled = true;
+      LP.quitarPrecio(sb, idV).then(function (ok) {
+        b.disabled = false;
+        if (!ok) { decir(idV, 'No pudimos volver al precio de la carta.', 'err'); return; }
+        delete precios[idV];
+        pintar();
+        LP.toast('Vuelve al precio de la carta impresa.', 'ok');
+      });
+    }
   });
 
   /* ------------------------------------------------------- hay / no hay -- */
@@ -321,6 +469,11 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   LP.platosAgotados(sb).then(function (mapa) {
     agotados = mapa || {};
+    pintar();
+  });
+  LP.preciosDePlatos(sb).then(function (mapa) {
+    precios = mapa || {};
+    LP.aplicarPrecios(MENU, precios);   // deja precioCarta guardado en cada plato
     pintar();
   });
 });

@@ -839,9 +839,17 @@ document.addEventListener('DOMContentLoaded', function () {
           '<span class="line-total">' + money(l.item.price * l.qty) + '</span>' +
         '</div></div>';
     }).join('');
+    /* Fila fija, sin mas/menos: no se elige, se informa. */
+    if (html && cubiertoPendiente > 0) {
+      html += '<div class="line">' +
+        '<div class="line-name">Cubiertos' +
+          '<div class="line-sub">Una vez por mesa</div></div>' +
+        '<div class="line-right"><span class="line-total">' + money(cubiertoPendiente) + '</span></div>' +
+      '</div>';
+    }
     document.getElementById('cartLines').innerHTML =
       html || '<div class="state"><p>Todavia no agregaste nada.</p></div>';
-    document.getElementById('cartSheetTotal').textContent = money(cartTotal());
+    document.getElementById('cartSheetTotal').textContent = money(totalAPagar());
     document.getElementById('goCheckoutBtn').disabled = vals.length === 0;
   }
 
@@ -852,8 +860,9 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   document.getElementById('cartbarBtn').addEventListener('click', function () {
-    renderCartLines();
+    renderCartLines();                 // se abre ya, con lo que hay
     LP.openDialog(cartSheet);
+    decidirCubierto().then(renderCartLines);   // y se completa apenas responde
   });
 
   Array.prototype.forEach.call(document.querySelectorAll('[data-close]'), function (btn) {
@@ -866,7 +875,7 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('goCheckoutBtn').addEventListener('click', function () {
     if (!cartCount()) return;
     LP.closeDialog(cartSheet);
-    document.getElementById('checkoutTotal').textContent = money(cartTotal());
+    document.getElementById('checkoutTotal').textContent = money(totalAPagar());
     renderPayFields();
     LP.openDialog(checkoutSheet);
   });
@@ -909,7 +918,7 @@ document.addEventListener('DOMContentLoaded', function () {
                    'maxlength="4" placeholder="123" aria-describedby="cardCvvErr">' +
             '<p class="field-err" id="cardCvvErr"></p></div>' +
         '</div>';
-      btn.textContent = 'Pagar ' + money(cartTotal());
+      btn.textContent = 'Pagar ' + money(totalAPagar());
       wireCardMasks();
     } else if (metodo === 'QR') {
       el.innerHTML = '<p class="demo-note">Cuando mandes el pedido, alguien del salon te acerca ' +
@@ -1025,7 +1034,7 @@ document.addEventListener('DOMContentLoaded', function () {
       // Se devuelve el control: esto lo arregla el comensal, no un reintento.
       submitting = false;
       btn.disabled = false;
-      btn.textContent = metodo === 'Tarjeta' ? 'Pagar ' + money(cartTotal())
+      btn.textContent = metodo === 'Tarjeta' ? 'Pagar ' + money(totalAPagar())
                       : (metodo === 'QR' ? 'Enviar pedido y pagar con QR'
                                          : 'Enviar pedido a cocina');
       var caja = document.getElementById('formErr');
@@ -1082,9 +1091,20 @@ document.addEventListener('DOMContentLoaded', function () {
          Perder la agrupacion de la cuenta es molesto; perder el pedido de un
          cliente sentado en la mesa es mucho peor.                       */
       LP.sesionDeMesa(sb, payload.mesa).then(function (ses) {
-        if (ses) payload.sesion_id = ses.id;
-        else console.warn('[La Positiva] el pedido entra sin cuenta de mesa');
-        return insertar();
+        if (!ses) {
+          console.warn('[La Positiva] el pedido entra sin cuenta de mesa');
+          return insertar();
+        }
+        payload.sesion_id = ses.id;
+        /* El cubierto entra como UNA LINEA MAS, solo en el primer pedido que
+           se cobra de la mesa. Total sigue siendo la suma exacta de lines. */
+        return LP.cubiertoParaSesion(sb, ses.id).then(function (linea) {
+          if (linea) {
+            payload.lines.push(linea);
+            payload.total = Number(payload.total) + linea.price * linea.qty;
+          }
+          return insertar();
+        });
       });
 
       function insertar() {
@@ -1092,9 +1112,22 @@ document.addEventListener('DOMContentLoaded', function () {
          "Enviando..." para siempre y el comensal esperando algo que no llega. */
       var colgado = setTimeout(function () { fallo(new Error('timeout')); }, 12000);
 
-      return sb.from(LP.TABLE).insert(payload).select().single().then(function (res) {
+      var fila = {};
+      for (var k in payload) if (Object.prototype.hasOwnProperty.call(payload, k) && k !== 'sinCubierto') fila[k] = payload[k];
+      return sb.from(LP.TABLE).insert(fila).select().single().then(function (res) {
         clearTimeout(colgado);
         if (yaFallo) return;          // el reloj llego primero
+        /* La base dejo pasar UN cubierto por mesa (indice
+           la_positiva_un_cubierto_por_sesion): otro celular de la misma
+           mesa llego primero. No es una falla: se saca la linea, se rehace
+           el total y se reintenta una vez con la misma clave.           */
+        if (res.error && res.error.code === '23505' &&
+            /un_cubierto_por_sesion/.test(res.error.message || '') && !payload.sinCubierto) {
+          payload.sinCubierto = true;
+          payload.lines = payload.lines.filter(function (l) { return !l.cubierto; });
+          payload.total = payload.lines.reduce(function (t, l) { return t + LP.importeDeLinea(l); }, 0);
+          return insertar();
+        }
         if (res.error || !res.data) { fallo(res.error); return; }
         submitting = false;
         btn.disabled = false;
@@ -1161,7 +1194,7 @@ document.addEventListener('DOMContentLoaded', function () {
       btn.disabled = false;
       /* No se repintan los campos: renderPayFields() borraba lo que el
          comensal habia tipeado. Alcanza con devolver la etiqueta del boton. */
-      btn.textContent = metodo === 'Tarjeta' ? 'Pagar ' + money(cartTotal())
+      btn.textContent = metodo === 'Tarjeta' ? 'Pagar ' + money(totalAPagar())
                       : (metodo === 'QR' ? 'Enviar pedido y pagar con QR'
                                          : 'Enviar pedido a cocina');
       var box = document.getElementById('formErr');
@@ -1282,6 +1315,11 @@ document.addEventListener('DOMContentLoaded', function () {
         ' &middot; ' + esc(pago) + '</p>' +
       avisoSacado +
       avisoQR +
+      /* Si el pedido lleva la linea de cubiertos, se dice de donde salio:
+         nadie tiene que preguntarle al mozo que es ese renglon. */
+      '<p class="order-no" style="margin-top:-4px">Total ' + money(LP.cobrable(order)) +
+        (LP.lineasDe(order).some(function (l) { return l.cubierto && !l.anulada; })
+          ? ' (incluye cubiertos, una sola vez por mesa)' : '') + '</p>' +
       '<div class="track">' + steps + '</div>' +
       '<button type="button" class="btn btn-secondary btn-block" id="keepBrowsing" style="margin-top:18px">' +
         'Seguir mirando la carta</button>';
@@ -1346,6 +1384,69 @@ document.addEventListener('DOMContentLoaded', function () {
   renderMenu();
   renderCartBar();
   updateScrollHint();
+
+  /* Los precios vigentes. Es una capa sobre la carta, igual que las fotos
+     propias y los agotados. Se aplica sobre MENU en el lugar: el carrito
+     guarda la referencia al plato, asi que el total y lo que viaja en el
+     pedido siguen solos. Si la consulta falla, quedan los de la carta
+     impresa: nunca se deja al cliente sin precios.                       */
+  var cubiertoPorMesa = 0;
+
+  /* Cuanto va a llevar ESTE pedido de cubiertos. Se decide al abrir "Tu
+     pedido", no al enviar: el comensal tiene que ver la palabra Cubiertos y
+     el importe ANTES de tocar "Pagar". Sin esto el boton decia $30.000 y se
+     cobraban $31.500, que es un cargo escondido.
+     La consulta es de solo lectura: NO abre la sesion de la mesa (eso lo
+     hace el envio). Si la mesa no tiene sesion abierta, es la primera ronda
+     y el cubierto entra; si tiene, entra solo si todavia no hay ninguna
+     ronda que se cobre.                                                */
+  var cubiertoPendiente = 0;
+  function decidirCubierto() {
+    if (!sb || !cubiertoPorMesa || SIN_MESA) { cubiertoPendiente = 0; return Promise.resolve(0); }
+    return sb.from(LP.SESIONES_TABLE).select('id').eq('mesa', 'Mesa ' + MESA)
+      .is('cerrada_en', null).limit(1).maybeSingle()
+      .then(function (r) {
+        if (r.error) return 0;                       // ante la duda, no se muestra
+        if (!r.data) return cubiertoPorMesa;         // mesa sin cuenta: primera ronda
+        return sb.from(LP.TABLE).select('id', { count: 'exact', head: true })
+          .eq('sesion_id', r.data.id).not('estado', 'in', LP.NO_SE_COBRA_SQL)
+          .then(function (c) { return (c.error || (c.count || 0) > 0) ? 0 : cubiertoPorMesa; },
+                function () { return 0; });
+      }, function () { return 0; })
+      .then(function (n) { cubiertoPendiente = n; return n; });
+  }
+
+  // Lo que el comensal paga por ESTE envio: los platos mas el cubierto si toca.
+  function totalAPagar() { return cartTotal() + cubiertoPendiente; }
+  if (sb) {
+    LP.preciosDePlatos(sb).then(function (m) {
+      LP.aplicarPrecios(MENU, m || {});
+      renderMenu();
+      renderCartBar();
+    });
+    LP.importeCubierto(sb).then(function (n) { cubiertoPorMesa = n; });
+
+    var canalPrecios = sb.channel('precios-' + Date.now())
+      .on('postgres_changes', { event: '*', schema: 'public', table: LP.PRECIOS_TABLE },
+          function () {
+            LP.preciosDePlatos(sb).then(function (m) {
+              LP.aplicarPrecios(MENU, m || {});
+              renderMenu();
+              renderCartBar();
+              /* Si cambio un precio con el carrito o el checkout abiertos, lo
+                 que se ve se actualiza tambien: el boton "Pagar $X" no puede
+                 decir un numero y el pedido entrar con otro.            */
+              if (LP.isDialogOpen(cartSheet)) renderCartLines();
+              if (LP.isDialogOpen(checkoutSheet) && !submitting) {
+                document.getElementById('checkoutTotal').textContent = money(totalAPagar());
+                var pb = document.getElementById('payBtn');
+                if (pb && /^Pagar /.test(pb.textContent)) pb.textContent = 'Pagar ' + money(totalAPagar());
+              }
+            });
+          })
+      .subscribe();
+    LP.onCleanup(function () { try { sb.removeChannel(canalPrecios); } catch (e) {} });
+  }
 
   /* Lo agotado, y despues atento a los cambios: el mozo puede apagar un plato
      mientras la mesa esta mirando la carta.                              */

@@ -86,6 +86,28 @@
   .atajo b{display:block;font-size:16px;font-weight:500;margin-bottom:3px}
   .atajo span{font-size:13px;color:var(--muted);line-height:1.45}
 
+  /* Un numero del local que el duenio cambia solo. Es la unica cosa de esta
+     pantalla que se escribe: por eso va en su propia tarjeta y no entre los
+     atajos. */
+  .ajuste{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);
+    padding:14px 16px;margin-bottom:12px;
+  }
+  .ajuste b{display:block;font-size:16px;font-weight:500;margin-bottom:2px}
+  .ajuste p{margin:0 0 10px;font-size:13px;color:var(--muted);line-height:1.45}
+  .ajuste-fila{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .ajuste-fila .pesos{font-size:17px;color:var(--muted-strong)}
+  .ajuste-fila input{
+    width:130px;min-height:var(--tap);padding:0 12px;font-size:19px;
+    border:1px solid var(--border-strong);border-radius:var(--r-md);
+    background:#fff;color:var(--ink);font-family:inherit;font-variant-numeric:tabular-nums;
+  }
+  .ajuste-fila input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .ajuste-fila .btn{min-height:var(--tap);padding:0 18px;font-size:15px}
+  .ajuste-msg{font-size:13px;margin:8px 0 0;min-height:1.2em}
+  .ajuste-msg.ok{color:var(--ok)}
+  .ajuste-msg.err{color:var(--err-ink)}
+
   .cargando{color:var(--muted);padding:16px 0;font-size:15px}
 
   .back-link{
@@ -123,6 +145,20 @@
   <div class="roles" id="roles"><p class="cargando">Cargando...</p></div>
 
   <h2>Ajustes del local</h2>
+
+  <div class="ajuste">
+    <b>Cubiertos por mesa</b>
+    <p>Se cobran una sola vez por mesa, en el primer pedido. Pon&eacute; 0 para no cobrarlos.
+       Las mesas que ya est&aacute;n abiertas no cambian.</p>
+    <div class="ajuste-fila">
+      <span class="pesos">$</span>
+      <input type="text" inputmode="numeric" pattern="[0-9]*" id="cubierto"
+             aria-label="Importe de los cubiertos por mesa" value="">
+      <button type="button" class="btn btn-primary" id="cubiertoGuardar">Guardar</button>
+    </div>
+    <p class="ajuste-msg" id="cubiertoMsg" role="status" aria-live="polite"></p>
+  </div>
+
   <div class="atajos">
     <a class="atajo" href="mesas.html"><b>Mesas abiertas</b>
       <span>La cuenta de cada mesa, ronda por ronda.</span></a>
@@ -298,6 +334,41 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   // Los minutos de demora corren aunque no cambie nada en la base.
   setInterval(function () { if (!document.hidden) cargar(); }, 30000);
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var sb = LP.client();
+  var input = document.getElementById('cubierto');
+  var btn = document.getElementById('cubiertoGuardar');
+  var msg = document.getElementById('cubiertoMsg');
+  var soy = LP.quienSoy();
+  var YO = (soy && soy.nombre) || 'Encargado';
+
+  function decir(t, clase) { msg.textContent = t || ''; msg.className = 'ajuste-msg' + (clase ? ' ' + clase : ''); }
+
+  if (!sb) { input.disabled = true; btn.disabled = true; return; }
+
+  LP.ajustes(sb).then(function (m) {
+    var n = Math.round(Number(m.cubierto_por_mesa));
+    input.value = isFinite(n) && n > 0 ? String(n) : '0';
+  });
+
+  btn.addEventListener('click', function () {
+    var n = Math.round(Number(String(input.value).replace(/[^0-9]/g, '')));
+    if (!isFinite(n) || n < 0) { decir('Pone un numero, sin centavos.', 'err'); input.focus(); return; }
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    LP.guardarAjuste(sb, 'cubierto_por_mesa', n, YO).then(function (ok) {
+      btn.disabled = false;
+      btn.textContent = 'Guardar';
+      if (!ok) { decir('No pudimos guardar. Proba de nuevo.', 'err'); return; }
+      input.value = String(n);
+      decir(n ? 'Listo: ' + LP.money(n) + ' por mesa, desde el proximo pedido.'
+              : 'Listo: no se cobran cubiertos desde el proximo pedido.', 'ok');
+    });
+  });
 });
 </script>
 </body>

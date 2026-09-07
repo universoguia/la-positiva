@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var opciones = '<option value="">Cobro sin monto (el cliente lo escribe)</option>' +
       pendientes.map(function (o) {
         return '<option value="' + esc(o.id) + '"' + (elegido && elegido.id === o.id ? ' selected' : '') + '>' +
-          esc(o.mesa) + ' - ' + money(o.total) + (o.cliente ? ' - ' + esc(o.cliente) : '') + '</option>';
+          esc(o.mesa) + ' - ' + money(LP.cobrable(o)) + (o.cliente ? ' - ' + esc(o.cliente) : '') + '</option>';
       }).join('');
 
     cont.innerHTML =
@@ -173,7 +173,13 @@ document.addEventListener('DOMContentLoaded', function () {
           (elegido
             ? '<div class="quien">' + esc(elegido.mesa) +
               (elegido.cliente ? ' &middot; ' + esc(elegido.cliente) : '') + '</div>' +
-              '<div class="cifra">' + money(elegido.total) + '</div>'
+              '<div class="cifra">' + money(LP.cobrable(elegido)) + '</div>' +
+              /* Si se saco algo, se dice: el mozo tiene que poder explicar
+                 por que el QR dice menos que el ticket. */
+              (LP.lineasDe(elegido).some(LP.lineaSacada)
+                ? '<div class="quien">Sin ' + esc(LP.lineasDe(elegido).filter(LP.lineaSacada)
+                    .map(function (l) { return l.qty + '\u00d7 ' + l.name; }).join(', ')) + '</div>'
+                : '')
             : '<div class="sin">El cliente escribe el monto</div>') +
         '</div>' +
         '<div class="qr-card">' +
@@ -197,7 +203,7 @@ document.addEventListener('DOMContentLoaded', function () {
           'Compartir el QR</button>' +
         (elegido
           ? '<button type="button" class="btn btn-secondary btn-block" id="cobradoBtn">' +
-            'Ya pago: confirmar ' + money(elegido.total) + '</button>'
+            'Ya pago: confirmar ' + money(LP.cobrable(elegido)) + '</button>'
           : '') +
       '</div>' +
 
@@ -272,7 +278,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var btn = document.getElementById('shareBtn');
     btn.disabled = true;
     var texto = elegido
-      ? 'Pago de ' + elegido.mesa + ' en La Positiva: ' + money(elegido.total)
+      ? 'Pago de ' + elegido.mesa + ' en La Positiva: ' + money(LP.cobrable(elegido))
       : 'QR para pagar en La Positiva';
 
     fetch(qr.imagen_url).then(function (r) { return r.blob(); }).then(function (blob) {
@@ -294,7 +300,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!qr || !qr.link_pago || btn.disabled) return;
 
     var texto = elegido
-      ? 'Para pagar ' + money(elegido.total) + ' de ' + elegido.mesa + ' en La Positiva'
+      ? 'Para pagar ' + money(LP.cobrable(elegido)) + ' de ' + elegido.mesa + ' en La Positiva'
       : 'Para pagar en La Positiva';
 
     if (navigator.share) {
@@ -352,7 +358,7 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function (res) {
         if (res.error) {
           LP.toast(LP.humanError(res.error, 'No se pudo confirmar el pago.'), 'err');
-          btn.disabled = false; btn.textContent = 'Ya pago: confirmar ' + money(elegido.total);
+          btn.disabled = false; btn.textContent = 'Ya pago: confirmar ' + money(LP.cobrable(elegido));
           return;
         }
         var recien = res.data && res.data.length;

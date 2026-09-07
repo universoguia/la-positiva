@@ -426,7 +426,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var anulada = !LP.seCobra(o);
     var sacadas = [];
-    var lines = LP.lineasDe(o).map(function (l) {
+    // Sin la linea de cubiertos: no es un plato, no se cocina.
+    var lines = LP.lineasDeComanda(o).map(function (l) {
       var fuera = LP.lineaSacada(l);
       if (fuera) sacadas.push(l);
       return '<div' + (fuera ? ' class="fuera"' : '') + '>' +
