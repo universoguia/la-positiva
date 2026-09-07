@@ -91,17 +91,26 @@
     margin:14px 2px 12px;color:var(--muted-strong);
     font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
   }
-  .menu-grid{display:grid;gap:16px}
+  .menu-grid{display:grid;gap:9px}
 
   /* Ficha grande: foto, nombre, precio y UNA accion evidente.
      Reemplaza la fila compacta anterior de 72px de alto. */
+  /* ------------------------------------------------------------ la carta --
+     Era una galeria: cada plato ocupaba 453px de alto y entraban 1,79 por
+     pantalla. Con 153 platos en 19 categorias, recorrer el menu eran unas 85
+     pantallas de scroll.
+
+     Ahora es una lista: la foto pasa a miniatura cuadrada y el nombre, la
+     nota, el precio y el boton entran al lado. La foto sigue estando -en un
+     bodegon la comida se elige mirando- pero deja de mandar sobre el alto. */
   .dish{
     background:var(--card);border:1px solid var(--border);
-    border-radius:var(--r-lg);overflow:hidden;
-    display:flex;flex-direction:column;
+    border-radius:var(--r-md);overflow:hidden;
+    display:flex;align-items:stretch;
   }
   .dish-media{
-    position:relative;width:100%;aspect-ratio:4/3;
+    position:relative;flex:none;
+    width:104px;aspect-ratio:1;
     background:var(--border);overflow:hidden;
   }
   .dish-media img{width:100%;height:100%;object-fit:cover;display:block}
@@ -111,49 +120,71 @@
     content:attr(data-ini);
     position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     background:var(--accent-soft);color:var(--accent);
-    font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:64px;
+    font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:38px;
   }
   .dish-tag{
-    position:absolute;top:10px;left:10px;
-    background:var(--ink);color:var(--gold);
-    font-size:13px;font-weight:500;padding:5px 11px;border-radius:var(--r-pill);
+    position:absolute;left:0;right:0;bottom:0;
+    background:rgba(20,16,14,.82);color:var(--gold);
+    font-size:11px;font-weight:600;letter-spacing:.03em;
+    padding:3px 6px;text-align:center;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
 
-  .dish-body{padding:14px 16px 16px;display:flex;flex-direction:column;flex:1}
-  .dish-name{font-size:19px;font-weight:500;line-height:1.25}
-  .dish-note{color:var(--muted);font-size:15px;margin-top:4px}
-  .dish-cat{color:var(--muted-soft);font-size:14px;margin-top:4px}
+  /* min-width:0 es lo que permite que el nombre largo se corte en vez de
+     empujar la fila y romper la grilla. */
+  .dish-body{
+    padding:10px 12px;display:flex;flex-direction:column;flex:1;min-width:0;
+  }
+  .dish-name{font-size:16px;font-weight:500;line-height:1.3}
+  /* La nota se limita a dos renglones: hay platos con descripciones largas
+     ("Con Rabas, Mejillones, Langostinos...") que solos duplicaban la fila. */
+  .dish-note{
+    color:var(--muted);font-size:13px;line-height:1.35;margin-top:2px;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .dish-cat{color:var(--muted-soft);font-size:12px;margin-top:2px}
+
+  /* Precio y boton comparten renglon, abajo de todo. */
+  .dish-foot{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:10px;margin-top:auto;padding-top:8px;
+  }
   .dish-price{
-    color:var(--accent);font-weight:600;font-size:25px;
-    margin-top:8px;font-variant-numeric:tabular-nums;
+    color:var(--accent);font-weight:600;font-size:18px;
+    font-variant-numeric:tabular-nums;white-space:nowrap;
   }
-  .dish-actions{margin-top:14px}
+  .dish-actions{flex:none}
 
-  /* Un solo boton, ancho completo y bien alto. Nada de 30px. */
+  /* Ya no ocupa el ancho, pero se mantiene por encima de los 44px de area
+     tactil: se toca de pie y apurado. */
   .btn-add{
     display:flex;align-items:center;justify-content:center;
-    width:100%;min-height:52px;padding:12px 18px;
-    border-radius:var(--r-sm);background:var(--accent);color:#fff;
-    font-size:17px;font-weight:500;
+    min-width:88px;min-height:44px;padding:0 16px;
+    border-radius:var(--r-pill);background:var(--accent);color:#fff;
+    font-size:15px;font-weight:500;
     transition:background-color .18s;
   }
   .btn-add:hover{background:var(--accent-dark)}
   .btn-add:active{transform:translateY(1px)}
 
   /* Cuando ya hay unidades, el boton se convierte en el contador. */
+  /* Los botones se mantienen en los 44px de --tap: se tocan de pie, apurado
+     y a veces con la mano ocupada. Achicarlos para ganar unos pixeles de
+     alto seria cambiar lo unico que no se negocia por lo que menos importa. */
   .qty-row{
-    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    display:flex;align-items:center;gap:2px;
     background:var(--accent-soft);border:1px solid var(--accent);
-    border-radius:var(--r-sm);padding:5px;min-height:52px;
+    border-radius:var(--r-pill);padding:2px;min-height:48px;
   }
   .qty-row .icon-btn{
-    width:46px;height:46px;min-width:46px;
+    width:var(--tap);height:var(--tap);min-width:var(--tap);
     background:#fff;border-color:var(--accent);color:var(--accent);
     font-size:24px;font-weight:600;
   }
   .qty-row .icon-btn:hover{background:var(--accent);color:#fff}
   .qty-val{
-    flex:1;text-align:center;font-weight:600;font-size:19px;
+    min-width:26px;text-align:center;font-weight:600;font-size:17px;
     color:var(--accent);font-variant-numeric:tabular-nums;
   }
 
@@ -578,8 +609,10 @@ document.addEventListener('DOMContentLoaded', function () {
         '<div class="dish-name">' + esc(d.name) + '</div>' +
         (d.note ? '<div class="dish-note">' + esc(d.note) + '</div>' : '') +
         (query ? '<div class="dish-cat">' + esc(d.cat) + '</div>' : '') +
-        '<div class="dish-price">' + money(d.price) + '</div>' +
-        '<div class="dish-actions">' + actions + '</div>' +
+        '<div class="dish-foot">' +
+          '<div class="dish-price">' + money(d.price) + '</div>' +
+          '<div class="dish-actions">' + actions + '</div>' +
+        '</div>' +
       '</div>' +
     '</article>';
   }
