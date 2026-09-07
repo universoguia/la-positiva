@@ -740,6 +740,20 @@
 
   var ESTADOS = ['Por aprobar', 'En cocina', 'Cocinando', 'Listo', 'Entregado'];
 
+  /* Que NO se le cobra al cliente. Una sola lista, en un solo lugar.
+     Antes esta regla estaba escrita a mano en cuatro lados distintos y con
+     cuatro criterios distintos: caja.html con .neq, app.js con .not(..in..),
+     admin.html con un !==, y cobrar.html sin ninguno. Por eso la misma mesa
+     podia mostrar un numero en el salon y otro en la caja.               */
+  var NO_SE_COBRA = ['Rechazado'];
+
+  // La misma lista en el formato que quiere PostgREST para .not('estado','in',...)
+  var NO_SE_COBRA_SQL = '("' + NO_SE_COBRA.join('","') + '")';
+
+  function seCobra(pedido) {
+    return !!pedido && NO_SE_COBRA.indexOf(pedido.estado) === -1;
+  }
+
   /* Quien se entera de cada paso. Esta tabla es la UNICA fuente: si un estado
      esta aca, avisa; si no, no. Antes cada pantalla decidia por su cuenta y
      por eso habia pasos mudos.                                           */
@@ -798,7 +812,7 @@
 
   /* Cambia el estado y avisa. Todas las pantallas pasan por aca para que
      ninguna transicion quede sin su notificacion.                        */
-  function cambiarEstado(sb, id, nuevo, campos) {
+  function cambiarEstado(sb, id, nuevo, campos, esperado) {
     if (!sb || !id) {
       return Promise.resolve({ ok: false, motivo: 'No hay conexion con el sistema.' });
     }
@@ -807,14 +821,34 @@
       if (Object.prototype.hasOwnProperty.call(campos, k)) parche[k] = campos[k];
     }
 
-    return sb.from(TABLE).update(parche).eq('id', id).select().single()
+    /* 'esperado' es desde que estado se supone que sale el pedido. Cuando
+       viene, el update solo pega si el pedido TODAVIA esta ahi.
+
+       Sin esto el update era ciego y se pisaban entre si: Jonathan aprueba
+       una comanda a las 20:31:02, Miguel la rechaza a las 20:31:04 desde su
+       celular sin haber visto que ya estaba aprobada, y la cocina se queda
+       sin la comanda sin que suene nada en ningun lado. Con el filtro, al
+       segundo no le pega el update y se le avisa que mire la pantalla.
+
+       Se usa .select() (array) y no .single(), porque .single() trata el
+       "no cambie nada" como error de base y no se puede distinguir de una
+       caida de conexion.                                                 */
+    var q = sb.from(TABLE).update(parche).eq('id', id);
+    if (esperado) q = q.eq('estado', esperado);
+
+    return q.select()
       .then(function (res) {
-        if (res.error || !res.data) {
+        if (res.error) {
           humanError(res.error);
           return { ok: false, motivo: 'No se pudo cambiar el estado. Proba de nuevo.' };
         }
-        avisarEstado(sb, res.data);          // sin await: no frena la pantalla
-        return { ok: true, pedido: res.data };
+        var fila = (res.data || [])[0];
+        if (!fila) {
+          return { ok: false, choque: true,
+                   motivo: 'Ese pedido lo acaba de cambiar otra persona. Fijate como quedo.' };
+        }
+        avisarEstado(sb, fila);              // sin await: no frena la pantalla
+        return { ok: true, pedido: fila };
       }, function (e) {
         humanError(e);
         return { ok: false, motivo: 'No se pudo cambiar el estado. Proba de nuevo.' };
@@ -827,19 +861,23 @@
       aprobado_por: (quien || 'Mozo').slice(0, 40),
       aprobado_en: new Date().toISOString(),
       detalle_comensal: (detalle || '').slice(0, 500) || null
-    });
+    }, 'Por aprobar');
   }
 
   function rechazarPedido(sb, id, quien, motivo) {
+    /* Ya NO pisa aprobado_por: esa columna quiere decir una sola cosa, quien
+       mando la comanda a la cocina, y se usa para saber si la cocina llego a
+       ver el pedido. Quien lo saco va en rechazado_motivo.               */
     return cambiarEstado(sb, id, 'Rechazado', {
-      aprobado_por: (quien || 'Mozo').slice(0, 40),
-      rechazado_motivo: (motivo || '').slice(0, 200) || null
-    });
+      rechazado_motivo: ((motivo || 'Sin motivo') +
+                         (quien ? ' - lo saco ' + quien : '')).slice(0, 200)
+    }, 'Por aprobar');
   }
 
   /* Un solo boton en la cocina: la recibieron Y la estan haciendo. */
   function tomarPedido(sb, id) {
-    return cambiarEstado(sb, id, 'Cocinando', { tomado_en: new Date().toISOString() });
+    return cambiarEstado(sb, id, 'Cocinando', { tomado_en: new Date().toISOString() },
+                         'En cocina');
   }
 
   /* Aviso de pago confirmado.
@@ -860,7 +898,7 @@
     return sb.from(TABLE).select('id', { count: 'exact', head: true })
       .eq('sesion_id', pedido.sesion_id)
       .eq('pagado', false)
-      .not('estado', 'in', '("Rechazado")')
+      .not('estado', 'in', NO_SE_COBRA_SQL)
       .then(function (res) {
         if (res.error || (res.count || 0) > 0) return false;   // todavia deben
         return sb.from(SESIONES_TABLE)
@@ -1107,15 +1145,33 @@
 
   function resumirCuenta(pedidos) {
     var total = 0, pagado = 0, sinEntregar = 0, enCurso = 0;
+    var devolver = 0, sacado = 0;
+
     pedidos.forEach(function (p) {
       var t = Number(p.total) || 0;
+
+      if (!seCobra(p)) {
+        /* Sacado de la cuenta: no se cobra. Antes SI se cobraba -este era el
+           bug-: el boton Rechazar existia desde siempre y el plato rechazado
+           igual sumaba en el total de la mesa y en lo que el cliente debia.
+
+           Pero no puede desaparecer sin mas: con tarjeta el pedido nace
+           pagado (pedir.html), asi que un rechazado pagado es plata que YA
+           entro y hay que devolver. Si se descartara a ciegas, esa plata no
+           aparecia en ninguna pantalla.                                  */
+        sacado += t;
+        if (p.pagado) devolver += t;
+        return;
+      }
+
       total += t;
       if (p.pagado) pagado += t;
       if (p.estado !== 'Entregado') sinEntregar++;
-      // Distinto de 'sinEntregar': un rechazado no esta entregado, pero
-      // tampoco esta en curso. Esto cuenta lo que la cocina todavia debe.
+      // Distinto de 'sinEntregar': lo sacado no esta entregado, pero tampoco
+      // esta en curso. Esto cuenta lo que la cocina todavia debe.
       if (SIN_TERMINAR.indexOf(p.estado) !== -1) enCurso++;
     });
+
     return {
       pedidos: pedidos,
       rondas: pedidos.length,
@@ -1123,7 +1179,9 @@
       pagado: pagado,
       debe: Math.max(0, total - pagado),
       sinEntregar: sinEntregar,
-      enCurso: enCurso
+      enCurso: enCurso,
+      devolver: devolver,     // ya pagado, despues sacado: hay que devolverlo
+      sacado: sacado          // cuanto salio de la cuenta (para el duenio)
     };
   }
 
@@ -1619,6 +1677,9 @@
     mantenerDespierta: mantenerDespierta,
     pantallaSiempreEncendida: pantallaSiempreEncendida,
     ESTADOS: ESTADOS,
+    NO_SE_COBRA: NO_SE_COBRA,
+    NO_SE_COBRA_SQL: NO_SE_COBRA_SQL,
+    seCobra: seCobra,
     AVISOS: AVISOS,
     avisarEstado: avisarEstado,
     avisarPago: avisarPago,

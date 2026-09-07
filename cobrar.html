@@ -110,17 +110,32 @@ document.addEventListener('DOMContentLoaded', function () {
   var pendientes = [];
   var elegido = null;   // pedido seleccionado, o null = cobro sin monto
 
+  /* Con que mesa se abrio. Viene de mesas.html: cobrar.html?sesion=12.
+     Sin esto la pantalla mostraba los impagos de todo el local mezclados y
+     era facil marcar pagada la mesa equivocada.                         */
+  var SESION = new URLSearchParams(location.search).get('sesion') || '';
+
   /* ------------------------------------------------------------- carga -- */
   function cargar() {
     if (!sb) { sinConexion(); return; }
     Promise.all([
       LP.qrActivo(sb),
-      sb.from(LP.TABLE).select('*').eq('pagado', false)
-        .order('created_at', { ascending: false }).limit(25)
-        .then(function (r) { return r.error ? [] : (r.data || []); }, function () { return []; })
+      (function () {
+        var q = sb.from(LP.TABLE).select('*').eq('pagado', false)
+          // Lo que se saco de la cuenta no se cobra. Antes esta pantalla era
+          // la unica sin este filtro, asi que ofrecia cobrar platos anulados.
+          .not('estado', 'in', LP.NO_SE_COBRA_SQL);
+        if (SESION) q = q.eq('sesion_id', SESION);
+        return q.order('created_at', { ascending: false }).limit(25)
+          .then(function (r) { return r.error ? [] : (r.data || []); },
+                function () { return []; });
+      })()
     ]).then(function (res) {
       qr = res[0];
       pendientes = res[1];
+      /* Si se abrio desde una mesa y quedo un solo pedido, ya viene elegido:
+         es el caso normal y le saca un paso al mozo. */
+      if (SESION && pendientes.length === 1) elegido = pendientes[0];
       pintar();
     });
   }
@@ -326,8 +341,14 @@ document.addEventListener('DOMContentLoaded', function () {
     btn.disabled = true;
     btn.textContent = 'Confirmando...';
 
+    /* El .not(...) del final es la otra mitad del filtro de arriba: entre que
+       se muestra el QR y el cliente termina de pagar pueden pasar dos minutos,
+       y en el medio el mozo puede haber sacado el plato. Filtrar solo la
+       consulta que pinta la pantalla no alcanza: hay que filtrar la escritura. */
     sb.from(LP.TABLE).update({ pagado: true, updated_at: new Date().toISOString() })
-      .eq('id', id).eq('pagado', false).select()
+      .eq('id', id).eq('pagado', false)
+      .not('estado', 'in', LP.NO_SE_COBRA_SQL)
+      .select()
       .then(function (res) {
         if (res.error) {
           LP.toast(LP.humanError(res.error, 'No se pudo confirmar el pago.'), 'err');
@@ -335,12 +356,29 @@ document.addEventListener('DOMContentLoaded', function () {
           return;
         }
         var recien = res.data && res.data.length;
-        LP.toast(recien ? 'Pago confirmado.' : 'Ese pago ya estaba confirmado.', 'ok');
+        if (!recien) {
+          /* No pego el update. Puede ser que ya estuviera pago (normal) o que
+             lo hayan sacado de la cuenta (hay que decirlo fuerte: si no, el
+             mozo cree que cobro y el cliente pago algo que no se le sirvio). */
+          sb.from(LP.TABLE).select('estado, pagado').eq('id', id).maybeSingle()
+            .then(function (v) {
+              var p = v && v.data;
+              if (p && !LP.seCobra(p)) {
+                LP.toast('Ese pedido se saco de la cuenta. No lo cobres.', 'err');
+              } else {
+                LP.toast('Ese pago ya estaba confirmado.', 'ok');
+              }
+              elegido = null;
+              cargar();
+            });
+          return;
+        }
+        LP.toast('Pago confirmado.', 'ok');
         /* Avisa igual que la caja. Antes esta pantalla marcaba el pago y no
            avisaba a nadie: cobrar con el QR desde el salon dejaba a Jonathan
            sin enterarse. Solo si el pago se confirmo recien, para no volver
            a avisar cuando ya estaba pago.                                */
-        if (recien) LP.avisarPago(sb, res.data[0]);
+        LP.avisarPago(sb, res.data[0]);
         elegido = null;
         cargar();
       }, function (e) {

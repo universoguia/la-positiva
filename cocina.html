@@ -443,7 +443,8 @@ document.addEventListener('DOMContentLoaded', function () {
       '<p class="kerr" role="alert" data-err="' + esc(o.id) + '"></p>' +
       (next
         ? '<button type="button" class="btn btn-primary btn-block" data-adv="' + esc(o.id) + '" ' +
-            'data-next="' + esc(next) + '"' + (busy ? ' disabled' : '') + '>' +
+            'data-next="' + esc(next) + '" data-desde="' + esc(o.estado) + '"' +
+            (busy ? ' disabled' : '') + '>' +
             (busy ? 'Guardando...' : esc(NEXT_LABEL[o.estado])) + '</button>'
         : '<button type="button" class="btn btn-block" disabled>' +
           (o.estado === 'Listo' ? 'Esperando al mozo' : 'Completado') + '</button>');
@@ -550,10 +551,10 @@ document.addEventListener('DOMContentLoaded', function () {
   elCols.addEventListener('click', function (ev) {
     var btn = ev.target.closest('[data-adv]');
     if (!btn || btn.disabled) return;
-    advance(btn.dataset.adv, btn.dataset.next, btn);
+    advance(btn.dataset.adv, btn.dataset.next, btn, btn.dataset.desde);
   });
 
-  function advance(id, next, btn) {
+  function advance(id, next, btn, desde) {
     if (pendingIds[id]) return;            // evita el doble clic
     pendingIds[id] = true;
     btn.disabled = true;
@@ -565,9 +566,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /* Pasa por LP.cambiarEstado y no por un update propio: ahi vive la tabla
        de avisos, asi que ninguna transicion puede quedarse muda.        */
-    LP.cambiarEstado(sb, id, next).then(function (r) {
+    /* Se manda 'desde': si otro ya movio esta comanda, el update no pega y
+       la cocina se entera en vez de pisar el cambio del mozo.           */
+    LP.cambiarEstado(sb, id, next, null, desde).then(function (r) {
         delete pendingIds[id];
-        if (!r.ok) { fail(null); return; }
+        if (!r.ok) {
+          /* Choque: no es una falla de conexion, es que la comanda ya no
+             estaba donde la cocina creia. Se dice con todas las letras y se
+             recarga, en vez del error generico de "proba de nuevo".     */
+          if (r.choque) {
+            LP.toast(r.motivo, 'err');
+            load(true);
+            return;
+          }
+          fail(null);
+          return;
+        }
         // Aplica el cambio localmente para que se vea al instante.
         orders = orders.map(function (o) {
           return String(o.id) === String(id) ? r.pedido : o;

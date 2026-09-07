@@ -370,7 +370,8 @@ document.addEventListener('DOMContentLoaded', function () {
       if (ocupado[idE]) return;
       ocupado[idE] = true;
       b.disabled = true; b.textContent = 'Guardando...';
-      LP.cambiarEstado(sb, idE, 'Entregado').then(function (r) {
+      // 'Listo' es el unico estado desde el que se puede entregar.
+      LP.cambiarEstado(sb, idE, 'Entregado', null, 'Listo').then(function (r) {
         delete ocupado[idE];
         if (!r.ok) { b.disabled = false; b.textContent = 'Lo lleve a la mesa';
                      LP.toast(r.motivo, 'err'); return; }

@@ -317,7 +317,11 @@ document.addEventListener('DOMContentLoaded', function () {
                      : (sinPedir ? 'Se fueron, liberar' : 'Cerrar la mesa')) + '</button>' +
           /* El QR solo donde hay algo que cobrar: en el resto era un boton de
              mas, repetido en cada tarjeta. */
-          (debe ? '<a class="btn btn-secondary" href="cobrar.html">Cobrar con QR</a>' : '') +
+          /* El link lleva la sesion. Sin esto, la pantalla del QR abria con
+             los 25 ultimos impagos de TODO el local y el mozo parado en la
+             Mesa 7 podia marcar pagada la mesa de al lado. */
+          (debe ? '<a class="btn btn-secondary" href="cobrar.html?sesion=' +
+                  esc(m.sesion.id) + '">Cobrar con QR</a>' : '') +
         '</div>' +
       '</li>';
   }
