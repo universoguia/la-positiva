@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3ece2">
+<meta name="description" content="Activacion en un toque de los avisos de cocina de La Positiva.">
+<title>La Positiva - Avisos de la cocina</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="La Positiva">
+<link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* Una sola cosa que hacer, y el boton bien a mano: esta pagina la abre
+     alguien en plena cocina, apurado, con una mano ocupada. */
+  .wrap{max-width:520px;padding-top:calc(34px + var(--sa-t));text-align:center}
+  .avatar{
+    width:76px;height:76px;border-radius:50%;
+    background:var(--card);border:1px solid var(--border-strong);
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 16px;color:var(--accent);
+  }
+  h1{font-size:29px;margin:0 0 6px}
+  p.lead{color:var(--muted);margin:0 0 24px;font-size:16px;line-height:1.55}
+
+  .btn-grande{min-height:58px;font-size:18px}
+
+  .estado{
+    margin-top:18px;padding:14px 16px;border-radius:var(--r-md);
+    font-size:15px;line-height:1.5;text-align:left;
+  }
+  .estado.ok{background:var(--ok-soft);color:var(--ok);border:1px solid #bfe0ce}
+  .estado.warn{background:var(--warn-soft);color:var(--warn);border:1px solid #e8d3a8}
+  .estado.err{background:var(--err-bg);color:var(--err-ink);border:1px solid #f0cfc9}
+  .estado strong{display:block;margin-bottom:4px}
+  .estado:empty{display:none}
+
+  .guia{
+    margin-top:18px;text-align:left;background:var(--card);
+    border:1px solid var(--border);border-radius:var(--r-md);padding:16px 18px;
+  }
+  .guia h2{
+    font-family:'Jost',sans-serif;font-style:normal;font-size:13px;
+    letter-spacing:.1em;text-transform:uppercase;font-weight:600;
+    color:var(--muted-strong);margin:0 0 10px;
+  }
+  .guia ol{margin:0;padding-left:20px}
+  .guia li{margin-bottom:8px;font-size:15px;line-height:1.5}
+  .guia li:last-child{margin-bottom:0}
+  .guia:empty{display:none}
+
+  .cuantos{margin-top:16px;font-size:14px;color:var(--muted);line-height:1.5}
+  .cuantos.solo{color:var(--err-ink)}
+
+  .abajo{
+    margin-top:26px;padding-top:18px;border-top:1px dashed var(--border);
+    display:flex;flex-direction:column;gap:10px;align-items:center;
+  }
+  .abajo a{color:var(--muted-strong);font-size:15px;text-decoration:underline;
+           min-height:var(--tap);display:inline-flex;align-items:center}
+  .abajo a:hover{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="avatar" aria-hidden="true">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+      <path d="M13.7 21a2 2 0 0 1-3.4 0"></path>
+    </svg>
+  </div>
+
+  <h1>Avisos de la cocina</h1>
+  <p class="lead">Activalos en este celular. Cuando el mozo mande una comanda te va a
+     sonar ac&aacute;, aunque tengas la pantalla apagada.</p>
+
+  <button type="button" class="btn btn-primary btn-block btn-grande" id="activar" disabled>
+    Comprobando...
+  </button>
+  <button type="button" class="btn btn-secondary btn-block" id="probar"
+          style="margin-top:10px" hidden>Probar el aviso</button>
+
+  <div class="estado" id="estado" role="status" aria-live="polite"></div>
+  <div class="guia" id="guia"></div>
+  <p class="cuantos" id="cuantos"></p>
+
+  <div class="abajo">
+    <a href="cocina.html">Ir al panel de cocina</a>
+    <a href="entrar.html">Volver a la entrada</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+<script src="config.js" defer></script>
+<script src="app.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var esc = LP.esc;
+  var sb = LP.client();
+  var ROL = 'Cocina';
+
+  var btn = document.getElementById('activar');
+  var probar = document.getElementById('probar');
+  var caja = document.getElementById('estado');
+  var guia = document.getElementById('guia');
+  var cuantos = document.getElementById('cuantos');
+
+  function decir(clase, titulo, texto) {
+    caja.className = 'estado ' + clase;
+    caja.innerHTML = '<strong>' + esc(titulo) + '</strong>' + esc(texto);
+  }
+  function limpiar() { caja.className = 'estado'; caja.innerHTML = ''; }
+
+  function pasos(titulo, lista) {
+    guia.innerHTML = lista && lista.length
+      ? '<h2>' + esc(titulo) + '</h2><ol>' +
+        lista.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>'
+      : '';
+  }
+
+  function boton(txt, apagado) { btn.textContent = txt; btn.disabled = !!apagado; }
+
+  /* Cuantos aparatos escuchan de verdad. Es el dato que evita el peor caso:
+     que todos crean que la cocina esta cubierta y no lo este.            */
+  function contar() {
+    return LP.contarSubs(sb, ROL).then(function (n) {
+      if (n === null) { cuantos.textContent = ''; return; }
+      if (n === 0) {
+        cuantos.textContent = 'Ningun celular tiene estos avisos activados todavia.';
+        cuantos.className = 'cuantos solo';
+      } else {
+        cuantos.textContent = n === 1
+          ? 'Hay 1 celular recibiendo los avisos de cocina.'
+          : 'Hay ' + n + ' celulares recibiendo los avisos de cocina.';
+        cuantos.className = 'cuantos';
+      }
+    });
+  }
+
+  /* Se comprueba contra la base y no solo contra el navegador: el permiso
+     dado no significa que el aparato haya quedado registrado. */
+  function repasar() {
+    return LP.estadoPush().then(function (st) {
+      if (st === 'no-soportado') {
+        boton('No disponible en este celular', true);
+        decir('err', 'Este navegador no puede recibir avisos',
+          'Proba con Chrome en Android, o con Safari en iPhone agregando la app al inicio.');
+        pasos('', []);
+      } else if (st === 'ios-sin-instalar') {
+        boton('Primero agrega la app al inicio', true);
+        decir('warn', 'Falta un paso en el iPhone',
+          'En iPhone los avisos solo funcionan con la app agregada a la pantalla de inicio.');
+        pasos('Como hacerlo en iPhone', [
+          'Toca el boton Compartir en la barra de Safari.',
+          'Elegi "Agregar a pantalla de inicio" y confirma.',
+          'Cerra Safari y abri La Positiva desde el icono nuevo.',
+          'Volve a esta pagina y toca el boton de activar.'
+        ]);
+      } else if (st === 'denegado') {
+        boton('Permiso bloqueado', true);
+        decir('err', 'Los avisos estan bloqueados en este celular',
+          'Hay que volver a habilitarlos desde los ajustes del navegador.');
+        pasos('Como desbloquearlos', LP.esIOS()
+          ? ['Abri Ajustes del iPhone.', 'Entra en Notificaciones y busca La Positiva.',
+             'Activa "Permitir notificaciones".', 'Volve a abrir la app y proba de nuevo.']
+          : ['Toca el candado al lado de la direccion web.',
+             'Entra en Permisos o Configuracion del sitio.',
+             'Cambia Notificaciones a "Permitir".', 'Recarga esta pagina.']);
+      } else if (st === 'activo') {
+        return LP.pushRegistrado(sb, ROL).then(function (reg) {
+          if (reg === null) {
+            boton('Volver a activar', false);
+            decir('warn', 'No pudimos comprobarlo',
+              'Revisa la conexion y proba de nuevo.');
+          } else if (reg) {
+            boton('Listo, ya estan activados', true);
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-secondary');
+            probar.hidden = false;
+            decir('ok', 'Este celular ya recibe los avisos',
+              'Cuando el mozo mande una comanda te va a sonar, tengas la app abierta o no.');
+            pasos('', []);
+          } else {
+            boton('Activar los avisos', false);
+            decir('warn', 'Falta registrar este celular',
+              'Diste el permiso, pero el celular no quedo anotado en el sistema.');
+          }
+          return contar();
+        });
+      } else {
+        boton('Activar los avisos', false);
+        limpiar();
+        pasos(LP.esIOS() ? 'Que va a pasar' : 'Que va a pasar',
+          ['Toca el boton de arriba.',
+           'El celular te va a preguntar si permitis las notificaciones: deci que si.',
+           'Listo. Podes comprobarlo con el boton de probar.']);
+      }
+      return contar();
+    });
+  }
+
+  btn.addEventListener('click', function () {
+    if (btn.disabled) return;
+    boton('Activando...', true);
+    limpiar();
+    LP.suscribirPush(sb, ROL).then(function (st) {
+      if (st === 'denegado') {
+        decir('err', 'No diste permiso',
+          'Sin el permiso de notificaciones no te podemos avisar de las comandas.');
+      } else if (st === 'sin-decidir') {
+        decir('warn', 'Quedo sin decidir',
+          'Toca de nuevo el boton y elegi Permitir.');
+      } else if (st === 'no-guardado') {
+        decir('err', 'No pudimos registrarlo',
+          'El celular quedo listo, pero no se anoto en el sistema. Proba de nuevo.');
+      }
+      repasar();
+    });
+  });
+
+  probar.addEventListener('click', function () {
+    if (probar.disabled) return;
+    probar.disabled = true;
+    probar.textContent = 'Enviando...';
+    LP.avisar(sb, ROL, 'Comanda nueva',
+              'Mesa 7 - 1x Provoleta (mensaje de prueba)', null, 'cocina.html', true)
+      .then(function (r) {
+        probar.disabled = false;
+        probar.textContent = 'Probar el aviso';
+        if (r.ok) {
+          LP.toast('Aviso enviado. Deberia llegarte en unos segundos.', 'ok');
+        } else if (r.config) {
+          decir('err', 'Los avisos estan sin configurar en el servidor',
+            'No se arregla desde este celular: avisale a quien administra el sistema.');
+        } else {
+          LP.toast(r.motivo || 'No salio el aviso de prueba.', 'err');
+        }
+      });
+  });
+
+  if (!sb) {
+    boton('Sin conexion', true);
+    decir('err', 'No hay conexion con el sistema', 'Revisa la conexion e intenta de nuevo.');
+    return;
+  }
+  repasar();
+});
+</script>
+</body>
+</html>
