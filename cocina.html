@@ -107,6 +107,17 @@
   }
   .kmeta.urgent{color:var(--err-ink);font-weight:600}
   .kpay{font-size:13px;color:var(--muted-strong);margin-top:5px;text-align:right}
+  /* Lo que se saco: tachado Y con cartel. El tachado solo no alcanza a
+     medio metro de una plancha. */
+  .kfuera{
+    margin:0 0 10px;padding:10px 12px;border-radius:var(--r-md);
+    background:var(--err-bg);border:1px solid #f0cfc9;color:var(--err-ink);
+    font-size:15px;font-weight:600;line-height:1.45;
+  }
+  .kfuera span{display:block;font-weight:400;font-size:13px;margin-top:2px}
+  .klines .fuera{color:var(--muted);text-decoration:line-through}
+  .kcard.anulada{border-color:var(--err);background:var(--err-bg)}
+
   .klines{
     border-top:1px dashed var(--border);border-bottom:1px dashed var(--border);
     padding:9px 0;margin:8px 0;
@@ -409,17 +420,34 @@ document.addEventListener('DOMContentLoaded', function () {
     var next = NEXT[o.estado];
     var mins = minutesOld(o);
     var urgent = (o.estado === 'En cocina' || o.estado === 'Cocinando') && mins >= 15;
-    var PENDIENTE = {
-      Efectivo: 'Paga en efectivo',
-      QR: 'Paga con QR',
-      Tarjeta: 'Pago pendiente'
-    };
-    var pago = o.pagado ? 'Pagado' : (PENDIENTE[o.metodo_pago] || 'Pago pendiente');
     var busy = !!pendingIds[o.id];
 
-    var lines = (o.lines || []).map(function (l) {
-      return '<div><span class="q">' + esc(l.qty) + '&times;</span><span>' + esc(l.name) + '</span></div>';
+    /* Se saco el renglon de pago (.kpay y el mapa PENDIENTE): la cocina no
+       toca plata, y ocupaba la esquina donde tiene que leer los platos
+       rapido. Ese lugar ahora lo usa el aviso de lo que salio. */
+
+    var anulada = !LP.seCobra(o);
+    var sacadas = [];
+    var lines = LP.lineasDe(o).map(function (l) {
+      var fuera = LP.lineaSacada(l);
+      if (fuera) sacadas.push(l);
+      return '<div' + (fuera ? ' class="fuera"' : '') + '>' +
+        '<span class="q">' + esc(l.qty) + '&times;</span><span>' + esc(l.name) + '</span></div>';
     }).join('');
+
+    var aviso = '';
+    if (anulada) {
+      aviso = '<p class="kfuera">ANULADA &mdash; no la hagas' +
+        '<span>' + esc(o.mesa) +
+        (sacadas.length && sacadas[0].motivo ? ' &middot; ' + esc(sacadas[0].motivo) : '') +
+        '</span></p>';
+    } else if (sacadas.length) {
+      aviso = '<p class="kfuera">' +
+        (sacadas.length === 1 ? 'SACARON UN PLATO' : 'SACARON ' + sacadas.length + ' PLATOS') +
+        ' &mdash; no lo hagas<span>' +
+        esc(sacadas.map(function (l) { return l.qty + '\u00d7 ' + l.name; }).join(', ')) +
+        '</span></p>';
+    }
 
     return '<div class="kcard-top">' +
         '<div>' +
@@ -430,27 +458,40 @@ document.addEventListener('DOMContentLoaded', function () {
             (o.cliente ? ' &middot; ' + esc(o.cliente) : '') +
           '</div>' +
         '</div>' +
-        '<div style="text-align:right">' +
-          '<span class="badge ' + BADGE[o.estado] + '">' + esc(o.estado) + '</span>' +
-          '<div class="kpay">' + esc(pago) + '</div>' +
-        '</div>' +
+        '<span class="badge ' + (BADGE[o.estado] || '') + '">' + esc(o.estado) + '</span>' +
       '</div>' +
+      aviso +
       (o.detalle_comensal
         ? '<p class="kojo"><b>Ojo</b>' + esc(o.detalle_comensal) + '</p>'
         : '') +
       '<div class="klines">' + lines + '</div>' +
-      '<div class="ktotal">' + money(o.total) + '</div>' +
       '<p class="kerr" role="alert" data-err="' + esc(o.id) + '"></p>' +
-      (next
-        ? '<button type="button" class="btn btn-primary btn-block" data-adv="' + esc(o.id) + '" ' +
+      /* Una comanda anulada no tiene boton: no hay nada que avanzar.
+         Los dos botones desactivados que habia antes ('Esperando al mozo' y
+         'Completado') se sacaron: no hacian nada y estaban a pantalla
+         completa en dos de las cuatro columnas. La tarjeta ahora termina
+         donde termina la comida. Tambien se fue el total en plata, que la
+         cocina no usa. */
+      (anulada || !next
+        ? ''
+        : '<button type="button" class="btn btn-primary btn-block" data-adv="' + esc(o.id) + '" ' +
             'data-next="' + esc(next) + '" data-desde="' + esc(o.estado) + '"' +
             (busy ? ' disabled' : '') + '>' +
-            (busy ? 'Guardando...' : esc(NEXT_LABEL[o.estado])) + '</button>'
-        : '<button type="button" class="btn btn-block" disabled>' +
-          (o.estado === 'Listo' ? 'Esperando al mozo' : 'Completado') + '</button>');
+            (busy ? 'Guardando...' : esc(NEXT_LABEL[o.estado])) + '</button>');
   }
 
   /* ------------------------------------------------- render con diffing -- */
+  /* Una comanda anulada no tiene estado de cocina: quedo en 'Rechazado'.
+     Se la muestra en la columna donde estaba cuando la sacaron, que quedo
+     guardado en la linea. Sin esto la tarjeta desaparecia de la pantalla sin
+     decir nada, y el cocinero que ya la habia empezado no se enteraba.  */
+  function columnaDe(o) {
+    if (LP.seCobra(o)) return o.estado;
+    var ls = LP.lineasDe(o);
+    for (var i = 0; i < ls.length; i++) if (ls[i].era) return ls[i].era;
+    return 'En cocina';
+  }
+
   function groupOrders() {
     /* Los grupos salen de STEPS y no de una lista escrita a mano: cuando
        cambiaron los estados, la lista fija dejaba g['En cocina'] en undefined
@@ -458,7 +499,7 @@ document.addEventListener('DOMContentLoaded', function () {
        o sea invisibles para la cocina.                                    */
     var g = {};
     STEPS.forEach(function (s) { g[s] = []; });
-    orders.forEach(function (o) { (g[o.estado] || g[STEPS[STEPS.length - 1]]).push(o); });
+    orders.forEach(function (o) { (g[columnaDe(o)] || g[STEPS[STEPS.length - 1]]).push(o); });
     // Activos: el mas viejo primero (es el que apura). Entregados: los ultimos.
     STEPS.slice(0, -1).forEach(function (s) {
       g[s].sort(function (a, b) { return new Date(a.created_at) - new Date(b.created_at); });
@@ -517,6 +558,10 @@ document.addEventListener('DOMContentLoaded', function () {
           el.dataset.sig = sig;
           el.innerHTML = cardHTML(o);
         }
+        /* Va en cada pintado y no solo al crear el nodo: una comanda puede
+           pasar a anulada con la tarjeta ya en pantalla, que es justo el
+           caso que importa. */
+        el.classList.toggle('anulada', !LP.seCobra(o));
         /* El destello se aplica DESPUES de tener el nodo, sea recien creado o
            reutilizado. Estaba adentro de la rama de creacion, asi que el
            pedido que entraba con la pantalla oculta creaba su tarjeta ahi
@@ -604,6 +649,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   var ACTIVOS = ['En cocina', 'Cocinando', 'Listo'];
   var ENTREGADOS_TRAIDOS = 20;
+  var ANULADAS_TRAIDAS = 15;
 
   function load(quiet) {
     // Descartar el refresco concurrente escondia el segundo de dos pedidos
@@ -619,7 +665,17 @@ document.addEventListener('DOMContentLoaded', function () {
       sb.from(LP.TABLE).select('*').in('estado', ACTIVOS)
         .order('created_at', { ascending: false }),
       sb.from(LP.TABLE).select('*').eq('estado', 'Entregado')
-        .order('created_at', { ascending: false }).limit(ENTREGADOS_TRAIDOS)
+        .order('created_at', { ascending: false }).limit(ENTREGADOS_TRAIDOS),
+      /* Las comandas que el mozo anulo. Solo las que la cocina ALCANZO A VER
+         (aprobado_en cargado): las que se frenaron antes de salir del panel
+         del mozo nunca fueron problema de la cocina.
+         Sin esta consulta la tarjeta desaparecia de la pantalla sin decir
+         nada, y el cocinero que ya la habia empezado seguia cocinando. */
+      sb.from(LP.TABLE).select('*').eq('estado', 'Rechazado')
+        .not('aprobado_en', 'is', null)
+        .order('updated_at', { ascending: false }).limit(ANULADAS_TRAIDAS)
+        .then(function (r) { return r.error ? { data: [] } : r; },
+              function () { return { data: [] }; })
     ]).then(function (res) {
       loadInFlight = false;
       var err = (res[0] && res[0].error) || (res[1] && res[1].error);
@@ -631,7 +687,7 @@ document.addEventListener('DOMContentLoaded', function () {
          pedido que todavia puede necesitar cocina nunca se esconde.      */
       var data = [];
       var vistos = Object.create(null);
-      [(res[0].data || []), (res[1].data || [])].forEach(function (lote) {
+      [(res[0].data || []), (res[2].data || []), (res[1].data || [])].forEach(function (lote) {
         lote.forEach(function (o) {
           if (vistos[o.id]) return;
           vistos[o.id] = true;

@@ -77,6 +77,18 @@
     background:#efe7db;border:1px solid var(--border);
     border-radius:var(--r-md);height:249px;
   }
+  /* La seccion de devoluciones va arriba de todo y se ve distinta: es lo
+     unico de esta pantalla donde la plata sale en vez de entrar. */
+  #devoluciones .pcard{border-color:var(--err);background:var(--err-bg)}
+  .pdevolver{
+    margin:10px 0 0;padding:11px 13px;border-radius:var(--r-md);
+    background:#fff;border:1px solid #f0cfc9;
+    font-size:15px;line-height:1.5;color:var(--err-ink);
+  }
+  .pdevolver b{display:block;font-size:19px;margin-bottom:2px}
+  .pdevolver .quep{font-size:13px;color:var(--muted-strong)}
+  .plines .fuera{color:var(--muted);text-decoration:line-through}
+
   [data-body="pend"]{min-height:249px}
   [data-body="pend"] .state{align-self:center}
 
@@ -205,6 +217,18 @@
     </div>
   </section>
 
+  <!-- Va ARRIBA de los pagos pendientes y tiene su propia consulta, sin el
+       recorte a 9 ni el limite de 60 de la lista comun: si no, la unica
+       ficha que dice "hay que devolver plata" se hunde abajo de los pagos
+       de la noche y nadie la ve nunca. -->
+  <section class="section" id="devoluciones" aria-labelledby="h-dev" hidden>
+    <div class="section-head">
+      <h2 id="h-dev">Hay que devolver</h2>
+      <span class="n" data-count="dev">0</span>
+    </div>
+    <div class="cards" data-body="dev"></div>
+  </section>
+
   <section class="section" id="pendientes" aria-labelledby="h-pend">
     <div class="section-head">
       <h2 id="h-pend">Pagos pendientes</h2>
@@ -242,6 +266,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
   var orders = [];
   var loaded = false;
+  var soy = LP.quienSoy();
+  var YO = (soy && soy.nombre) || 'Caja';
+
+  var devoluciones = [];                  // fichas con plata para devolver
+  var devolviendo = Object.create(null);
+
   var pending = Object.create(null);      // confirmacion de pago en curso
   var notifyState = Object.create(null);  // id -> 'ok' | 'fail'
   var notifying = Object.create(null);
@@ -249,12 +279,17 @@ document.addEventListener('DOMContentLoaded', function () {
   /* -------------------------------------------------------- tarjetas -- */
   function signature(o) {
     return [o.id, o.pagado, o.updated_at, pending[o.id] ? 1 : 0,
-            notifying[o.id] ? 1 : 0, notifyState[o.id] || ''].join('|');
+            notifying[o.id] ? 1 : 0, notifyState[o.id] || '',
+            LP.pendienteDeDevolver(o), devolviendo[o.id] ? 1 : 0].join('|');
   }
 
-  function cardHTML(o) {
-    var lines = (o.lines || []).map(function (l) {
-      return '<div><span class="q">' + esc(l.qty) + '&times;</span><span>' + esc(l.name) + '</span></div>';
+  function cardHTML(o, modo) {
+    // Los platos que el mozo saco se muestran tachados, no escondidos: la
+    // caja tiene que poder decirle al cliente que fue lo que no se le cobra.
+    var lines = LP.lineasDe(o).map(function (l) {
+      var fuera = LP.lineaSacada(l);
+      return '<div' + (fuera ? ' class="fuera"' : '') + '>' +
+        '<span class="q">' + esc(l.qty) + '&times;</span><span>' + esc(l.name) + '</span></div>';
     }).join('');
     var METODOS = {
       Efectivo: 'Efectivo al mozo',
@@ -266,11 +301,29 @@ document.addEventListener('DOMContentLoaded', function () {
     var nstate = notifyState[o.id];
 
     var foot;
-    if (o.pagado) {
+    if (modo === 'dev') {
+      /* Ficha de devolucion: no se cobra nada aca, se devuelve. Un solo
+         boton, y lo que hay que devolver bien grande. */
+      var cuanto = LP.pendienteDeDevolver(o);
+      var que = [];
+      LP.lineasDe(o).forEach(function (l) {
+        if (LP.lineaSacada(l) && !l.devuelto) {
+          que.push(l.qty + '\u00d7 ' + l.name + ' (' + (l.motivo || 'sin motivo') + ')');
+        }
+      });
+      foot = '<div class="pdevolver"><b>Devolverle ' + money(cuanto) + '</b>' +
+          '<span class="quep">' + esc(que.join(', ') || 'Ya lo habia pagado') + '</span>' +
+        '</div>' +
+        '<button type="button" class="btn btn-primary btn-block" data-devuelto="' + esc(o.id) + '" ' +
+          'style="margin-top:10px"' + (devolviendo[o.id] ? ' disabled' : '') + '>' +
+          (devolviendo[o.id] ? 'Anotando...' : 'Ya se lo devolvi') + '</button>';
+    } else if (o.pagado) {
       // Confirmacion persistente en la ficha, ademas del mensaje temporal.
       var nota = '';
-      if (nstate === 'ok') nota = '<p class="pnote ok">Aviso enviado a Jonathan.</p>';
-      else if (nstate === 'fail') {
+      /* Se saco 'Aviso enviado a Jonathan.': era un mensaje de exito que
+         nadie accionaba y que el toast ya habia dicho. Queda solo la nota de
+         FALLA, que es la unica de las dos que pide hacer algo. */
+      if (nstate === 'fail') {
         nota = '<p class="pnote warn">El pago quedo confirmado, pero el aviso no salio.</p>' +
           '<button type="button" class="btn btn-secondary btn-block" data-retry="' + esc(o.id) + '" ' +
           'style="margin-top:8px"' + (notifying[o.id] ? ' disabled' : '') + '>' +
@@ -292,11 +345,11 @@ document.addEventListener('DOMContentLoaded', function () {
             ' &middot; ' + esc(LP.timeAgo(o.created_at)) + '</div>' +
           '<div class="pmetodo">' + esc(metodo) + '</div>' +
         '</div>' +
-        '<span class="badge ' + (o.pagado ? 'b-ok' : 'b-pend') + '">' +
-          (o.pagado ? 'Pagado' : 'Pendiente') + '</span>' +
       '</div>' +
       '<div class="plines">' + lines + '</div>' +
-      '<div class="ptotal">' + money(o.total) + '</div>' +
+      /* Lo que se cobra, no el total del insert: si el mozo saco un plato,
+         la caja tiene que cobrar lo que quedo. */
+      '<div class="ptotal">' + money(modo === 'dev' ? o.total : LP.cobrable(o)) + '</div>' +
       '<div class="pfoot">' + foot + '</div>';
   }
 
@@ -304,11 +357,14 @@ document.addEventListener('DOMContentLoaded', function () {
   function render() {
     var pend = orders.filter(function (o) { return !o.pagado; });
     var pag = orders.filter(function (o) { return o.pagado; }).slice(0, VISIBLES_PAGADOS);
+    // Sin recorte: las devoluciones son pocas y ninguna se puede perder.
+    document.getElementById('devoluciones').hidden = !devoluciones.length;
+    paint('dev', devoluciones, '', 'dev');
     paint('pend', pend, 'No hay pagos pendientes.');
     paint('pag', pag, 'Todavia no se confirmo ningun pago.');
   }
 
-  function paint(key, list, emptyMsg) {
+  function paint(key, list, emptyMsg, modo) {
     var body = document.querySelector('[data-body="' + key + '"]');
     document.querySelector('[data-count="' + key + '"]').textContent = list.length;
 
@@ -325,18 +381,18 @@ document.addEventListener('DOMContentLoaded', function () {
     list.forEach(function (o, i) {
       seen[o.id] = true;
       var el = body.querySelector('[data-card="' + o.id + '"]');
-      var sig = signature(o);
+      var sig = (modo || '') + '|' + signature(o);
       if (!el) {
         el = document.createElement('article');
         el.dataset.card = o.id;
         el.dataset.sig = sig;
         el.className = 'pcard' + (o.pagado ? ' is-paid' : '');
-        el.innerHTML = cardHTML(o);
+        el.innerHTML = cardHTML(o, modo);
       } else if (el.dataset.sig !== sig) {
         // Solo se repinta la ficha que cambio, nunca la lista entera.
         el.dataset.sig = sig;
         el.className = 'pcard' + (o.pagado ? ' is-paid' : '');
-        el.innerHTML = cardHTML(o);
+        el.innerHTML = cardHTML(o, modo);
       }
       if (body.children[i] !== el) body.insertBefore(el, body.children[i] || null);
     });
@@ -442,19 +498,54 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  /* ------------------------------------------------------- devolver ---- */
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-devuelto]');
+    if (!b || b.disabled) return;
+    var id = b.dataset.devuelto;
+    var o = null;
+    devoluciones.forEach(function (x) { if (String(x.id) === String(id)) o = x; });
+    if (!o) return;
+
+    devolviendo[id] = true;
+    b.disabled = true;
+    b.textContent = 'Anotando...';
+    LP.marcarDevuelto(sb, o, YO).then(function (ok) {
+      delete devolviendo[id];
+      if (!ok) {
+        b.disabled = false;
+        b.textContent = 'Ya se lo devolvi';
+        LP.toast('No pudimos anotarlo. Proba de nuevo.', 'err');
+        return;
+      }
+      LP.toast('Anotado. Queda registrado que se devolvio.', 'ok');
+      load(true);
+    });
+  });
+
   /* ------------------------------------------------------------- carga -- */
   var inFlight = false;
   function load(quiet) {
     if (inFlight) return Promise.resolve();
     if (!sb) { showFatal(); return Promise.resolve(); }
     inFlight = true;
-    /* Lo rechazado no se cobra: el mozo lo freno antes de que existiera. */
-    return sb.from(LP.TABLE).select('*').neq('estado', 'Rechazado')
-      .order('created_at', { ascending: false }).limit(60)
-      .then(function (res) {
+    /* Dos consultas. La de siempre para cobrar (lo sacado no se cobra), y
+       una aparte para las devoluciones, que SI tiene que traer lo rechazado:
+       una comanda anulada entera queda en 'Rechazado' y desaparecia de esta
+       pantalla, que es justo donde hay que devolver la plata. */
+    return Promise.all([
+      sb.from(LP.TABLE).select('*').not('estado', 'in', LP.NO_SE_COBRA_SQL)
+        .order('created_at', { ascending: false }).limit(60),
+      sb.from(LP.TABLE).select('*').eq('pagado', true)
+        .order('updated_at', { ascending: false }).limit(200)
+        .then(function (r) { return r.error ? [] : (r.data || []); }, function () { return []; })
+    ]).then(function (res) {
         inFlight = false;
-        if (res.error) { showError(res.error, quiet); return; }
-        orders = res.data || [];
+        if (res[0].error) { showError(res[0].error, quiet); return; }
+        orders = res[0].data || [];
+        devoluciones = res[1].filter(function (o) {
+          return LP.pendienteDeDevolver(o) > 0;
+        });
         loaded = true;
         elState.innerHTML = '';
         render();

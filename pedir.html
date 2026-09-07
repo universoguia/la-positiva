@@ -1216,12 +1216,22 @@ document.addEventListener('DOMContentLoaded', function () {
        clavado en el primer paso, para siempre. Peor que no mostrar nada,
        porque lo dejaba esperando algo que no iba a llegar.              */
     if (order.estado === 'Rechazado') {
+      /* Ya no quiere decir solo "el mozo lo freno antes de mandarlo": ahora
+         tambien es "lo sacamos de tu cuenta". Lo primero que tiene que leer
+         el comensal es que NO se lo vamos a cobrar, y si ya habia pagado,
+         que se lo devolvemos. */
+      var devolverle = LP.pendienteDeDevolver(order);
       document.getElementById('statusScreen').innerHTML =
-        '<h3 class="serif" style="margin:0;font-size:28px">No pudimos tomar el pedido</h3>' +
+        '<h3 class="serif" style="margin:0;font-size:28px">Sacamos este pedido de tu cuenta</h3>' +
         '<p class="order-no">Pedido #' + esc(order.id) + ' &middot; ' + esc(order.mesa) + '</p>' +
-        '<div class="qr-aviso"><strong>Avisale a un mozo</strong>' +
-        'Alguien del salon va a pasar para ayudarte a hacerlo de nuevo' +
-        (order.rechazado_motivo ? ': ' + esc(order.rechazado_motivo) : '.') + '</div>' +
+        '<div class="qr-aviso"><strong>No te lo vamos a cobrar</strong>' +
+        (order.rechazado_motivo
+          ? esc(String(order.rechazado_motivo).split(' - lo saco ')[0]) + '. '
+          : '') +
+        (devolverle > 0
+          ? 'Ya lo habias pagado: te devolvemos ' + money(devolverle) + ' en la mesa.'
+          : 'Si necesitas algo, avisale a un mozo.') +
+        '</div>' +
         '<button type="button" class="btn btn-secondary btn-block" id="keepBrowsing" ' +
           'style="margin-top:18px">Volver a la carta</button>';
       document.getElementById('keepBrowsing').addEventListener('click', function () {
@@ -1230,6 +1240,20 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       return;
     }
+
+    /* Le sacaron un plato pero el resto sigue en marcha: el seguimiento
+       normal, con un renglon arriba diciendo que salio y cuanto queda. Sin
+       esto el comensal seguia viendo el total viejo. */
+    var fuera = [];
+    LP.lineasDe(order).forEach(function (l) {
+      if (LP.lineaSacada(l)) fuera.push(l.qty + '\u00d7 ' + l.name);
+    });
+    var avisoSacado = fuera.length
+      ? '<div class="qr-aviso" style="margin-bottom:14px"><strong>' +
+        (fuera.length === 1 ? 'Sacamos un plato de tu pedido' : 'Sacamos platos de tu pedido') +
+        '</strong>' + esc(fuera.join(', ')) + ' \u2014 no te lo cobramos. ' +
+        'Ahora tu pedido queda en ' + money(LP.cobrable(order)) + '.</div>'
+      : '';
 
     var idx = STEPS.indexOf(order.estado);
     if (idx < 0) idx = 0;
@@ -1256,6 +1280,7 @@ document.addEventListener('DOMContentLoaded', function () {
       '<h3 class="serif" style="margin:0;font-size:28px">Pedido enviado</h3>' +
       '<p class="order-no">Pedido #' + esc(order.id) + ' &middot; ' + esc(order.mesa) +
         ' &middot; ' + esc(pago) + '</p>' +
+      avisoSacado +
       avisoQR +
       '<div class="track">' + steps + '</div>' +
       '<button type="button" class="btn btn-secondary btn-block" id="keepBrowsing" style="margin-top:18px">' +
