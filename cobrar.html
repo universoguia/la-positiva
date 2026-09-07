@@ -332,8 +332,13 @@ document.addEventListener('DOMContentLoaded', function () {
           btn.disabled = false; btn.textContent = 'Ya pago: confirmar ' + money(elegido.total);
           return;
         }
-        LP.toast(res.data && res.data.length
-          ? 'Pago confirmado.' : 'Ese pago ya estaba confirmado.', 'ok');
+        var recien = res.data && res.data.length;
+        LP.toast(recien ? 'Pago confirmado.' : 'Ese pago ya estaba confirmado.', 'ok');
+        /* Avisa igual que la caja. Antes esta pantalla marcaba el pago y no
+           avisaba a nadie: cobrar con el QR desde el salon dejaba a Jonathan
+           sin enterarse. Solo si el pago se confirmo recien, para no volver
+           a avisar cuando ya estaba pago.                                */
+        if (recien) LP.avisarPago(sb, res.data[0]);
         elegido = null;
         cargar();
       }, function (e) {

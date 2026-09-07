@@ -1014,6 +1014,27 @@ document.addEventListener('DOMContentLoaded', function () {
   function renderStatus(order) {
     if (lastEstado === order.estado) return;   // no repinta si nada cambio
     lastEstado = order.estado;
+
+    /* Un pedido rechazado no entra en la barra de pasos: antes caia en
+       'idx = 0' y el comensal veia "Pedido enviado" con el seguimiento
+       clavado en el primer paso, para siempre. Peor que no mostrar nada,
+       porque lo dejaba esperando algo que no iba a llegar.              */
+    if (order.estado === 'Rechazado') {
+      document.getElementById('statusScreen').innerHTML =
+        '<h3 class="serif" style="margin:0;font-size:28px">No pudimos tomar el pedido</h3>' +
+        '<p class="order-no">Pedido #' + esc(order.id) + ' &middot; ' + esc(order.mesa) + '</p>' +
+        '<div class="qr-aviso"><strong>Avisale a un mozo</strong>' +
+        'Alguien del salon va a pasar para ayudarte a hacerlo de nuevo' +
+        (order.rechazado_motivo ? ': ' + esc(order.rechazado_motivo) : '.') + '</div>' +
+        '<button type="button" class="btn btn-secondary btn-block" id="keepBrowsing" ' +
+          'style="margin-top:18px">Volver a la carta</button>';
+      document.getElementById('keepBrowsing').addEventListener('click', function () {
+        LP.closeDialog(statusSheet);
+        clearActiveOrder();
+      });
+      return;
+    }
+
     var idx = STEPS.indexOf(order.estado);
     if (idx < 0) idx = 0;
 

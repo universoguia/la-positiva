@@ -128,8 +128,11 @@ document.addEventListener('DOMContentLoaded', function () {
   var resumen = document.getElementById('resumen');
   var conn = new LP.ConnBadge(document.getElementById('conn'));
 
-  var BADGE = { Nuevo: 'b-nuevo', Cocinando: 'b-cocinando', Listo: 'b-listo',
-                Entregado: 'b-entregado' };
+  /* Las claves tienen que ser los estados REALES: con las viejas, un pedido
+     'Por aprobar' o 'En cocina' salia sin color. */
+  var BADGE = { 'Por aprobar': 'b-nuevo', 'En cocina': 'b-nuevo',
+                Cocinando: 'b-cocinando', Listo: 'b-listo',
+                Entregado: 'b-entregado', Rechazado: 'b-entregado' };
 
   var mesas = [];
   var cargado = false;
@@ -222,6 +225,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
     LP.cerrarSesion(sb, id, 'Salon').then(function (hecho) {
       delete cerrando[id];
+
+      /* La mesa todavia tiene comida en curso. No se cierra a la primera:
+         casi siempre es un error, y si no lo es, se confirma y se fuerza. */
+      if (hecho && hecho.bloqueado) {
+        b.disabled = false;
+        b.textContent = 'Cerrar la mesa';
+        var igual = window.confirm(
+          m.mesa + ' todavia tiene ' + hecho.enCurso +
+          (hecho.enCurso === 1 ? ' pedido sin terminar' : ' pedidos sin terminar') +
+          '.\n\nSi la cerras igual, esos pedidos quedan colgando de una cuenta ' +
+          'cerrada. Cerrar de todos modos?');
+        if (!igual) return;
+        cerrando[id] = true;
+        b.disabled = true;
+        b.textContent = 'Cerrando...';
+        LP.cerrarSesion(sb, id, 'Salon', true).then(function () {
+          delete cerrando[id];
+          LP.toast(m.mesa + ' cerrada.', 'ok');
+          cargar(true);
+        });
+        return;
+      }
+
       if (!hecho) {
         b.disabled = false;
         b.textContent = 'Cerrar la mesa';

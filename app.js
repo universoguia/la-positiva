@@ -653,11 +653,11 @@
     'Por aprobar': { a: 'Mozo',   titulo: 'Pedido para aprobar',
                      url: 'mozo.html',   insistir: true },
     'En cocina':   { a: 'Cocina', titulo: 'Comanda nueva',
-                     url: 'cocina.html', insistir: true },
+                     url: 'cocina.html', insistir: true, wa: true },
     'Cocinando':   { a: 'Mozo',   titulo: 'La cocina lo esta cocinando',
                      url: 'mozo.html',   insistir: false },
     'Listo':       { a: 'Mozo',   titulo: 'Listo para llevar a la mesa',
-                     url: 'mozo.html',   insistir: true },
+                     url: 'mozo.html',   insistir: true, wa: true },
     'Entregado':   { a: 'Mozo',   titulo: 'Pedido entregado',
                      url: 'mozo.html',   insistir: false },
     'Rechazado':   { a: null }
@@ -674,16 +674,19 @@
                  (pedido.cliente ? ' - ' + pedido.cliente : '') +
                  (extra ? '\n' + extra : '');
 
-    /* La comanda tambien sale por WhatsApp, si el local cargo un numero.
-       Va aparte del push a proposito: que Twilio falle no puede tocar el
-       aviso que ya funciona.                                             */
-    if (pedido.estado === 'En cocina') {
+    /* WhatsApp solo en los pasos criticos, no en todos: el push ya avisa de
+       todo, es instantaneo y gratis. WhatsApp cuesta por mensaje y fuera de
+       la ventana de 24h necesita plantilla aprobada, asi que duplicar los
+       seis eventos es caro y ademas hace vibrar el telefono dos veces por lo
+       mismo. Aca es respaldo de lo que no se puede perder.
+       Va aparte del push: que Twilio falle no toca el aviso que funciona. */
+    if (cfg.wa) {
       var detalle = (pedido.lines || []).map(function (l) {
         return l.qty + 'x ' + l.name;
       }).join(', ');
       avisarWhatsapp(sb, {
-        rol: 'Cocina',
-        texto: 'Comanda de ' + pedido.mesa + '\n' + detalle +
+        rol: cfg.a,
+        texto: cfg.titulo + ' - ' + pedido.mesa + '\n' + detalle +
                '\nTotal: ' + money(pedido.total) +
                (pedido.detalle_comensal ? '\nOJO: ' + pedido.detalle_comensal : '')
       });
@@ -743,6 +746,30 @@
   /* Un solo boton en la cocina: la recibieron Y la estan haciendo. */
   function tomarPedido(sb, id) {
     return cambiarEstado(sb, id, 'Cocinando', { tomado_en: new Date().toISOString() });
+  }
+
+  /* Aviso de pago confirmado.
+     Vive aca y no en cada pantalla porque estaba pasando lo peor: caja.html
+     avisaba y cobrar.html no. El mismo hecho -confirmar un pago- notificaba
+     o no segun desde donde se hiciera, y el mozo que cobraba con el QR en el
+     salon dejaba a Jonathan sin enterarse.                               */
+  function avisarPago(sb, pedido) {
+    if (!pedido) return Promise.resolve({ ok: false, motivo: 'Sin pedido.' });
+    var cuerpo = pedido.mesa + ' pago ' + money(pedido.total) + '. Ya podes seguir.';
+
+    avisarWhatsapp(sb, {
+      rol: 'Jonathan',
+      texto: 'Pago confirmado - ' + pedido.mesa + '\nTotal: ' + money(pedido.total)
+    });
+
+    return avisar(sb, 'Jonathan', 'Pago confirmado', cuerpo, pedido.id, 'caja.html', false)
+      .then(function (r) {
+        if (!r.ok && r.codigo !== 'sin-destinos') {
+          console.warn('[La Positiva] aviso de pago no llego: ' +
+                       (r.motivo || 'motivo desconocido'));
+        }
+        return r;
+      });
   }
 
   /* --- Notas entre el mozo y la cocina ------------------------------------ */
@@ -835,13 +862,18 @@
 
   /* El resumen se calcula en un solo lugar para que la mesa, la caja y el
      cliente muestren SIEMPRE el mismo numero.                            */
+  var SIN_TERMINAR = ['Por aprobar', 'En cocina', 'Cocinando', 'Listo'];
+
   function resumirCuenta(pedidos) {
-    var total = 0, pagado = 0, sinEntregar = 0;
+    var total = 0, pagado = 0, sinEntregar = 0, enCurso = 0;
     pedidos.forEach(function (p) {
       var t = Number(p.total) || 0;
       total += t;
       if (p.pagado) pagado += t;
       if (p.estado !== 'Entregado') sinEntregar++;
+      // Distinto de 'sinEntregar': un rechazado no esta entregado, pero
+      // tampoco esta en curso. Esto cuenta lo que la cocina todavia debe.
+      if (SIN_TERMINAR.indexOf(p.estado) !== -1) enCurso++;
     });
     return {
       pedidos: pedidos,
@@ -849,7 +881,8 @@
       total: total,
       pagado: pagado,
       debe: Math.max(0, total - pagado),
-      sinEntregar: sinEntregar
+      sinEntregar: sinEntregar,
+      enCurso: enCurso
     };
   }
 
@@ -885,8 +918,27 @@
   }
 
   /* Cierra la cuenta. La mesa queda libre y el proximo pedido abre una nueva. */
-  function cerrarSesion(sb, id, quien) {
+  function cerrarSesion(sb, id, quien, forzar) {
     if (!sb || !id) return Promise.resolve(false);
+
+    /* Cerrar una mesa con pedidos todavia en curso deja esos pedidos colgando
+       de una cuenta cerrada: siguen apareciendo en el panel del mozo, pero su
+       importe ya no entra en ninguna cuenta abierta. Paso de verdad.
+       Es distinto de cerrar con saldo impago -eso es normal, se cobro en
+       efectivo y no se marco-, por eso este chequeo va aparte.          */
+    var previo = forzar ? Promise.resolve(0) : sb.from(TABLE)
+      .select('id', { count: 'exact', head: true })
+      .eq('sesion_id', id).in('estado', SIN_TERMINAR)
+      .then(function (res) { return res.error ? 0 : (res.count || 0); },
+            function () { return 0; });
+
+    return previo.then(function (vivos) {
+      if (vivos > 0) return { bloqueado: true, enCurso: vivos };
+      return cerrarAhora(sb, id, quien);
+    });
+  }
+
+  function cerrarAhora(sb, id, quien) {
     return sb.from(SESIONES_TABLE)
       .update({ cerrada_en: new Date().toISOString(),
                 cerrada_por: (quien || '').slice(0, 40) || null })
@@ -1253,6 +1305,7 @@
     ESTADOS: ESTADOS,
     AVISOS: AVISOS,
     avisarEstado: avisarEstado,
+    avisarPago: avisarPago,
     cambiarEstado: cambiarEstado,
     aprobarPedido: aprobarPedido,
     rechazarPedido: rechazarPedido,
