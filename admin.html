@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3ece2">
+<meta name="description" content="El estado del salon y los ajustes del local de La Positiva.">
+<title>La Positiva - Encargado</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="La Positiva">
+<link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* Dos cosas y nada mas: como viene el salon ahora, y quien recibe los
+     avisos. Lo demas son cuatro links. Si esta pantalla crece, deja de
+     servir para lo que existe: mirarla de reojo entre mesa y mesa. */
+  .wrap{max-width:760px;padding-top:calc(26px + var(--sa-t))}
+
+  header.top{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    gap:12px;flex-wrap:wrap;margin-bottom:18px;
+  }
+  header.top h1{margin:0;font-size:28px}
+  header.top .sub{color:var(--muted);font-size:15px;margin:2px 0 0}
+
+  h2{
+    font-family:'Jost',sans-serif;font-style:normal;
+    font-size:13px;letter-spacing:.11em;text-transform:uppercase;font-weight:600;
+    color:var(--muted-strong);margin:30px 0 12px;
+  }
+
+  /* ------------------------------------------------------------ el salon -- */
+  .cifras{
+    display:grid;grid-template-columns:repeat(2,1fr);gap:1px;
+    background:var(--border);border:1px solid var(--border);
+    border-radius:var(--r-md);overflow:hidden;
+  }
+  @media (min-width:560px){.cifras{grid-template-columns:repeat(4,1fr)}}
+  .cifra{background:var(--card);padding:14px 16px}
+  .cifra span{display:block;font-size:12px;color:var(--muted);line-height:1.4}
+  .cifra b{font-size:24px;font-variant-numeric:tabular-nums;line-height:1.2}
+  .cifra.alerta b{color:var(--warn)}
+  .cifra.mal b{color:var(--err-ink)}
+
+  .demorados{
+    margin-top:12px;padding:13px 16px;border-radius:var(--r-md);
+    background:var(--warn-soft);border:1px solid #e8d3a8;color:var(--warn);
+    font-size:15px;line-height:1.5;
+  }
+  .demorados b{display:block;color:var(--ink);margin-bottom:3px}
+  .demorados[hidden]{display:none}
+
+  /* ------------------------------------------------------------- avisos -- */
+  .roles{display:grid;gap:10px}
+  .rol-fila{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--r-md);padding:12px 14px;
+  }
+  .rol-fila.sin{border-color:#f0cfc9;background:var(--err-bg)}
+  .rol-quien{flex:1;min-width:150px}
+  .rol-quien b{display:block;font-size:16px;font-weight:500}
+  .rol-quien span{font-size:13px;color:var(--muted)}
+  .rol-fila.sin .rol-quien span{color:var(--err-ink)}
+  .rol-acc{display:flex;gap:7px;flex-wrap:wrap}
+  .rol-acc a,.rol-acc button{
+    min-height:38px;padding:0 14px;border-radius:var(--r-pill);
+    font-size:14px;font-family:inherit;display:inline-flex;align-items:center;
+    border:1px solid var(--border-strong);background:transparent;color:var(--muted-strong);
+    text-decoration:none;cursor:pointer;
+  }
+  .rol-acc a:hover,.rol-acc button:hover{background:var(--bg);color:var(--ink)}
+
+  /* -------------------------------------------------------------- links -- */
+  .atajos{display:grid;gap:9px}
+  @media (min-width:560px){.atajos{grid-template-columns:repeat(3,1fr)}}
+  .atajo{
+    display:block;background:var(--card);border:1px solid var(--border);
+    border-radius:var(--r-md);padding:14px 16px;text-decoration:none;color:inherit;
+  }
+  .atajo:hover{border-color:var(--accent)}
+  .atajo b{display:block;font-size:16px;font-weight:500;margin-bottom:3px}
+  .atajo span{font-size:13px;color:var(--muted);line-height:1.45}
+
+  .cargando{color:var(--muted);padding:16px 0;font-size:15px}
+
+  .back-link{
+    display:inline-flex;align-items:center;min-height:var(--tap);margin-top:26px;
+    color:var(--muted-strong);font-size:15px;text-decoration:underline;
+  }
+  .back-link:hover{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Encargado</h1>
+      <p class="sub">Cómo viene el salón y quién recibe los avisos</p>
+    </div>
+    <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
+      <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
+    </span>
+  </header>
+
+  <h2>El salón ahora</h2>
+  <div class="cifras" id="cifras">
+    <div class="cifra"><span>Mesas abiertas</span><b>—</b></div>
+    <div class="cifra"><span>Sin aprobar</span><b>—</b></div>
+    <div class="cifra"><span>En cocina</span><b>—</b></div>
+    <div class="cifra"><span>Falta cobrar</span><b>—</b></div>
+  </div>
+  <p class="demorados" id="demorados" hidden></p>
+
+  <h2>Quién recibe los avisos</h2>
+  <div class="roles" id="roles"><p class="cargando">Cargando...</p></div>
+
+  <h2>Ajustes del local</h2>
+  <div class="atajos">
+    <a class="atajo" href="mesas.html"><b>Mesas abiertas</b>
+      <span>La cuenta de cada mesa, ronda por ronda.</span></a>
+    <a class="atajo" href="carta-fotos.html"><b>Fotos de la carta</b>
+      <span>Sacar la foto de un plato desde el celular.</span></a>
+    <a class="atajo" href="qr-mesa.html"><b>QR de las mesas</b>
+      <span>Generar e imprimir el código de cada mesa.</span></a>
+  </div>
+
+  <a class="back-link" href="entrar.html">Cambiar de persona</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+<script src="config.js" defer></script>
+<script src="app.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var esc = LP.esc, money = LP.money;
+  var sb = LP.client();
+  var conn = new LP.ConnBadge(document.getElementById('conn'));
+
+  /* Los tres roles que reciben avisos. 'Jonathan' es el rol del encargado y
+     de la caja: en un local de este tamanio son la misma persona mirando. */
+  var ROLES = [
+    { id: 'Mozo',     nombre: 'Mozo',     que: 'Los pedidos que esperan aprobación' },
+    { id: 'Cocina',   nombre: 'Cocina',   que: 'Las comandas que manda el mozo' },
+    { id: 'Jonathan', nombre: 'Encargado', que: 'Los pagos que confirma la caja' }
+  ];
+
+  /* 872 min no se lee. Pasada la hora se dice en horas. */
+  function hace(mins) {
+    if (mins < 60) return mins + ' min';
+    var h = Math.floor(mins / 60);
+    return h + (h === 1 ? ' hora' : ' horas');
+  }
+
+  /* --------------------------------------------------------- el salon --- */
+  function pintarSalon(mesas, pedidos) {
+    var sinAprobar = 0, enCocina = 0, demorados = [];
+    var ahora = Date.now();
+
+    pedidos.forEach(function (p) {
+      if (p.estado === 'Por aprobar') sinAprobar++;
+      if (p.estado === 'En cocina' || p.estado === 'Cocinando') enCocina++;
+      var mins = Math.round((ahora - new Date(p.created_at).getTime()) / 60000);
+      if (mins >= 15 && p.estado !== 'Entregado' && p.estado !== 'Rechazado') {
+        demorados.push({ mesa: p.mesa, mins: mins });
+      }
+    });
+
+    var debe = 0;
+    (mesas || []).forEach(function (m) { debe += m.debe; });
+
+    var c = document.getElementById('cifras').children;
+    c[0].querySelector('b').textContent = (mesas || []).length;
+    c[1].querySelector('b').textContent = sinAprobar;
+    c[1].className = 'cifra' + (sinAprobar > 0 ? ' alerta' : '');
+    c[2].querySelector('b').textContent = enCocina;
+    c[3].querySelector('b').textContent = money(debe);
+    c[3].className = 'cifra' + (debe > 0 ? ' mal' : '');
+
+    /* Lo demorado va aparte y con nombre: una cifra sola no dice cual mesa
+       hay que ir a mirar, que es lo unico accionable de esta pantalla.
+
+       Se agrupa POR MESA y no por pedido: una mesa con tres rondas demoradas
+       es una mesa a la que hay que ir, no tres. Antes decia "6 mesas" y
+       listaba "Mesa 7" cuatro veces. */
+    var caja = document.getElementById('demorados');
+    if (!demorados.length) { caja.hidden = true; return; }
+
+    var porMesa = {};
+    demorados.forEach(function (d) {
+      if (!porMesa[d.mesa] || d.mins > porMesa[d.mesa]) porMesa[d.mesa] = d.mins;
+    });
+    var lista = Object.keys(porMesa).map(function (m) {
+      return { mesa: m, mins: porMesa[m] };
+    }).sort(function (a, b) { return b.mins - a.mins; });
+
+    caja.innerHTML = '<b>' + (lista.length === 1
+        ? 'Hay una mesa esperando hace rato'
+        : 'Hay ' + lista.length + ' mesas esperando hace rato') + '</b>' +
+      esc(lista.slice(0, 4).map(function (d) {
+        return d.mesa + ' (' + hace(d.mins) + ')';
+      }).join(' · ')) +
+      (lista.length > 4 ? esc(' y ' + (lista.length - 4) + ' más') : '');
+    caja.hidden = false;
+  }
+
+  /* ---------------------------------------------------------- los roles -- */
+  function pintarRoles() {
+    var caja = document.getElementById('roles');
+    return Promise.all(ROLES.map(function (r) {
+      return LP.contarSubs(sb, r.id).then(function (n) {
+        return { rol: r, n: n };
+      });
+    })).then(function (filas) {
+      caja.innerHTML = filas.map(function (f) {
+        var n = f.n;
+        var sin = n === 0;
+        var txt = n === null ? 'No pudimos comprobarlo'
+                : sin ? 'Ningún celular lo recibe'
+                : (n === 1 ? '1 celular' : n + ' celulares');
+        return '<div class="rol-fila' + (sin ? ' sin' : '') + '">' +
+            '<span class="rol-quien"><b>' + esc(f.rol.nombre) + '</b>' +
+              '<span>' + esc(txt) + ' · ' + esc(f.rol.que) + '</span></span>' +
+            '<span class="rol-acc">' +
+              '<a href="alta.html?rol=' + encodeURIComponent(f.rol.id) + '">Dar de alta</a>' +
+              '<button type="button" data-probar="' + esc(f.rol.id) + '">Probar</button>' +
+            '</span>' +
+          '</div>';
+      }).join('');
+    });
+  }
+
+  document.getElementById('roles').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-probar]');
+    if (!b) return;
+    var rol = b.dataset.probar;
+    b.disabled = true;
+    b.textContent = 'Enviando...';
+    LP.avisar(sb, rol, 'Prueba de aviso',
+              'Si ves esto, los avisos funcionan.', null, 'admin.html', false)
+      .then(function (r) {
+        b.disabled = false;
+        b.textContent = 'Probar';
+        if (r.ok) LP.toast('Aviso enviado a ' + rol + '.', 'ok');
+        else LP.toast(r.motivo || 'No salió el aviso.', 'err');
+      });
+  });
+
+  /* ------------------------------------------------------------ carga --- */
+  var enVuelo = false;
+  function cargar() {
+    if (enVuelo || !sb) return Promise.resolve();
+    enVuelo = true;
+    return Promise.all([
+      LP.mesasAbiertas(sb),
+      sb.from(LP.TABLE).select('mesa, estado, created_at')
+        .in('estado', ['Por aprobar', 'En cocina', 'Cocinando', 'Listo'])
+    ]).then(function (res) {
+      enVuelo = false;
+      conn.set(navigator.onLine ? 'live' : 'off');
+      pintarSalon(res[0] || [], (res[1] && res[1].data) || []);
+    }, function () {
+      enVuelo = false;
+      conn.set(navigator.onLine ? 'retry' : 'off');
+    });
+  }
+
+  if (!sb) {
+    document.getElementById('roles').innerHTML =
+      '<p class="cargando">No hay conexión con el sistema.</p>';
+    return;
+  }
+
+  cargar();
+  pintarRoles();
+
+  var canal = sb.channel('admin-' + Date.now())
+    .on('postgres_changes', { event: '*', schema: 'public', table: LP.TABLE },
+        function () { cargar(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: LP.SESIONES_TABLE },
+        function () { cargar(); })
+    .subscribe(function (st) {
+      if (st === 'SUBSCRIBED') conn.set(navigator.onLine ? 'live' : 'off');
+    });
+
+  LP.onCleanup(function () { try { sb.removeChannel(canal); } catch (e) {} });
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) cargar();
+  });
+  // Los minutos de demora corren aunque no cambie nada en la base.
+  setInterval(function () { if (!document.hidden) cargar(); }, 30000);
+});
+</script>
+</body>
+</html>

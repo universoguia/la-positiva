@@ -709,7 +709,7 @@
 
   /* A que pantalla va cada rol al entrar. */
   var PANTALLA_POR_ROL = {
-    Duenio: 'mesas.html',
+    Duenio: 'admin.html',
     Mozo:   'mozo.html',
     Caja:   'caja.html',
     Cocina: 'cocina.html'

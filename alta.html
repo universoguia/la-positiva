@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f3ece2">
-<meta name="description" content="Activacion en un toque de los avisos de cocina de La Positiva.">
-<title>La Positiva - Avisos de la cocina</title>
+<meta name="description" content="Activacion en un toque de los avisos de La Positiva.">
+<title>La Positiva - Activar avisos</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -16,7 +16,13 @@
 <link rel="stylesheet" href="styles.css">
 <style>
   /* Una sola cosa que hacer, y el boton bien a mano: esta pagina la abre
-     alguien en plena cocina, apurado, con una mano ocupada. */
+     alguien en plena cocina o en pleno salon, apurado y con una mano
+     ocupada. Una sola cosa que hacer.
+
+     Sirve para CUALQUIER rol: el rol viene por la URL (alta.html?rol=Cocina).
+     Antes habia una pagina por rol -jonathan.html y cocina-avisos.html-, dos
+     archivos de 250 lineas para la misma funcion, y el rol Mozo se habia
+     quedado sin la suya. */
   .wrap{max-width:520px;padding-top:calc(34px + var(--sa-t));text-align:center}
   .avatar{
     width:76px;height:76px;border-radius:50%;
@@ -75,9 +81,8 @@
     </svg>
   </div>
 
-  <h1>Avisos de la cocina</h1>
-  <p class="lead">Activalos en este celular. Cuando el mozo mande una comanda te va a
-     sonar ac&aacute;, aunque tengas la pantalla apagada.</p>
+  <h1 id="titulo">Activar avisos</h1>
+  <p class="lead" id="bajada">Activalos en este celular.</p>
 
   <button type="button" class="btn btn-primary btn-block btn-grande" id="activar" disabled>
     Comprobando...
@@ -90,7 +95,7 @@
   <p class="cuantos" id="cuantos"></p>
 
   <div class="abajo">
-    <a href="cocina.html">Ir al panel de cocina</a>
+    <a href="cocina.html" id="irAlPanel">Ir a mi panel</a>
     <a href="entrar.html">Volver a la entrada</a>
   </div>
 </div>
@@ -103,7 +108,48 @@ document.addEventListener('DOMContentLoaded', function () {
   'use strict';
   var esc = LP.esc;
   var sb = LP.client();
-  var ROL = 'Cocina';
+  /* El rol viene por la URL. Si no viene o no se reconoce, se cae a Cocina,
+     que es el caso mas frecuente y el que menos sorprende.              */
+  var ROLES = {
+    Cocina: {
+      titulo: 'Avisos de la cocina',
+      bajada: 'Activalos en este celular. Cuando el mozo mande una comanda te va a ' +
+              'sonar aca, aunque tengas la pantalla apagada.',
+      quien: 'los avisos de cocina',
+      listo: 'Cuando el mozo mande una comanda te va a sonar, tengas la app abierta o no.',
+      sinPermiso: 'Sin el permiso de notificaciones no te podemos avisar de las comandas.',
+      prueba: ['Comanda nueva', 'Mesa 7 - 1x Provoleta (mensaje de prueba)'],
+      panel: 'cocina.html'
+    },
+    Mozo: {
+      titulo: 'Avisos del mozo',
+      bajada: 'Activalos en este celular. Cuando una mesa pida algo te va a sonar aca, ' +
+              'aunque andes por el salon con el panel cerrado.',
+      quien: 'los avisos del mozo',
+      listo: 'Cuando una mesa pida algo te va a sonar, tengas la app abierta o no.',
+      sinPermiso: 'Sin el permiso de notificaciones no te podemos avisar de los pedidos.',
+      prueba: ['Pedido para aprobar', 'Mesa 7 - $20.000 (mensaje de prueba)'],
+      panel: 'mozo.html'
+    },
+    Jonathan: {
+      titulo: 'Avisos del encargado',
+      bajada: 'Activalos en este celular. Cuando la caja confirme un pago te va a ' +
+              'sonar aca, aunque tengas la pantalla apagada.',
+      quien: 'los avisos del encargado',
+      listo: 'Cuando la caja confirme un pago te va a sonar, tengas la app abierta o no.',
+      sinPermiso: 'Sin el permiso de notificaciones no te podemos avisar de los pagos.',
+      prueba: ['Pago confirmado', 'Mesa 7 pago $20.000 (mensaje de prueba)'],
+      panel: 'caja.html'
+    }
+  };
+
+  var pedido = new URLSearchParams(location.search).get('rol') || '';
+  var ROL = Object.prototype.hasOwnProperty.call(ROLES, pedido) ? pedido : 'Cocina';
+  var CFG = ROLES[ROL];
+
+  document.getElementById('titulo').textContent = CFG.titulo;
+  document.getElementById('bajada').textContent = CFG.bajada;
+  document.getElementById('irAlPanel').setAttribute('href', CFG.panel);
 
   var btn = document.getElementById('activar');
   var probar = document.getElementById('probar');
@@ -136,8 +182,8 @@ document.addEventListener('DOMContentLoaded', function () {
         cuantos.className = 'cuantos solo';
       } else {
         cuantos.textContent = n === 1
-          ? 'Hay 1 celular recibiendo los avisos de cocina.'
-          : 'Hay ' + n + ' celulares recibiendo los avisos de cocina.';
+          ? 'Hay 1 celular recibiendo ' + CFG.quien + '.'
+          : 'Hay ' + n + ' celulares recibiendo ' + CFG.quien + '.';
         cuantos.className = 'cuantos';
       }
     });
@@ -184,7 +230,7 @@ document.addEventListener('DOMContentLoaded', function () {
             btn.classList.add('btn-secondary');
             probar.hidden = false;
             decir('ok', 'Este celular ya recibe los avisos',
-              'Cuando el mozo mande una comanda te va a sonar, tengas la app abierta o no.');
+              CFG.listo);
             pasos('', []);
           } else {
             boton('Activar los avisos', false);
@@ -212,7 +258,7 @@ document.addEventListener('DOMContentLoaded', function () {
     LP.suscribirPush(sb, ROL).then(function (st) {
       if (st === 'denegado') {
         decir('err', 'No diste permiso',
-          'Sin el permiso de notificaciones no te podemos avisar de las comandas.');
+          CFG.sinPermiso);
       } else if (st === 'sin-decidir') {
         decir('warn', 'Quedo sin decidir',
           'Toca de nuevo el boton y elegi Permitir.');
@@ -228,8 +274,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (probar.disabled) return;
     probar.disabled = true;
     probar.textContent = 'Enviando...';
-    LP.avisar(sb, ROL, 'Comanda nueva',
-              'Mesa 7 - 1x Provoleta (mensaje de prueba)', null, 'cocina.html', true)
+    LP.avisar(sb, ROL, CFG.prueba[0], CFG.prueba[1], null, CFG.panel, true)
       .then(function (r) {
         probar.disabled = false;
         probar.textContent = 'Probar el aviso';
