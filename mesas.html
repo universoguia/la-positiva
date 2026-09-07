@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f3ece2">
-<meta name="description" content="Las mesas con la cuenta abierta en La Positiva, con todas sus rondas.">
-<title>La Positiva - Mesas abiertas</title>
+<meta name="description" content="El plano del salon de La Positiva: como esta cada mesa, en vivo.">
+<title>La Positiva - El salon</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -15,93 +15,170 @@
 <link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 <style>
-  .wrap{max-width:1000px;padding-top:calc(26px + var(--sa-t))}
+  .wrap{max-width:760px;padding-top:calc(18px + var(--sa-t));padding-bottom:40px}
   header.top{
     display:flex;justify-content:space-between;align-items:flex-start;
-    gap:12px;flex-wrap:wrap;margin-bottom:8px;
+    gap:12px;flex-wrap:wrap;margin-bottom:14px;
   }
   header.top h1{margin:0;font-size:30px}
   header.top .sub{color:var(--muted);font-size:15px;margin:2px 0 0}
   .head-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 
   .resumen{
-    display:flex;gap:22px;flex-wrap:wrap;margin:16px 0 20px;
-    padding:14px 18px;background:var(--card);
+    display:flex;gap:22px;flex-wrap:wrap;margin:0 0 16px;
+    padding:13px 17px;background:var(--card);
     border:1px solid var(--border);border-radius:var(--r-md);
   }
   .resumen div span{display:block;font-size:13px;color:var(--muted)}
   .resumen div b{font-size:22px;color:var(--ink)}
 
-  /* align-items:start evita que una mesa libre se estire a lo alto solo
-     porque al lado hay una con seis rondas. */
-  .mesas{list-style:none;margin:0;padding:0;display:grid;gap:14px;align-items:start}
-  @media (min-width:760px){.mesas{grid-template-columns:repeat(2,minmax(0,1fr))}}
-
-  .mesa{
-    background:var(--card);border:1px solid var(--border);
-    border-radius:var(--r-lg);padding:16px 18px 18px;
+  /* ------------------------------------------------------- las plantas -- */
+  .plantas{display:flex;gap:8px;margin-bottom:12px}
+  .planta-btn{
+    flex:1;min-height:var(--tap);padding:0 14px;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--card);border:1px solid var(--border-strong);
+    border-radius:var(--r-pill);font-size:15px;font-family:inherit;
+    color:var(--muted-strong);cursor:pointer;
+    transition:background .18s ease,border-color .18s ease,color .18s ease;
   }
-  .mesa.debe{border-color:#e0bc7a}
-  /* La que ya pago y falta levantar: es la unica que se puede volver a vender,
-     asi que se ve distinta de las que estan comiendo. */
-  .mesa.limpiar{border-color:var(--ok);background:var(--ok-soft)}
-  .chip.limpiar{background:var(--ok-bg);color:var(--ok);border:1px solid #bfe0ce}
-  .mesa-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-  .mesa-top h2{margin:0;font-size:23px}
-  .mesa-top .desde{font-size:13px;color:var(--muted);margin-top:2px}
+  .planta-btn[aria-pressed="true"]{
+    background:var(--ink);border-color:var(--ink);color:var(--gold);font-weight:500;
+  }
+  /* Cuantas mesas de ESA planta piden algo: para no subir la escalera al pepe. */
+  .planta-btn .pide{
+    min-width:21px;height:21px;padding:0 6px;border-radius:var(--r-pill);
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--warn);color:#fff;font-size:12px;font-weight:600;
+  }
+  .planta-btn[aria-pressed="true"] .pide{background:var(--gold);color:var(--ink)}
+  .planta-btn .pide[hidden]{display:none}
+
+  /* ---------------------------------------------------------- el plano -- */
+  .plano-caja{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--r-lg);padding:12px;
+  }
+  .plano{display:block;width:100%;height:auto;touch-action:manipulation}
+
+  /* El salon dibujado: paredes y muebles. No son datos, son el lugar. */
+  .pared{fill:var(--bg);stroke:var(--border-strong);stroke-width:.7}
+  .mueble{fill:var(--border);stroke:none}
+  .mueble-txt{
+    fill:var(--muted);font-size:3.6px;font-family:'Jost',sans-serif;
+    text-anchor:middle;letter-spacing:.3px;text-transform:uppercase;
+  }
+
+  /* Las mesas. La transicion hace que un cambio de estado se VEA cambiar,
+     que es lo que convierte el plano en algo vivo y no en una foto. */
+  .mesa-g{cursor:pointer}
+  .mesa-f{
+    stroke-width:1.1;
+    transition:fill .3s ease,stroke .3s ease,opacity .3s ease;
+  }
+  .mesa-n{
+    font-family:'Jost',sans-serif;font-weight:600;font-size:6px;
+    text-anchor:middle;dominant-baseline:central;
+    transition:fill .3s ease;pointer-events:none;
+  }
+  .mesa-i{
+    font-family:'Jost',sans-serif;font-size:3.4px;text-anchor:middle;
+    fill:var(--muted);pointer-events:none;
+  }
+
+  .e-libre .mesa-f{fill:transparent;stroke:var(--border-strong);stroke-dasharray:2.5 2}
+  .e-libre .mesa-n{fill:var(--muted)}
+  .e-ocupada .mesa-f{fill:#e8dcc9;stroke:var(--muted-strong)}
+  .e-ocupada .mesa-n{fill:var(--ink)}
+  .e-debe .mesa-f{fill:var(--warn-soft);stroke:var(--warn)}
+  .e-debe .mesa-n{fill:var(--warn)}
+  .e-reservada .mesa-f{fill:var(--warn-soft);stroke:var(--warn);stroke-dasharray:3 2}
+  .e-reservada .mesa-n{fill:var(--warn)}
+  .e-limpieza .mesa-f{fill:var(--ok-soft);stroke:var(--ok)}
+  .e-limpieza .mesa-n{fill:var(--ok)}
+
+  .mesa-g:hover .mesa-f{stroke-width:1.8}
+  .mesa-g:focus-visible{outline:none}
+  .mesa-g:focus-visible .mesa-f{stroke:var(--accent);stroke-width:2}
+
+  /* Late suave: la que ya pago y hay que levantar es la unica que se puede
+     volver a vender, asi que es la unica que llama. */
+  @keyframes latir{0%,100%{opacity:1}50%{opacity:.55}}
+  .pulso{animation:latir 2.4s ease-in-out infinite}
+  @media (prefers-reduced-motion:reduce){.pulso{animation:none}}
+
+  .leyenda{
+    display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;
+    padding-top:11px;border-top:1px dashed var(--border);
+  }
+  .leyenda span{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+  .leyenda i{width:13px;height:13px;border-radius:4px;border:1.5px solid;flex:none}
+  .l-libre{background:transparent;border-color:var(--border-strong);border-style:dashed}
+  .l-ocupada{background:#e8dcc9;border-color:var(--muted-strong)}
+  .l-debe{background:var(--warn-soft);border-color:var(--warn)}
+  .l-limpieza{background:var(--ok-soft);border-color:var(--ok)}
+
+  /* ----------------------------------------------------------- la hoja -- */
+  .hoja-sub{font-size:14px;color:var(--muted);margin:-6px 0 14px}
+  .hoja-et{font-size:14px;color:var(--muted-strong);margin:0 0 8px;font-weight:500}
+  .volver-x{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:var(--tap);height:var(--tap);min-width:var(--tap);flex:none;
+    border-radius:50%;background:var(--card);border:1px solid var(--border-strong);
+    font-size:19px;line-height:1;color:var(--ink);cursor:pointer;
+  }
+  .volver-x:hover{background:#fff}
+  .volver-x[hidden]{display:none}
+
+  .opcion{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    width:100%;min-height:var(--tap);padding:12px 15px;margin-bottom:8px;
+    background:var(--card);border:1px solid var(--border-strong);
+    border-radius:var(--r-md);font-size:16px;font-family:inherit;
+    color:var(--ink);text-align:left;cursor:pointer;
+  }
+  .opcion:hover{border-color:var(--accent);background:#fff}
+  .opcion .plata{flex:none;color:var(--muted-strong);font-size:15px}
+  .opcion.toda{border-style:dashed;margin-top:10px}
+  .banda-pago{
+    margin:0 0 14px;padding:12px 14px;border-radius:var(--r-md);
+    background:var(--warn-soft);color:var(--warn);border:1px solid #e8d3a8;
+    font-size:14px;line-height:1.5;
+  }
+
   .chip{
-    flex:none;font-size:12px;font-weight:600;letter-spacing:.05em;
+    display:inline-flex;align-items:center;flex:none;
+    font-size:12px;font-weight:600;letter-spacing:.05em;
     text-transform:uppercase;border-radius:var(--r-pill);padding:4px 11px;
   }
   .chip.ok{background:var(--ok-soft);color:var(--ok);border:1px solid #bfe0ce}
   .chip.debe{background:var(--warn-soft);color:var(--warn);border:1px solid #e8d3a8}
   .chip.espera{background:var(--border);color:var(--muted-strong)}
+  .chip.limpiar{background:var(--ok-bg);color:var(--ok);border:1px solid #bfe0ce}
   .chip.reservada{background:var(--warn-soft);color:var(--warn);border:1px solid #e8d3a8}
 
-  /* La mesa libre es la que NO necesita a nadie: se dibuja apagada a
-     proposito, para que lo que si pide atencion salte a la vista. */
-  .mesa.libre{
-    background:transparent;border-style:dashed;border-color:var(--border-strong);
-    text-align:center;padding:18px 16px 14px;
-  }
-  .mesa.libre h2{color:var(--muted-strong)}
-  .mesa.libre .cabe{display:block;font-size:13px;color:var(--muted);margin:2px 0 12px}
-  .mesa.reservada{border-color:var(--warn);background:var(--warn-soft)}
-
-  /* Reservar se usa una vez cada tanto; sentar, todo el tiempo. Por eso una
-     es boton y la otra es texto. Igual respeta los 44px de alto minimo. */
-  .apartar{
-    display:inline-flex;align-items:center;justify-content:center;
-    min-height:var(--tap);width:100%;margin-top:2px;font-size:14px;
-    color:var(--muted-strong);text-decoration:underline;cursor:pointer;
-    background:none;border:0;font-family:inherit;
-  }
-  .apartar:hover{color:var(--ink)}
-  .abrio{font-size:12px;color:var(--muted);margin-top:3px}
+  .abrio{font-size:12px;color:var(--muted);margin:3px 0 0}
 
   .rondas{list-style:none;margin:14px 0 0;padding:0}
   .ronda{
-    padding:9px 0;border-top:1px dashed var(--border);
-    display:flex;justify-content:space-between;gap:12px;align-items:baseline;
+    padding:10px 0;border-top:1px dashed var(--border);
+    display:flex;justify-content:space-between;gap:12px;align-items:flex-start;
   }
   .ronda .que{flex:1;min-width:0;font-size:15px;line-height:1.45}
   .ronda .que b{display:block;font-size:13px;color:var(--muted);font-weight:500}
   .ronda .cuanto{flex:none;font-weight:600;text-align:right}
   .ronda .cuanto s{color:var(--muted);font-weight:400;display:block;font-size:13px}
 
-  /* Los platos de la ronda, uno por renglon, para poder tachar el que salio. */
   .platos{list-style:none;margin:4px 0 0;padding:0}
   .platos li{font-size:15px;line-height:1.5}
   .platos li.fuera{color:var(--muted)}
   .platos li.fuera .nom{text-decoration:line-through}
-  /* El tachado solo no alcanza: hay que poder leerlo sin distinguir estilos. */
   .marca-fuera{
     font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
     background:var(--err-bg);color:var(--err-ink);border-radius:var(--r-pill);
     padding:2px 8px;margin-left:6px;white-space:nowrap;
   }
   .porque{display:block;font-size:12px;color:var(--muted);margin:1px 0 2px}
-
   .sacar-btn{
     display:inline-flex;align-items:center;justify-content:center;
     min-height:var(--tap);padding:0 14px;margin-top:6px;
@@ -117,25 +194,6 @@
   }
   .reponer:hover{color:var(--ink)}
 
-  /* --------------------------------------------------------- la hoja --- */
-  .opcion{
-    display:flex;justify-content:space-between;align-items:center;gap:12px;
-    width:100%;min-height:var(--tap);padding:12px 15px;margin-bottom:8px;
-    background:var(--card);border:1px solid var(--border-strong);
-    border-radius:var(--r-md);font-size:16px;font-family:inherit;
-    color:var(--ink);text-align:left;cursor:pointer;
-  }
-  .opcion:hover{border-color:var(--accent);background:#fff}
-  .opcion .plata{flex:none;color:var(--muted-strong);font-size:15px}
-  .opcion.toda{border-style:dashed;margin-top:10px}
-  .hoja-sub{font-size:14px;color:var(--muted);margin:-6px 0 14px}
-  .hoja-et{font-size:14px;color:var(--muted-strong);margin:0 0 8px;font-weight:500}
-  .banda-pago{
-    margin:0 0 14px;padding:12px 14px;border-radius:var(--r-md);
-    background:var(--warn-soft);color:var(--warn);border:1px solid #e8d3a8;
-    font-size:14px;line-height:1.5;
-  }
-
   .totales{
     margin-top:14px;padding-top:13px;border-top:1px solid var(--border-strong);
     display:flex;justify-content:space-between;align-items:baseline;gap:10px;
@@ -144,11 +202,17 @@
   .totales .num{font-size:25px;font-weight:600}
   .totales .num.debe{color:var(--warn)}
 
-  .acciones{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-  .acciones .btn{padding:10px 18px;font-size:15px}
+  .acciones{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+  .acciones .btn{
+    flex:1 1 auto;min-height:var(--tap);padding:0 18px;font-size:15px;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
+
+  .cab-cuenta{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .cab-cuenta .desde{font-size:14px;color:var(--muted)}
 
   .estado-vacio{
-    text-align:center;color:var(--muted);padding:48px 20px;
+    text-align:center;color:var(--muted);padding:44px 20px;
     background:var(--card);border:1px dashed var(--border-strong);
     border-radius:var(--r-lg);
   }
@@ -156,7 +220,7 @@
   .estado-vacio p{margin:0;line-height:1.55}
 
   .back-link{
-    display:inline-flex;align-items:center;min-height:var(--tap);margin-top:24px;
+    display:inline-flex;align-items:center;min-height:var(--tap);margin-top:20px;
     color:var(--muted-strong);font-size:15px;text-decoration:underline;
   }
   .back-link:hover{color:var(--ink)}
@@ -167,7 +231,7 @@
   <header class="top">
     <div>
       <h1>El sal&oacute;n</h1>
-      <p class="sub">Todas las mesas y c&oacute;mo est&aacute; cada una, ahora.</p>
+      <p class="sub">Toc&aacute; una mesa para ver su cuenta</p>
     </div>
     <div class="head-right">
       <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
@@ -186,18 +250,31 @@
     <div><span>Falta cobrar</span><b id="rDebe">$0</b></div>
   </div>
 
-  <ul class="mesas" id="lista"></ul>
+  <div class="plantas" id="plantas" hidden role="group" aria-label="Planta del local"></div>
+
+  <div class="plano-caja" id="planoCaja" hidden>
+    <svg class="plano" id="plano" viewBox="0 0 100 130" role="img"
+         aria-label="Plano del salon con el estado de cada mesa"></svg>
+    <div class="leyenda">
+      <span><i class="l-libre"></i>Libre</span>
+      <span><i class="l-ocupada"></i>Ocupada</span>
+      <span><i class="l-debe"></i>Falta cobrar</span>
+      <span><i class="l-limpieza"></i>Para limpiar</span>
+    </div>
+  </div>
+
   <div id="estado"></div>
 
   <a class="back-link" href="./">Volver al inicio</a>
 </div>
 
-<!-- La hoja de sacar. Dos pasos: que sale, y por que. Elegir el motivo ES la
-     confirmacion: no hay un "estas seguro?" arriba de otro toque. -->
+<!-- Una sola hoja para todo: la cuenta de la mesa y los dos pasos de sacar un
+     plato. Tres vistas, una sola ventana, con flecha para volver. -->
 <div class="sheet" id="hoja" hidden role="dialog" aria-modal="true" aria-labelledby="hojaTit">
   <div class="sheet-panel">
     <div class="sheet-head">
-      <h2 id="hojaTit">Sacar de la cuenta</h2>
+      <button type="button" class="volver-x" id="hojaBack" aria-label="Volver" hidden>&#8592;</button>
+      <h2 id="hojaTit">Mesa</h2>
       <button type="button" class="close-x" id="hojaX" aria-label="Cerrar">&#10005;</button>
     </div>
     <p class="hoja-sub" id="hojaSub"></p>
@@ -214,215 +291,53 @@ document.addEventListener('DOMContentLoaded', function () {
   var esc = LP.esc, money = LP.money;
   var sb = LP.client();
 
-  var lista = document.getElementById('lista');
+  var svg = document.getElementById('plano');
+  var planoCaja = document.getElementById('planoCaja');
+  var plantasBar = document.getElementById('plantas');
   var estado = document.getElementById('estado');
   var resumen = document.getElementById('resumen');
   var conn = new LP.ConnBadge(document.getElementById('conn'));
 
-  /* El badge de estado por ronda se saco a proposito. El salon es para la
-     plata y para saber si la mesa esta libre; el estado plato por plato es
-     trabajo del panel del mozo. Encima pintaba 'Rechazado' igual que
-     'Entregado', o sea que un plato sacado se veia como uno servido. Ese
-     lugar ahora lo ocupa el motivo de lo que salio.                      */
-
   var puedoSacar = LP.puedeSacar();
-
   var soy = LP.quienSoy();
   var YO = (soy && soy.nombre) || 'Salon';
 
-  var plano = [];                       // las doce mesas, con o sin cuenta
+  var plano = [];                       // las mesas, con o sin cuenta
   var cargado = false;
-  var cerrando = Object.create(null);
-  var tocando = Object.create(null);    // mesas con una accion en vuelo
+  var plantaActiva = null;              // 'Baja' | 'Alta'
+  var mesaAbierta = null;               // etiqueta de la mesa abierta en la hoja
+  var vista = 'mesa';                   // 'mesa' | 'que' | 'porque'
+  var sacando = null;                   // pedido elegido para sacar
+  var enVuelo = Object.create(null);    // acciones en curso, por clave
 
-  function cuentaDe(sesionId) {
-    for (var i = 0; i < plano.length; i++) {
-      if (plano[i].cuenta && String(plano[i].cuenta.sesion.id) === String(sesionId)) {
-        return plano[i].cuenta;
-      }
-    }
+  /* ------------------------------------------------------- el edificio --
+     Paredes y muebles fijos. Van dibujados y no en la base a proposito: la
+     barra y la escalera no cambian durante el servicio, no son datos.
+     Las mesas si, porque cambian de estado todo el tiempo.              */
+  var EDIFICIO = {
+    Baja:
+      '<rect class="pared" x="3" y="3" width="94" height="124" rx="4"/>' +
+      '<rect class="mueble" x="8" y="8" width="46" height="9" rx="2"/>' +
+      '<text class="mueble-txt" x="31" y="14.4">Barra</text>' +
+      '<rect class="mueble" x="60" y="8" width="32" height="14" rx="2"/>' +
+      '<text class="mueble-txt" x="76" y="16.5">Cocina</text>' +
+      '<rect class="mueble" x="86" y="88" width="7" height="26" rx="2"/>' +
+      '<text class="mueble-txt" x="89.5" y="101" transform="rotate(-90 89.5 101)">Escalera</text>' +
+      '<rect class="mueble" x="8" y="112" width="18" height="10" rx="2"/>' +
+      '<text class="mueble-txt" x="17" y="118">Ba&#241;os</text>',
+    Alta:
+      '<rect class="pared" x="3" y="3" width="94" height="124" rx="4"/>' +
+      '<rect class="mueble" x="8" y="8" width="80" height="6" rx="2"/>' +
+      '<text class="mueble-txt" x="48" y="12.3">Ventanal a la calle</text>' +
+      '<rect class="mueble" x="86" y="88" width="7" height="26" rx="2"/>' +
+      '<text class="mueble-txt" x="89.5" y="101" transform="rotate(-90 89.5 101)">Escalera</text>'
+  };
+
+  /* --------------------------------------------------------- utilidades -- */
+  function mesaPorEtiqueta(et) {
+    for (var i = 0; i < plano.length; i++) if (plano[i].etiqueta === et) return plano[i];
     return null;
   }
-
-  /* ---------------------------------------------------------- pintado -- */
-  function pintar() {
-    if (!plano.length) {
-      lista.innerHTML = '';
-      resumen.hidden = true;
-      estado.innerHTML = '<div class="estado-vacio"><h3>No hay mesas cargadas</h3>' +
-        '<p>Todavia no estan cargadas las mesas del local.</p></div>';
-      return;
-    }
-    estado.innerHTML = '';
-    resumen.hidden = false;
-
-    var libres = 0, ocupadas = 0, limpiar = 0, debe = 0;
-    plano.forEach(function (t) {
-      if (t.estado === 'Libre') libres++;
-      else if (t.estado === 'Limpieza') limpiar++;
-      else if (t.estado !== 'Reservada') ocupadas++;
-      if (t.cuenta) debe += t.cuenta.debe;
-    });
-
-    document.getElementById('rLibres').textContent = libres;
-    document.getElementById('rOcupadas').textContent = ocupadas;
-    document.getElementById('rLimpiar').textContent = limpiar;
-    document.getElementById('rDebe').textContent = money(debe);
-
-    /* El orden es la prioridad del mozo, no el numero de mesa: primero lo que
-       se puede volver a vender (para limpiar), despues lo que falta cobrar, y
-       las libres al final, que no piden nada.                            */
-    var peso = { Limpieza: 0, Ocupada: 1, Reservada: 2, Libre: 3 };
-    var orden = plano.slice().sort(function (a, b) {
-      var pa = peso[a.estado] === undefined ? 1 : peso[a.estado];
-      var pb = peso[b.estado] === undefined ? 1 : peso[b.estado];
-      if (pa !== pb) return pa - pb;
-      if (pa === 1) {
-        var da = a.cuenta && a.cuenta.debe > 0 ? 0 : 1;
-        var db = b.cuenta && b.cuenta.debe > 0 ? 0 : 1;
-        if (da !== db) return da - db;
-      }
-      return (a.mesa.orden || a.mesa.numero || 0) - (b.mesa.orden || b.mesa.numero || 0);
-    });
-
-    lista.innerHTML = orden.map(tileHTML).join('');
-  }
-
-  function tileHTML(t) {
-    if (t.estado === 'Libre') return libreHTML(t);
-    if (t.estado === 'Reservada') return reservadaHTML(t);
-    return mesaHTML(t.cuenta, t.estado === 'Limpieza');
-  }
-
-  function libreHTML(t) {
-    return '<li class="mesa libre">' +
-        '<h2>' + esc(t.etiqueta) + '</h2>' +
-        '<span class="cabe">Libre' +
-          (t.mesa.capacidad ? ' · ' + t.mesa.capacidad + ' personas' : '') + '</span>' +
-        '<button type="button" class="btn btn-primary" style="width:100%" ' +
-          'data-sentar="' + esc(t.etiqueta) + '">Sentar</button>' +
-        '<button type="button" class="apartar" data-reservar="' + esc(t.etiqueta) + '">' +
-          'Reservar</button>' +
-      '</li>';
-  }
-
-  function reservadaHTML(t) {
-    var ses = t.cuenta.sesion;
-    return '<li class="mesa reservada" data-sesion="' + esc(ses.id) + '">' +
-        '<div class="mesa-top">' +
-          '<div>' +
-            '<h2>' + esc(t.etiqueta) + '</h2>' +
-            '<div class="desde">Apartada ' + esc(LP.timeAgo(ses.abierta_en)) + '</div>' +
-            (ses.abierta_por
-              ? '<div class="abrio">La aparto ' + esc(ses.abierta_por) + '</div>' : '') +
-          '</div>' +
-          '<span class="chip reservada">Reservada</span>' +
-        '</div>' +
-        '<div class="acciones">' +
-          '<button type="button" class="btn btn-primary" data-ocupar="' + esc(ses.id) + '">' +
-            'Llegaron</button>' +
-          '<button type="button" class="btn btn-secondary" data-cerrar="' + esc(ses.id) + '">' +
-            'Liberar</button>' +
-        '</div>' +
-      '</li>';
-  }
-
-  function mesaHTML(m, limpiar) {
-    var debe = m.debe > 0;
-    // Pago todo y falta levantar: es la mesa que hay que ir a limpiar YA,
-    // porque es la unica que se puede volver a vender.
-    limpiar = !!limpiar && !debe;
-    /* Sentada y todavia sin pedir. Antes no existia -la mesa nacia con su
-       primer pedido-; ahora el mozo la abre cuando llegan.               */
-    var sinPedir = m.rondas === 0;
-    var rondas = m.pedidos.map(function (p, i) {
-      var lineas = LP.lineasDe(p);
-      var cobra = LP.cobrable(p);
-      var salioAlgo = cobra < (Number(p.total) || 0);
-
-      /* Un renglon por plato, no todos apelmazados en una linea: hace falta
-         para poder tachar el que salio y decir por que salio. */
-      var platos = lineas.length
-        ? '<ul class="platos">' + lineas.map(function (l, j) {
-            var fuera = LP.lineaSacada(l);
-            return '<li' + (fuera ? ' class="fuera"' : '') + '>' +
-                '<span class="nom">' + l.qty + '\u00d7 ' + esc(l.name) + '</span>' +
-                (fuera ? '<span class="marca-fuera">Sacado</span>' : '') +
-                (fuera
-                  ? '<span class="porque">' + esc(l.motivo || 'Sin motivo') +
-                    (l.por ? ' \u00b7 lo saco ' + esc(l.por) : '') +
-                    (l.devuelto ? ' \u00b7 ya se devolvio' : '') + '</span>' +
-                    (l.devuelto ? '' :
-                      '<button type="button" class="reponer" data-reponer="' +
-                        esc(p.id) + ':' + j + '">Volver a ponerlo</button>')
-                  : '') +
-              '</li>';
-          }).join('') + '</ul>'
-        : '<div class="platos">Sin detalle</div>';
-
-      return '<li class="ronda">' +
-          '<span class="que">' +
-            '<b>Ronda ' + (i + 1) + ' \u00b7 ' + esc(LP.timeAgo(p.created_at)) + '</b>' +
-            platos +
-            (puedoSacar && cobra > 0
-              ? '<button type="button" class="sacar-btn" data-sacar="' + esc(p.id) + '">' +
-                'Sacar un plato</button>'
-              : '') +
-          '</span>' +
-          '<span class="cuanto">' +
-            (salioAlgo ? '<s>' + money(p.total) + '</s>' : '') +
-            money(cobra) +
-          '</span>' +
-        '</li>';
-    }).join('');
-
-    return '<li class="mesa' + (limpiar ? ' limpiar' : (debe ? ' debe' : '')) +
-      '" data-sesion="' + m.sesion.id + '">' +
-        '<div class="mesa-top">' +
-          '<div>' +
-            '<h2>' + esc(m.mesa) + '</h2>' +
-            '<div class="desde">Abierta ' + esc(LP.timeAgo(m.sesion.abierta_en)) +
-              (sinPedir ? '' : ' · ' + m.rondas +
-                              (m.rondas === 1 ? ' ronda' : ' rondas')) + '</div>' +
-            (m.sesion.abierta_por
-              ? '<div class="abrio">La abrio ' + esc(m.sesion.abierta_por) + '</div>' : '') +
-          '</div>' +
-          '<span class="chip ' +
-            (limpiar ? 'limpiar' : (debe ? 'debe' : (sinPedir ? 'espera' : 'ok'))) + '">' +
-            (limpiar ? 'Para limpiar'
-                     : (debe ? 'Falta cobrar' : (sinPedir ? 'Sin pedir' : 'Todo pago'))) +
-          '</span>' +
-        '</div>' +
-        (sinPedir ? '' :
-          '<ul class="rondas">' + rondas + '</ul>' +
-          '<div class="totales">' +
-            '<span class="etq">Total de la mesa' +
-              (m.pagado > 0 && debe ? ' · pago ' + money(m.pagado) : '') + '</span>' +
-            '<span class="num' + (debe ? ' debe' : '') + '">' +
-              money(debe ? m.debe : m.total) + '</span>' +
-          '</div>') +
-        '<div class="acciones">' +
-          '<button type="button" class="btn btn-primary" data-cerrar="' + m.sesion.id + '">' +
-            (limpiar ? 'Mesa limpia, liberar'
-                     : (sinPedir ? 'Se fueron, liberar' : 'Cerrar la mesa')) + '</button>' +
-          /* El QR solo donde hay algo que cobrar: en el resto era un boton de
-             mas, repetido en cada tarjeta. */
-          /* El link lleva la sesion. Sin esto, la pantalla del QR abria con
-             los 25 ultimos impagos de TODO el local y el mozo parado en la
-             Mesa 7 podia marcar pagada la mesa de al lado. */
-          (debe ? '<a class="btn btn-secondary" href="cobrar.html?sesion=' +
-                  esc(m.sesion.id) + '">Cobrar con QR</a>' : '') +
-        '</div>' +
-      '</li>';
-  }
-
-  /* -------------------------------------------------------- sacar ----- */
-  var hoja = document.getElementById('hoja');
-  var hojaTit = document.getElementById('hojaTit');
-  var hojaSub = document.getElementById('hojaSub');
-  var hojaCuerpo = document.getElementById('hojaCuerpo');
-  var sacando = null;               // el pedido con el que se abrio la hoja
-  var enVueloSacar = false;
 
   function pedidoPorId(id) {
     for (var i = 0; i < plano.length; i++) {
@@ -435,168 +350,436 @@ document.addEventListener('DOMContentLoaded', function () {
     return null;
   }
 
+  // Una mesa "pide algo" si se puede volver a vender o si hay que cobrarle.
+  function pideAlgo(t) {
+    if (t.estado === 'Limpieza') return true;
+    return !!(t.cuenta && t.cuenta.debe > 0);
+  }
+
+  function claseDe(t) {
+    if (t.estado === 'Libre') return 'e-libre';
+    if (t.estado === 'Reservada') return 'e-reservada';
+    if (t.estado === 'Limpieza') return 'e-limpieza';
+    return (t.cuenta && t.cuenta.debe > 0) ? 'e-debe' : 'e-ocupada';
+  }
+
+  function textoEstado(t) {
+    if (t.estado === 'Libre') return 'libre';
+    if (t.estado === 'Reservada') return 'reservada';
+    if (t.estado === 'Limpieza') return 'pago todo, hay que levantarla';
+    if (t.cuenta && t.cuenta.debe > 0) return 'falta cobrar ' + money(t.cuenta.debe);
+    return 'ocupada';
+  }
+
+  /* ---------------------------------------------------------- pintado --- */
+  function pintar() {
+    if (!plano.length) {
+      planoCaja.hidden = true;
+      plantasBar.hidden = true;
+      resumen.hidden = true;
+      estado.innerHTML = '<div class="estado-vacio"><h3>No hay mesas cargadas</h3>' +
+        '<p>Todavia no estan cargadas las mesas del local.</p></div>';
+      return;
+    }
+    estado.innerHTML = '';
+    resumen.hidden = false;
+    planoCaja.hidden = false;
+
+    var libres = 0, ocupadas = 0, limpiar = 0, debe = 0;
+    plano.forEach(function (t) {
+      if (t.estado === 'Libre') libres++;
+      else if (t.estado === 'Limpieza') limpiar++;
+      else if (t.estado !== 'Reservada') ocupadas++;
+      if (t.cuenta) debe += t.cuenta.debe;
+    });
+    document.getElementById('rLibres').textContent = libres;
+    document.getElementById('rOcupadas').textContent = ocupadas;
+    document.getElementById('rLimpiar').textContent = limpiar;
+    document.getElementById('rDebe').textContent = money(debe);
+
+    pintarPlantas();
+    pintarPlano();
+
+    /* Si la hoja esta abierta mostrando una mesa, se repinta con lo nuevo:
+       asi un pago que entra por realtime se ve sin cerrar y volver a abrir.
+       Solo en la vista 'mesa': no se le puede mover el piso a alguien que
+       esta a mitad de elegir por que saca un plato. */
+    if (mesaAbierta && vista === 'mesa') verMesa(mesaAbierta);
+  }
+
+  function plantasDelLocal() {
+    var vistas = [], orden = { Baja: 0, Alta: 1 };
+    plano.forEach(function (t) {
+      var p = t.mesa.planta || 'Baja';
+      if (vistas.indexOf(p) === -1) vistas.push(p);
+    });
+    /* Ojo con el `|| 9` de siempre: Baja vale 0, y 0 || 9 da 9. Con eso la
+       planta alta quedaba primera y era la que se abria al entrar. */
+    vistas.sort(function (a, b) {
+      var pa = orden[a] === undefined ? 9 : orden[a];
+      var pb = orden[b] === undefined ? 9 : orden[b];
+      return pa - pb;
+    });
+    return vistas;
+  }
+
+  function pintarPlantas() {
+    var plantas = plantasDelLocal();
+    if (plantas.indexOf(plantaActiva) === -1) plantaActiva = plantas[0] || null;
+
+    // Con una sola planta el selector no aporta nada: no se dibuja.
+    plantasBar.hidden = plantas.length < 2;
+    if (plantasBar.hidden) return;
+
+    plantasBar.innerHTML = plantas.map(function (p) {
+      var pide = 0;
+      plano.forEach(function (t) {
+        if ((t.mesa.planta || 'Baja') === p && pideAlgo(t)) pide++;
+      });
+      return '<button type="button" class="planta-btn" data-planta="' + esc(p) + '" ' +
+          'aria-pressed="' + (p === plantaActiva) + '">' +
+          '<span>Planta ' + esc(p.toLowerCase()) + '</span>' +
+          '<span class="pide"' + (pide ? '' : ' hidden') + '>' + pide + '</span>' +
+        '</button>';
+    }).join('');
+  }
+
+  function pintarPlano() {
+    var deLaPlanta = plano.filter(function (t) {
+      return (t.mesa.planta || 'Baja') === plantaActiva;
+    });
+    svg.innerHTML = (EDIFICIO[plantaActiva] || EDIFICIO.Baja) +
+      deLaPlanta.map(mesaSVG).join('');
+  }
+
+  function mesaSVG(t) {
+    var m = t.mesa;
+    var x = Number(m.x), y = Number(m.y);
+    var an = Number(m.ancho), al = Number(m.alto);
+    var redonda = m.forma === 'redonda';
+    var late = t.estado === 'Limpieza' ? ' pulso' : '';
+
+    /* La forma se dibuja centrada en (x,y): mover una mesa de lugar es
+       cambiar dos numeros en la base y nada mas. */
+    var figura = redonda
+      ? '<ellipse class="mesa-f' + late + '" cx="' + x + '" cy="' + y +
+          '" rx="' + (an / 2) + '" ry="' + (al / 2) + '"/>'
+      : '<rect class="mesa-f' + late + '" x="' + (x - an / 2) + '" y="' + (y - al / 2) +
+          '" width="' + an + '" height="' + al + '" rx="2.5"/>';
+
+    var pie = t.estado === 'Libre'
+      ? (m.capacidad ? m.capacidad + ' pers.' : '')
+      : (t.cuenta && t.cuenta.debe > 0 ? money(t.cuenta.debe)
+         : (t.estado === 'Limpieza' ? 'levantar'
+            : (t.estado === 'Reservada' ? 'reservada' : 'ocupada')));
+
+    return '<g class="mesa-g ' + claseDe(t) + '" data-mesa="' + esc(t.etiqueta) + '" ' +
+        'role="button" tabindex="0" ' +
+        'aria-label="' + esc(t.etiqueta + ', ' + textoEstado(t)) + '">' +
+        figura +
+        '<text class="mesa-n" x="' + x + '" y="' + (y - (pie ? 1.6 : 0)) + '">' +
+          esc(m.numero) + '</text>' +
+        (pie ? '<text class="mesa-i" x="' + x + '" y="' + (y + al / 2 - 3.2) + '">' +
+               esc(pie) + '</text>' : '') +
+      '</g>';
+  }
+
+  /* ------------------------------------------------------------ la hoja -- */
+  var hoja = document.getElementById('hoja');
+  var hojaTit = document.getElementById('hojaTit');
+  var hojaSub = document.getElementById('hojaSub');
+  var hojaCuerpo = document.getElementById('hojaCuerpo');
+  var hojaBack = document.getElementById('hojaBack');
+
   function cerrarHoja() {
     hoja.hidden = true;
     document.body.classList.remove('sheet-open');
     hojaCuerpo.innerHTML = '';
+    mesaAbierta = null;
     sacando = null;
+    vista = 'mesa';
+    hojaBack.hidden = true;
   }
 
-  function abrirHoja(pedido) {
-    sacando = pedido;
+  function verMesa(etiqueta) {
+    var t = mesaPorEtiqueta(etiqueta);
+    if (!t) { cerrarHoja(); return; }
+    mesaAbierta = etiqueta;
+    vista = 'mesa';
+    sacando = null;
+    hojaBack.hidden = true;
     hoja.hidden = false;
     document.body.classList.add('sheet-open');
+
+    hojaTit.textContent = t.etiqueta;
+    hojaSub.textContent = textoEstado(t) +
+      (t.mesa.capacidad ? ' · ' + t.mesa.capacidad + ' personas' : '');
+
+    if (t.estado === 'Libre') { hojaCuerpo.innerHTML = cuerpoLibre(t); return; }
+    if (t.estado === 'Reservada') { hojaCuerpo.innerHTML = cuerpoReservada(t); return; }
+    hojaCuerpo.innerHTML = cuerpoCuenta(t);
+  }
+
+  function cuerpoLibre(t) {
+    return '<div class="acciones" style="margin-top:4px">' +
+        '<button type="button" class="btn btn-primary" data-sentar="' +
+          esc(t.etiqueta) + '">Sentar</button>' +
+        '<button type="button" class="btn btn-secondary" data-reservar="' +
+          esc(t.etiqueta) + '">Reservar</button>' +
+      '</div>';
+  }
+
+  function cuerpoReservada(t) {
+    var ses = t.cuenta.sesion;
+    return (ses.abierta_por
+        ? '<p class="abrio">La aparto ' + esc(ses.abierta_por) + ' ' +
+          esc(LP.timeAgo(ses.abierta_en)) + '</p>'
+        : '') +
+      '<div class="acciones">' +
+        '<button type="button" class="btn btn-primary" data-ocupar="' + esc(ses.id) + '">' +
+          'Llegaron</button>' +
+        '<button type="button" class="btn btn-secondary" data-cerrar="' + esc(ses.id) + '">' +
+          'Liberar</button>' +
+      '</div>';
+  }
+
+  function cuerpoCuenta(t) {
+    var m = t.cuenta;
+    var debe = m.debe > 0;
+    var limpiar = t.estado === 'Limpieza';
+    var sinPedir = m.rondas === 0;
+
+    var chip = limpiar ? '<span class="chip limpiar">Para limpiar</span>'
+             : debe ? '<span class="chip debe">Falta cobrar</span>'
+             : sinPedir ? '<span class="chip espera">Sin pedir</span>'
+             : '<span class="chip ok">Todo pago</span>';
+
+    var cab = '<div class="cab-cuenta">' +
+        '<span class="desde">Abierta ' + esc(LP.timeAgo(m.sesion.abierta_en)) +
+          (sinPedir ? '' : ' · ' + m.rondas + (m.rondas === 1 ? ' ronda' : ' rondas')) +
+        '</span>' + chip +
+      '</div>' +
+      (m.sesion.abierta_por
+        ? '<p class="abrio">La abrio ' + esc(m.sesion.abierta_por) + '</p>' : '');
+
+    var rondas = sinPedir ? '' :
+      '<ul class="rondas">' + m.pedidos.map(rondaHTML).join('') + '</ul>' +
+      '<div class="totales">' +
+        '<span class="etq">Total de la mesa' +
+          (m.pagado > 0 && debe ? ' · pago ' + money(m.pagado) : '') + '</span>' +
+        '<span class="num' + (debe ? ' debe' : '') + '">' +
+          money(debe ? m.debe : m.total) + '</span>' +
+      '</div>';
+
+    var acciones = '<div class="acciones">' +
+        '<button type="button" class="btn btn-primary" data-cerrar="' + esc(m.sesion.id) + '">' +
+          (limpiar ? 'Mesa limpia, liberar'
+                   : (sinPedir ? 'Se fueron, liberar' : 'Cerrar la mesa')) + '</button>' +
+        /* El QR solo donde hay algo que cobrar, y con la mesa puesta: sin el
+           parametro, la pantalla de cobro ofrecia los impagos de todo el local. */
+        (debe ? '<a class="btn btn-secondary" href="cobrar.html?sesion=' + esc(m.sesion.id) +
+                '">Cobrar con QR</a>' : '') +
+      '</div>';
+
+    return cab + rondas + acciones;
+  }
+
+  function rondaHTML(p, i) {
+    var lineas = LP.lineasDe(p);
+    var cobra = LP.cobrable(p);
+    var salioAlgo = cobra < (Number(p.total) || 0);
+
+    var platos = lineas.length
+      ? '<ul class="platos">' + lineas.map(function (l, j) {
+          var fuera = LP.lineaSacada(l);
+          return '<li' + (fuera ? ' class="fuera"' : '') + '>' +
+              '<span class="nom">' + l.qty + '× ' + esc(l.name) + '</span>' +
+              (fuera ? '<span class="marca-fuera">Sacado</span>' : '') +
+              (fuera
+                ? '<span class="porque">' + esc(l.motivo || 'Sin motivo') +
+                  (l.por ? ' · lo saco ' + esc(l.por) : '') +
+                  (l.devuelto ? ' · ya se devolvio' : '') + '</span>' +
+                  (l.devuelto ? '' :
+                    '<button type="button" class="reponer" data-reponer="' +
+                      esc(p.id) + ':' + j + '">Volver a ponerlo</button>')
+                : '') +
+            '</li>';
+        }).join('') + '</ul>'
+      : '<div class="platos">Sin detalle</div>';
+
+    return '<li class="ronda">' +
+        '<span class="que">' +
+          '<b>Ronda ' + (i + 1) + ' · ' + esc(LP.timeAgo(p.created_at)) + '</b>' +
+          platos +
+          (puedoSacar && cobra > 0
+            ? '<button type="button" class="sacar-btn" data-sacar="' + esc(p.id) + '">' +
+              'Sacar un plato</button>'
+            : '') +
+        '</span>' +
+        '<span class="cuanto">' +
+          (salioAlgo ? '<s>' + money(p.total) + '</s>' : '') + money(cobra) +
+        '</span>' +
+      '</li>';
+  }
+
+  /* --------------------------------------------------- sacar: los pasos -- */
+  function verQue(pedido) {
+    sacando = pedido;
+    vista = 'que';
+    hojaBack.hidden = false;
 
     var vivas = [];
     LP.lineasDe(pedido).forEach(function (l, i) {
       if (!LP.lineaSacada(l)) vivas.push({ l: l, i: i });
     });
+    // Un solo plato vivo: no tiene sentido preguntar cual.
+    if (vivas.length === 1) { verMotivo(vivas[0].i, vivas[0].l); return; }
 
-    /* Un solo plato vivo: no tiene sentido preguntar cual. Se saltea el paso
-       y se va derecho al motivo. Es el caso mas comun. */
-    if (vivas.length === 1) { pasoMotivo(vivas[0].i, vivas[0].l); return; }
-    pasoQue(vivas);
-  }
-
-  function pasoQue(vivas) {
     hojaTit.textContent = 'Sacar de la cuenta';
-    hojaSub.textContent = sacando.mesa + ' \u00b7 ' + money(LP.cobrable(sacando));
-    hojaCuerpo.innerHTML =
-      '<p class="hoja-et">Que sale?</p>' +
+    hojaSub.textContent = pedido.mesa + ' · ' + money(LP.cobrable(pedido));
+    hojaCuerpo.innerHTML = '<p class="hoja-et">Que sale?</p>' +
       vivas.map(function (v) {
         return '<button type="button" class="opcion" data-linea="' + v.i + '">' +
-            '<span>' + v.l.qty + '\u00d7 ' + esc(v.l.name) + '</span>' +
+            '<span>' + v.l.qty + '× ' + esc(v.l.name) + '</span>' +
             '<span class="plata">' + money(LP.importeDeLinea(v.l)) + '</span>' +
           '</button>';
       }).join('') +
       '<button type="button" class="opcion toda" data-linea="todo">' +
         '<span>Toda la ronda</span>' +
-        '<span class="plata">' + money(LP.cobrable(sacando)) + '</span>' +
+        '<span class="plata">' + money(LP.cobrable(pedido)) + '</span>' +
       '</button>';
   }
 
-  function pasoMotivo(indice, linea) {
+  function verMotivo(indice, linea) {
+    vista = 'porque';
+    hojaBack.hidden = false;
     var todo = indice === 'todo';
     var cuanto = todo ? LP.cobrable(sacando) : LP.importeDeLinea(linea);
-    var queSale = todo
-      ? 'Toda la ronda'
-      : (linea.qty + '\u00d7 ' + linea.name);
 
     hojaTit.textContent = 'Por que sale?';
-    hojaSub.textContent = queSale + ' \u00b7 ' + money(cuanto);
+    hojaSub.textContent = (todo ? 'Toda la ronda' : linea.qty + '× ' + linea.name) +
+      ' · ' + money(cuanto);
 
-    /* Si ya esta pago, se dice ANTES de tocar el motivo. No frena nada: el
-       mozo tiene que poder sacarlo igual, pero enterarse ahora y no despues. */
-    var banda = sacando.pagado
-      ? '<div class="banda-pago">Esto ya est&aacute; pagado. Cuando lo saques, ' +
-        'la caja tiene que devolverle ' + money(cuanto) + '.</div>'
-      : '';
-
-    hojaCuerpo.innerHTML = banda +
+    /* Si ya esta pago se dice ANTES de tocar el motivo: no frena nada, pero
+       el mozo se entera ahora y no cuando ya lo saco. */
+    hojaCuerpo.innerHTML =
+      (sacando.pagado
+        ? '<div class="banda-pago">Esto ya est&aacute; pagado. Cuando lo saques, ' +
+          'la caja tiene que devolverle ' + money(cuanto) + '.</div>'
+        : '') +
       LP.MOTIVOS_SACAR.map(function (m) {
         return '<button type="button" class="opcion" data-motivo="' + esc(m) + '" ' +
           'data-indice="' + esc(String(indice)) + '">' + esc(m) + '</button>';
       }).join('');
   }
 
-  // Abrir la hoja desde la ronda
-  lista.addEventListener('click', function (ev) {
-    var b = ev.target.closest('[data-sacar]');
+  /* ------------------------------------------------------------- toques -- */
+  svg.addEventListener('click', function (ev) {
+    var g = ev.target.closest('[data-mesa]');
+    if (g) verMesa(g.dataset.mesa);
+  });
+  svg.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    var g = ev.target.closest('[data-mesa]');
+    if (!g) return;
+    ev.preventDefault();
+    verMesa(g.dataset.mesa);
+  });
+
+  plantasBar.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-planta]');
     if (!b) return;
-    var p = pedidoPorId(b.dataset.sacar);
-    if (!p) { LP.toast('Ese pedido ya no esta. Recargamos.', 'err'); cargar(true); return; }
-    abrirHoja(p);
+    plantaActiva = b.dataset.planta;
+    pintarPlantas();
+    pintarPlano();
   });
 
-  // Elegir que sale
-  hojaCuerpo.addEventListener('click', function (ev) {
-    var b = ev.target.closest('[data-linea]');
-    if (!b || !sacando) return;
-    var idx = b.dataset.linea;
-    if (idx === 'todo') { pasoMotivo('todo', null); return; }
-    pasoMotivo(Number(idx), LP.lineasDe(sacando)[Number(idx)]);
+  hojaBack.addEventListener('click', function () {
+    if (vista === 'porque' && sacando) { verQue(sacando); return; }
+    if (mesaAbierta) verMesa(mesaAbierta);
   });
-
-  /* Elegir el motivo EJECUTA. No hay un "estas seguro?" arriba: son dos
-     pantallas de botones grandes y un toque perdido abre la hoja pero no
-     saca nada. Si igual se equivoco, la linea queda con "Volver a ponerlo". */
-  hojaCuerpo.addEventListener('click', function (ev) {
-    var b = ev.target.closest('[data-motivo]');
-    if (!b || !sacando || enVueloSacar) return;
-    enVueloSacar = true;
-
-    var motivo = b.dataset.motivo;
-    var crudo = b.dataset.indice;
-    var pedido = sacando;
-    var todo = crudo === 'todo';
-
-    [].forEach.call(hojaCuerpo.querySelectorAll('button'), function (x) { x.disabled = true; });
-    b.textContent = 'Sacando...';
-
-    var accion = todo
-      ? LP.sacarRonda(sb, pedido, motivo, YO)
-      : LP.sacarPlato(sb, pedido, Number(crudo), motivo, YO);
-
-    accion.then(function (r) {
-      enVueloSacar = false;
-      cerrarHoja();
-      if (!r.ok) { LP.toast(r.motivo, 'err'); cargar(true); return; }
-      LP.toast(r.devolver > 0
-        ? 'Listo. Hay que devolverle ' + money(r.devolver) + ' a ' + pedido.mesa +
-          ' \u2014 lo hace la caja.'
-        : 'Listo, lo sacamos de la cuenta de ' + pedido.mesa + '.', 'ok');
-      cargar(true);
-    });
-  });
-
   document.getElementById('hojaX').addEventListener('click', cerrarHoja);
   hoja.addEventListener('click', function (ev) { if (ev.target === hoja) cerrarHoja(); });
   document.addEventListener('keydown', function (ev) {
     if (ev.key === 'Escape' && !hoja.hidden) cerrarHoja();
   });
 
-  /* Volver a poner. Es la unica salida de un toque errado: sacar no pide
-     confirmacion y el mozo no tiene desde donde volver a cargar un plato. */
-  lista.addEventListener('click', function (ev) {
-    var b = ev.target.closest('[data-reponer]');
+  /* Todo lo que se toca adentro de la hoja pasa por aca. */
+  hojaCuerpo.addEventListener('click', function (ev) {
+    var b = ev.target.closest('button');
     if (!b || b.disabled) return;
-    var partes = b.dataset.reponer.split(':');
-    var p = pedidoPorId(partes[0]);
-    if (!p) { cargar(true); return; }
-    b.disabled = true;
-    b.textContent = 'Poniendo...';
-    LP.volverAPoner(sb, p, Number(partes[1]), YO).then(function (r) {
-      if (!r.ok) { LP.toast(r.motivo, 'err'); }
-      else { LP.toast('Volvio a la cuenta.', 'ok'); }
-      cargar(true);
-    });
+    var d = b.dataset;
+
+    if (d.sacar) { var p = pedidoPorId(d.sacar); if (p) verQue(p); return; }
+    if (d.linea !== undefined) {
+      if (d.linea === 'todo') verMotivo('todo', null);
+      else verMotivo(Number(d.linea), LP.lineasDe(sacando)[Number(d.linea)]);
+      return;
+    }
+    if (d.motivo) { ejecutarSacar(b, d.motivo, d.indice); return; }
+    if (d.reponer) { ejecutarReponer(b, d.reponer); return; }
+    if (d.sentar || d.reservar) { ejecutarAbrir(b, d.sentar || d.reservar, !!d.reservar); return; }
+    if (d.ocupar) { ejecutarLlegaron(b, d.ocupar); return; }
+    if (d.cerrar) { ejecutarCerrar(b, d.cerrar); return; }
   });
 
-  /* ------------------------------------------------ sentar y reservar -- */
-  lista.addEventListener('click', function (ev) {
-    var b = ev.target.closest('[data-sentar], [data-reservar]');
-    if (!b) return;
-    var reservar = b.hasAttribute('data-reservar');
-    var etiqueta = reservar ? b.dataset.reservar : b.dataset.sentar;
-    if (tocando[etiqueta]) return;
-
-    tocando[etiqueta] = true;
+  /* --------------------------------------------------------- acciones --- */
+  function bloquear(b, texto) {
     b.disabled = true;
-    var antes = b.textContent;
-    b.textContent = reservar ? 'Apartando...' : 'Abriendo...';
+    b.dataset.antes = b.textContent;
+    b.textContent = texto;
+  }
+  function soltar(b) {
+    b.disabled = false;
+    if (b.dataset.antes) b.textContent = b.dataset.antes;
+  }
+
+  function ejecutarSacar(b, motivo, crudo) {
+    if (enVuelo.sacar) return;
+    enVuelo.sacar = true;
+    var pedido = sacando, todo = crudo === 'todo';
+    [].forEach.call(hojaCuerpo.querySelectorAll('button'), function (x) { x.disabled = true; });
+    b.textContent = 'Sacando...';
+
+    var accion = todo ? LP.sacarRonda(sb, pedido, motivo, YO)
+                      : LP.sacarPlato(sb, pedido, Number(crudo), motivo, YO);
+    accion.then(function (r) {
+      delete enVuelo.sacar;
+      if (!r.ok) { cerrarHoja(); LP.toast(r.motivo, 'err'); cargar(true); return; }
+      LP.toast(r.devolver > 0
+        ? 'Listo. Hay que devolverle ' + money(r.devolver) + ' a ' + pedido.mesa +
+          ' — lo hace la caja.'
+        : 'Listo, lo sacamos de la cuenta de ' + pedido.mesa + '.', 'ok');
+      vista = 'mesa';                    // al repintar vuelve a la cuenta de la mesa
+      cargar(true);
+    });
+  }
+
+  function ejecutarReponer(b, clave) {
+    var partes = clave.split(':');
+    var p = pedidoPorId(partes[0]);
+    if (!p) { cargar(true); return; }
+    bloquear(b, 'Poniendo...');
+    LP.volverAPoner(sb, p, Number(partes[1]), YO).then(function (r) {
+      if (!r.ok) LP.toast(r.motivo, 'err');
+      else LP.toast('Volvio a la cuenta.', 'ok');
+      cargar(true);
+    });
+  }
+
+  function ejecutarAbrir(b, etiqueta, reservar) {
+    if (enVuelo[etiqueta]) return;
+    enVuelo[etiqueta] = true;
+    bloquear(b, reservar ? 'Apartando...' : 'Abriendo...');
 
     var accion = reservar ? LP.reservarMesa(sb, etiqueta, YO)
                           : LP.abrirMesa(sb, etiqueta, YO);
-
     accion.then(function (r) {
-      delete tocando[etiqueta];
+      delete enVuelo[etiqueta];
       if (!r || !r.ok) {
-        b.disabled = false;
-        b.textContent = antes;
+        soltar(b);
         /* Que otro la haya abierto primero no es una falla: es el indice de
-           la base impidiendo dos cuentas en la misma mesa. Se dice con todas
-           las letras y se repinta, asi el mozo ve el estado real en lugar de
-           pensar que no anduvo el boton.                                 */
+           la base impidiendo dos cuentas en la misma mesa. */
         LP.toast((r && r.motivo) || 'No pudimos abrir la mesa.', 'err');
         cargar(true);
         return;
@@ -605,39 +788,23 @@ document.addEventListener('DOMContentLoaded', function () {
                         : etiqueta + ' abierta. Ya puede pedir.', 'ok');
       cargar(true);
     });
-  });
+  }
 
-  /* --------------------------------------------------------- llegaron -- */
-  lista.addEventListener('click', function (ev) {
-    var b = ev.target.closest('[data-ocupar]');
-    if (!b) return;
-    var id = b.dataset.ocupar;
-    if (tocando[id]) return;
-
-    tocando[id] = true;
-    b.disabled = true;
-    b.textContent = 'Sentando...';
-
-    LP.estadoDeMesa(sb, id, 'Ocupada').then(function (ok) {
-      delete tocando[id];
-      if (!ok) {
-        b.disabled = false;
-        b.textContent = 'Llegaron';
-        LP.toast('No pudimos sentarlos. Proba de nuevo.', 'err');
-        return;
-      }
+  function ejecutarLlegaron(b, sesionId) {
+    if (enVuelo[sesionId]) return;
+    enVuelo[sesionId] = true;
+    bloquear(b, 'Sentando...');
+    LP.estadoDeMesa(sb, sesionId, 'Ocupada').then(function (ok) {
+      delete enVuelo[sesionId];
+      if (!ok) { soltar(b); LP.toast('No pudimos sentarlos. Proba de nuevo.', 'err'); return; }
       cargar(true);
     });
-  });
+  }
 
-  /* ----------------------------------------------------------- cerrar -- */
-  lista.addEventListener('click', function (ev) {
-    var b = ev.target.closest('[data-cerrar]');
-    if (!b) return;
-    var id = b.dataset.cerrar;
-    if (cerrando[id]) return;
-
-    var m = cuentaDe(id);
+  function ejecutarCerrar(b, id) {
+    if (enVuelo['c' + id]) return;
+    var t = mesaAbierta ? mesaPorEtiqueta(mesaAbierta) : null;
+    var m = t && t.cuenta;
     if (!m) return;
 
     /* Cerrar con saldo pendiente es una decision del local -a veces se cobra
@@ -648,65 +815,63 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!ok) return;
     }
 
-    cerrando[id] = true;
-    b.disabled = true;
-    b.textContent = 'Cerrando...';
+    enVuelo['c' + id] = true;
+    bloquear(b, 'Cerrando...');
 
-    var textoBoton = b.textContent;
     LP.cerrarSesion(sb, id, YO).then(function (hecho) {
-      delete cerrando[id];
+      delete enVuelo['c' + id];
 
       /* La mesa todavia tiene comida en curso. No se cierra a la primera:
          casi siempre es un error, y si no lo es, se confirma y se fuerza. */
       if (hecho && hecho.bloqueado) {
-        b.disabled = false;
-        b.textContent = textoBoton;
+        soltar(b);
         var igual = window.confirm(
           m.mesa + ' todavia tiene ' + hecho.enCurso +
           (hecho.enCurso === 1 ? ' pedido sin terminar' : ' pedidos sin terminar') +
           '.\n\nSi la cerras igual, esos pedidos quedan colgando de una cuenta ' +
           'cerrada. Cerrar de todos modos?');
         if (!igual) return;
-        cerrando[id] = true;
-        b.disabled = true;
-        b.textContent = 'Cerrando...';
+        enVuelo['c' + id] = true;
+        bloquear(b, 'Cerrando...');
         LP.cerrarSesion(sb, id, YO, true).then(function () {
-          delete cerrando[id];
+          delete enVuelo['c' + id];
           LP.toast(m.mesa + ' cerrada.', 'ok');
+          cerrarHoja();
           cargar(true);
         });
         return;
       }
 
       if (!hecho) {
-        b.disabled = false;
-        b.textContent = textoBoton;
+        soltar(b);
         LP.toast('No pudimos cerrarla. Puede que ya la haya cerrado otro.', 'err');
         cargar(true);
         return;
       }
       LP.toast(m.mesa + ' cerrada. El proximo pedido abre una cuenta nueva.', 'ok');
+      cerrarHoja();
       cargar(true);
     });
-  });
+  }
 
   /* ------------------------------------------------------------ carga -- */
-  var enVuelo = false;
+  var cargando = false;
   function cargar(silencioso) {
-    if (enVuelo) return Promise.resolve();
+    if (cargando) return Promise.resolve();
     if (!sb) {
       estado.innerHTML = '<div class="estado-vacio"><h3>No hay conexion con el sistema</h3></div>';
       return Promise.resolve();
     }
-    enVuelo = true;
+    cargando = true;
     return LP.planoDelSalon(sb).then(function (datos) {
-      enVuelo = false;
+      cargando = false;
       if (datos === null) {
         conn.set(navigator.onLine ? 'retry' : 'off');
         if (!cargado) {
           /* Ojo con tocar esto: si un error de conexion cayera en el camino
-             normal, la pantalla pintaria las doce mesas libres, que es el
+             normal, la pantalla pintaria todas las mesas libres, que es el
              peor error posible aca. Por eso planoDelSalon devuelve null. */
+          planoCaja.hidden = true;
           estado.innerHTML = '<div class="estado-vacio"><h3>No pudimos cargar las mesas</h3>' +
             '<p>Revisa la conexion del local.</p></div>';
         } else if (!silencioso) {
