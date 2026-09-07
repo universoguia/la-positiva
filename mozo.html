@@ -134,7 +134,7 @@
 <div class="wrap">
   <header class="top">
     <div>
-      <h1>Mozo</h1>
+      <h1 id="saludo">Mozo</h1>
       <p class="sub">Aproba lo que piden las mesas y manda la comanda</p>
     </div>
     <div class="head-right">
@@ -143,7 +143,7 @@
       </span>
       <button type="button" class="btn btn-secondary" id="avisosBtn"
               style="padding:8px 15px;font-size:15px">Avisos</button>
-      <a class="back-link" href="./">Inicio</a>
+      <a class="back-link" href="entrar.html" id="salirLink">Cambiar</a>
     </div>
   </header>
 
@@ -191,7 +191,22 @@ document.addEventListener('DOMContentLoaded', function () {
   'use strict';
   var esc = LP.esc, money = LP.money;
   var sb = LP.client();
-  var YO = 'Mozo';
+  /* Quien esta usando el panel. Se firma con el nombre real -para saber quien
+     aprobo y quien le escribio a la cocina-, pero los avisos van al ROL:
+     la tabla de AVISOS conoce 'Mozo', no 'Miguel'. Si alguien no eligio
+     nombre, sigue funcionando como antes.                                */
+  var soy = LP.quienSoy();
+  var YO = (soy && soy.nombre) || 'Mozo';
+  var ROL = LP.rolDeAvisos(soy && soy.rol) || 'Mozo';
+
+  LP.pantallaSiempreEncendida();
+
+  if (soy) {
+    document.getElementById('saludo').textContent = soy.nombre;
+    document.getElementById('salirLink').addEventListener('click', function () {
+      LP.salir();          // el link sigue: solo se olvida quien era
+    });
+  }
 
   var elAprobar = document.getElementById('porAprobar');
   var elCurso = document.getElementById('enCurso');
@@ -593,7 +608,7 @@ document.addEventListener('DOMContentLoaded', function () {
     return LP.estadoPush().then(function (st) {
       var cls = 'aviso-estado', txt, label, off = false;
       if (st === 'activo') {
-        return LP.pushRegistrado(sb, YO).then(function (reg) {
+        return LP.pushRegistrado(sb, ROL).then(function (reg) {
           if (reg === null) {
             pintar2('aviso-estado warn', 'No pudimos comprobar el registro. Revisa la conexion.',
                     'Volver a registrar', false);
@@ -629,7 +644,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function destinos() {
-    return LP.contarSubs(sb, YO).then(function (n) {
+    return LP.contarSubs(sb, ROL).then(function (n) {
       if (n === null) { pushDestinos.textContent = ''; return; }
       pushDestinos.textContent = n === 0
         ? 'Ningun dispositivo recibe los avisos del mozo: hoy no le llega a nadie.'
@@ -642,7 +657,7 @@ document.addEventListener('DOMContentLoaded', function () {
   pushBtn.addEventListener('click', function () {
     if (pushBtn.disabled) return;
     pushBtn.disabled = true; pushBtn.textContent = 'Activando...';
-    LP.suscribirPush(sb, YO).then(function (st) {
+    LP.suscribirPush(sb, ROL).then(function (st) {
       if (st === 'activo') LP.toast('Avisos activados para el mozo.', 'ok');
       else if (st === 'denegado') LP.toast('No diste permiso.', 'err');
       else if (st === 'no-guardado') LP.toast('El permiso quedo dado, pero no se registro. Proba de nuevo.', 'err');

@@ -1221,6 +1221,11 @@ document.addEventListener('DOMContentLoaded', function () {
   engancharPrimerToque();
 
   /* ------------------------------------------------------------ inicio -- */
+  /* La tablet de la cocina se apagaba sola a los dos minutos y el aviso
+     sonaba contra una pantalla negra. Esto la mantiene encendida mientras el
+     panel este abierto. No cubre el panel CERRADO: para eso esta el push. */
+  LP.pantallaSiempreEncendida();
+
   conn.set(navigator.onLine ? 'connecting' : 'off');
   /* Se comprueba el push al abrir, no solo al abrir el dialogo: la barra de
      arriba necesita saber si esta pantalla puede avisar o no.           */

@@ -24,6 +24,7 @@
   var FOTOS_TABLE = CFG.FOTOS_TABLE || 'la_positiva_fotos';
   var SESIONES_TABLE = CFG.SESIONES_TABLE || 'la_positiva_sesiones';
   var NOTAS_TABLE = CFG.NOTAS_TABLE || 'la_positiva_notas';
+  var PERSONAS_TABLE = CFG.PERSONAS_TABLE || 'la_positiva_personas';
   var BUCKET = CFG.BUCKET;
   var IMG_BASE = CFG.IMG_BASE;
 
@@ -632,6 +633,97 @@
       })
       .catch(function (e) { console.warn('[La Positiva] SW no registrado', e); return null; });
   }
+
+  /* --- Pantalla despierta -------------------------------------------------
+     La tablet de la cocina se apaga sola a los dos minutos y el aviso suena
+     contra una pantalla negra. Esto la mantiene encendida mientras el panel
+     este a la vista.
+
+     No arregla el caso del panel CERRADO: ahi no hay pagina viva que pueda
+     sonar, y lo unico que llega es la notificacion push. Es un limite del
+     navegador, no algo que se pueda programar.                           */
+  var wakeLock = null;
+
+  function mantenerDespierta() {
+    if (!('wakeLock' in navigator)) return Promise.resolve(false);
+    if (document.hidden) return Promise.resolve(false);
+    if (wakeLock) return Promise.resolve(true);
+
+    return navigator.wakeLock.request('screen').then(function (wl) {
+      wakeLock = wl;
+      // El sistema lo suelta solo al minimizar o bloquear: se vuelve a pedir
+      // cuando la pantalla regresa.
+      wl.addEventListener('release', function () { wakeLock = null; });
+      return true;
+    }).catch(function () { return false; });
+  }
+
+  /* Se engancha una vez y se ocupa de re-pedirlo cuando haga falta. */
+  function pantallaSiempreEncendida() {
+    mantenerDespierta();
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) mantenerDespierta();
+    });
+    onCleanup(function () {
+      if (wakeLock) { try { wakeLock.release(); } catch (e) {} wakeLock = null; }
+    });
+  }
+
+  /* --- Quien esta usando esto --------------------------------------------
+     Sin contrasenia y sin correo: se toca el nombre y listo. En un local de
+     seis personas con el telefono en la mano, una clave solo agrega un paso
+     que alguien va a terminar anotando en un papel. Esto no protege datos
+     -la demo es de acceso libre-: sirve para saber quien aprobo, quien
+     cobro y a quien avisarle.                                            */
+  var YO_KEY = 'lp_quien_soy';
+
+  function personas(sb) {
+    if (!sb) return Promise.resolve([]);
+    return sb.from(PERSONAS_TABLE).select('*')
+      .eq('activo', true).order('orden', { ascending: true })
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return []; }
+        return res.data || [];
+      }, function (e) { humanError(e); return []; });
+  }
+
+  function quienSoy() {
+    try {
+      var crudo = localStorage.getItem(YO_KEY);
+      return crudo ? JSON.parse(crudo) : null;
+    } catch (e) { return null; }
+  }
+
+  function entrarComo(persona) {
+    try {
+      localStorage.setItem(YO_KEY, JSON.stringify({
+        nombre: persona.nombre, rol: persona.rol, nota: persona.nota || null
+      }));
+    } catch (e) {}
+    return persona;
+  }
+
+  function salir() {
+    try { localStorage.removeItem(YO_KEY); } catch (e) {}
+  }
+
+  /* A que pantalla va cada rol al entrar. */
+  var PANTALLA_POR_ROL = {
+    Duenio: 'mesas.html',
+    Mozo:   'mozo.html',
+    Caja:   'caja.html',
+    Cocina: 'cocina.html'
+  };
+
+  function pantallaDe(rol) { return PANTALLA_POR_ROL[rol] || 'index.html'; }
+
+  /* El rol al que le llegan los avisos. Duenio y Caja comparten los del
+     encargado: en un local de este tamanio son la misma persona mirando. */
+  var ROL_DE_AVISOS = {
+    Duenio: 'Jonathan', Caja: 'Jonathan', Mozo: 'Mozo', Cocina: 'Cocina'
+  };
+
+  function rolDeAvisos(rol) { return ROL_DE_AVISOS[rol] || rol; }
 
   /* --- Flujo del pedido ---------------------------------------------------
      El pedido del comensal NO va derecho a la cocina: primero lo aprueba el
@@ -1302,6 +1394,15 @@
     FOTOS_TABLE: FOTOS_TABLE,
     SESIONES_TABLE: SESIONES_TABLE,
     NOTAS_TABLE: NOTAS_TABLE,
+    PERSONAS_TABLE: PERSONAS_TABLE,
+    personas: personas,
+    quienSoy: quienSoy,
+    entrarComo: entrarComo,
+    salir: salir,
+    pantallaDe: pantallaDe,
+    rolDeAvisos: rolDeAvisos,
+    mantenerDespierta: mantenerDespierta,
+    pantallaSiempreEncendida: pantallaSiempreEncendida,
     ESTADOS: ESTADOS,
     AVISOS: AVISOS,
     avisarEstado: avisarEstado,
