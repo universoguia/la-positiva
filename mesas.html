@@ -32,7 +32,9 @@
   .resumen div span{display:block;font-size:13px;color:var(--muted)}
   .resumen div b{font-size:22px;color:var(--ink)}
 
-  .mesas{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+  /* align-items:start evita que una mesa libre se estire a lo alto solo
+     porque al lado hay una con seis rondas. */
+  .mesas{list-style:none;margin:0;padding:0;display:grid;gap:14px;align-items:start}
   @media (min-width:760px){.mesas{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
   .mesa{
@@ -53,6 +55,29 @@
   }
   .chip.ok{background:var(--ok-soft);color:var(--ok);border:1px solid #bfe0ce}
   .chip.debe{background:var(--warn-soft);color:var(--warn);border:1px solid #e8d3a8}
+  .chip.espera{background:var(--border);color:var(--muted-strong)}
+  .chip.reservada{background:var(--warn-soft);color:var(--warn);border:1px solid #e8d3a8}
+
+  /* La mesa libre es la que NO necesita a nadie: se dibuja apagada a
+     proposito, para que lo que si pide atencion salte a la vista. */
+  .mesa.libre{
+    background:transparent;border-style:dashed;border-color:var(--border-strong);
+    text-align:center;padding:18px 16px 14px;
+  }
+  .mesa.libre h2{color:var(--muted-strong)}
+  .mesa.libre .cabe{display:block;font-size:13px;color:var(--muted);margin:2px 0 12px}
+  .mesa.reservada{border-color:var(--warn);background:var(--warn-soft)}
+
+  /* Reservar se usa una vez cada tanto; sentar, todo el tiempo. Por eso una
+     es boton y la otra es texto. Igual respeta los 44px de alto minimo. */
+  .apartar{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-height:var(--tap);width:100%;margin-top:2px;font-size:14px;
+    color:var(--muted-strong);text-decoration:underline;cursor:pointer;
+    background:none;border:0;font-family:inherit;
+  }
+  .apartar:hover{color:var(--ink)}
+  .abrio{font-size:12px;color:var(--muted);margin-top:3px}
 
   .rondas{list-style:none;margin:14px 0 0;padding:0}
   .ronda{
@@ -94,8 +119,8 @@
 <div class="wrap">
   <header class="top">
     <div>
-      <h1>Mesas abiertas</h1>
-      <p class="sub">Una cuenta por mesa, con todas las rondas que haya pedido.</p>
+      <h1>El sal&oacute;n</h1>
+      <p class="sub">Todas las mesas y c&oacute;mo est&aacute; cada una, ahora.</p>
     </div>
     <div class="head-right">
       <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
@@ -108,9 +133,9 @@
   </header>
 
   <div class="resumen" id="resumen" hidden>
-    <div><span>Mesas abiertas</span><b id="rMesas">0</b></div>
-    <div><span>Rondas servidas</span><b id="rRondas">0</b></div>
-    <div><span>Facturado sin cerrar</span><b id="rTotal">$0</b></div>
+    <div><span>Libres</span><b id="rLibres">0</b></div>
+    <div><span>Ocupadas</span><b id="rOcupadas">0</b></div>
+    <div><span>Para limpiar</span><b id="rLimpiar">0</b></div>
     <div><span>Falta cobrar</span><b id="rDebe">$0</b></div>
   </div>
 
@@ -140,38 +165,114 @@ document.addEventListener('DOMContentLoaded', function () {
                 Cocinando: 'b-cocinando', Listo: 'b-listo',
                 Entregado: 'b-entregado', Rechazado: 'b-entregado' };
 
-  var mesas = [];
+  var soy = LP.quienSoy();
+  var YO = (soy && soy.nombre) || 'Salon';
+
+  var plano = [];                       // las doce mesas, con o sin cuenta
   var cargado = false;
   var cerrando = Object.create(null);
+  var tocando = Object.create(null);    // mesas con una accion en vuelo
+
+  function cuentaDe(sesionId) {
+    for (var i = 0; i < plano.length; i++) {
+      if (plano[i].cuenta && String(plano[i].cuenta.sesion.id) === String(sesionId)) {
+        return plano[i].cuenta;
+      }
+    }
+    return null;
+  }
 
   /* ---------------------------------------------------------- pintado -- */
   function pintar() {
-    if (!mesas.length) {
+    if (!plano.length) {
       lista.innerHTML = '';
       resumen.hidden = true;
-      estado.innerHTML = '<div class="estado-vacio"><h3>No hay mesas abiertas</h3>' +
-        '<p>Cuando alguien pida desde una mesa, la cuenta se abre sola y aparece aca.</p></div>';
+      estado.innerHTML = '<div class="estado-vacio"><h3>No hay mesas cargadas</h3>' +
+        '<p>Todavia no estan cargadas las mesas del local.</p></div>';
       return;
     }
     estado.innerHTML = '';
     resumen.hidden = false;
 
-    var tRondas = 0, tTotal = 0, tDebe = 0;
-    mesas.forEach(function (m) { tRondas += m.rondas; tTotal += m.total; tDebe += m.debe; });
+    var libres = 0, ocupadas = 0, limpiar = 0, debe = 0;
+    plano.forEach(function (t) {
+      if (t.estado === 'Libre') libres++;
+      else if (t.estado === 'Limpieza') limpiar++;
+      else if (t.estado !== 'Reservada') ocupadas++;
+      if (t.cuenta) debe += t.cuenta.debe;
+    });
 
-    document.getElementById('rMesas').textContent = mesas.length;
-    document.getElementById('rRondas').textContent = tRondas;
-    document.getElementById('rTotal').textContent = money(tTotal);
-    document.getElementById('rDebe').textContent = money(tDebe);
+    document.getElementById('rLibres').textContent = libres;
+    document.getElementById('rOcupadas').textContent = ocupadas;
+    document.getElementById('rLimpiar').textContent = limpiar;
+    document.getElementById('rDebe').textContent = money(debe);
 
-    lista.innerHTML = mesas.map(mesaHTML).join('');
+    /* El orden es la prioridad del mozo, no el numero de mesa: primero lo que
+       se puede volver a vender (para limpiar), despues lo que falta cobrar, y
+       las libres al final, que no piden nada.                            */
+    var peso = { Limpieza: 0, Ocupada: 1, Reservada: 2, Libre: 3 };
+    var orden = plano.slice().sort(function (a, b) {
+      var pa = peso[a.estado] === undefined ? 1 : peso[a.estado];
+      var pb = peso[b.estado] === undefined ? 1 : peso[b.estado];
+      if (pa !== pb) return pa - pb;
+      if (pa === 1) {
+        var da = a.cuenta && a.cuenta.debe > 0 ? 0 : 1;
+        var db = b.cuenta && b.cuenta.debe > 0 ? 0 : 1;
+        if (da !== db) return da - db;
+      }
+      return (a.mesa.orden || a.mesa.numero || 0) - (b.mesa.orden || b.mesa.numero || 0);
+    });
+
+    lista.innerHTML = orden.map(tileHTML).join('');
   }
 
-  function mesaHTML(m) {
+  function tileHTML(t) {
+    if (t.estado === 'Libre') return libreHTML(t);
+    if (t.estado === 'Reservada') return reservadaHTML(t);
+    return mesaHTML(t.cuenta, t.estado === 'Limpieza');
+  }
+
+  function libreHTML(t) {
+    return '<li class="mesa libre">' +
+        '<h2>' + esc(t.etiqueta) + '</h2>' +
+        '<span class="cabe">Libre' +
+          (t.mesa.capacidad ? ' · ' + t.mesa.capacidad + ' personas' : '') + '</span>' +
+        '<button type="button" class="btn btn-primary" style="width:100%" ' +
+          'data-sentar="' + esc(t.etiqueta) + '">Sentar</button>' +
+        '<button type="button" class="apartar" data-reservar="' + esc(t.etiqueta) + '">' +
+          'Reservar</button>' +
+      '</li>';
+  }
+
+  function reservadaHTML(t) {
+    var ses = t.cuenta.sesion;
+    return '<li class="mesa reservada" data-sesion="' + esc(ses.id) + '">' +
+        '<div class="mesa-top">' +
+          '<div>' +
+            '<h2>' + esc(t.etiqueta) + '</h2>' +
+            '<div class="desde">Apartada ' + esc(LP.timeAgo(ses.abierta_en)) + '</div>' +
+            (ses.abierta_por
+              ? '<div class="abrio">La aparto ' + esc(ses.abierta_por) + '</div>' : '') +
+          '</div>' +
+          '<span class="chip reservada">Reservada</span>' +
+        '</div>' +
+        '<div class="acciones">' +
+          '<button type="button" class="btn btn-primary" data-ocupar="' + esc(ses.id) + '">' +
+            'Llegaron</button>' +
+          '<button type="button" class="btn btn-secondary" data-cerrar="' + esc(ses.id) + '">' +
+            'Liberar</button>' +
+        '</div>' +
+      '</li>';
+  }
+
+  function mesaHTML(m, limpiar) {
     var debe = m.debe > 0;
     // Pago todo y falta levantar: es la mesa que hay que ir a limpiar YA,
     // porque es la unica que se puede volver a vender.
-    var limpiar = !debe && m.sesion.estado === 'Limpieza';
+    limpiar = !!limpiar && !debe;
+    /* Sentada y todavia sin pedir. Antes no existia -la mesa nacia con su
+       primer pedido-; ahora el mozo la abre cuando llegan.               */
+    var sinPedir = m.rondas === 0;
     var rondas = m.pedidos.map(function (p, i) {
       var items = (p.lines || []).map(function (l) {
         return l.qty + '× ' + l.name;
@@ -191,25 +292,93 @@ document.addEventListener('DOMContentLoaded', function () {
           '<div>' +
             '<h2>' + esc(m.mesa) + '</h2>' +
             '<div class="desde">Abierta ' + esc(LP.timeAgo(m.sesion.abierta_en)) +
-              ' · ' + m.rondas + (m.rondas === 1 ? ' ronda' : ' rondas') + '</div>' +
+              (sinPedir ? '' : ' · ' + m.rondas +
+                              (m.rondas === 1 ? ' ronda' : ' rondas')) + '</div>' +
+            (m.sesion.abierta_por
+              ? '<div class="abrio">La abrio ' + esc(m.sesion.abierta_por) + '</div>' : '') +
           '</div>' +
-          '<span class="chip ' + (limpiar ? 'limpiar' : (debe ? 'debe' : 'ok')) + '">' +
-            (limpiar ? 'Para limpiar' : (debe ? 'Falta cobrar' : 'Todo pago')) + '</span>' +
+          '<span class="chip ' +
+            (limpiar ? 'limpiar' : (debe ? 'debe' : (sinPedir ? 'espera' : 'ok'))) + '">' +
+            (limpiar ? 'Para limpiar'
+                     : (debe ? 'Falta cobrar' : (sinPedir ? 'Sin pedir' : 'Todo pago'))) +
+          '</span>' +
         '</div>' +
-        '<ul class="rondas">' + rondas + '</ul>' +
-        '<div class="totales">' +
-          '<span class="etq">Total de la mesa' +
-            (m.pagado > 0 && debe ? ' · pago ' + money(m.pagado) : '') + '</span>' +
-          '<span class="num' + (debe ? ' debe' : '') + '">' +
-            money(debe ? m.debe : m.total) + '</span>' +
-        '</div>' +
+        (sinPedir ? '' :
+          '<ul class="rondas">' + rondas + '</ul>' +
+          '<div class="totales">' +
+            '<span class="etq">Total de la mesa' +
+              (m.pagado > 0 && debe ? ' · pago ' + money(m.pagado) : '') + '</span>' +
+            '<span class="num' + (debe ? ' debe' : '') + '">' +
+              money(debe ? m.debe : m.total) + '</span>' +
+          '</div>') +
         '<div class="acciones">' +
           '<button type="button" class="btn btn-primary" data-cerrar="' + m.sesion.id + '">' +
-            (limpiar ? 'Mesa limpia, liberar' : 'Cerrar la mesa') + '</button>' +
-          '<a class="btn btn-secondary" href="cobrar.html">Cobrar con QR</a>' +
+            (limpiar ? 'Mesa limpia, liberar'
+                     : (sinPedir ? 'Se fueron, liberar' : 'Cerrar la mesa')) + '</button>' +
+          /* El QR solo donde hay algo que cobrar: en el resto era un boton de
+             mas, repetido en cada tarjeta. */
+          (debe ? '<a class="btn btn-secondary" href="cobrar.html">Cobrar con QR</a>' : '') +
         '</div>' +
       '</li>';
   }
+
+  /* ------------------------------------------------ sentar y reservar -- */
+  lista.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-sentar], [data-reservar]');
+    if (!b) return;
+    var reservar = b.hasAttribute('data-reservar');
+    var etiqueta = reservar ? b.dataset.reservar : b.dataset.sentar;
+    if (tocando[etiqueta]) return;
+
+    tocando[etiqueta] = true;
+    b.disabled = true;
+    var antes = b.textContent;
+    b.textContent = reservar ? 'Apartando...' : 'Abriendo...';
+
+    var accion = reservar ? LP.reservarMesa(sb, etiqueta, YO)
+                          : LP.abrirMesa(sb, etiqueta, YO);
+
+    accion.then(function (r) {
+      delete tocando[etiqueta];
+      if (!r || !r.ok) {
+        b.disabled = false;
+        b.textContent = antes;
+        /* Que otro la haya abierto primero no es una falla: es el indice de
+           la base impidiendo dos cuentas en la misma mesa. Se dice con todas
+           las letras y se repinta, asi el mozo ve el estado real en lugar de
+           pensar que no anduvo el boton.                                 */
+        LP.toast((r && r.motivo) || 'No pudimos abrir la mesa.', 'err');
+        cargar(true);
+        return;
+      }
+      LP.toast(reservar ? etiqueta + ' queda apartada.'
+                        : etiqueta + ' abierta. Ya puede pedir.', 'ok');
+      cargar(true);
+    });
+  });
+
+  /* --------------------------------------------------------- llegaron -- */
+  lista.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-ocupar]');
+    if (!b) return;
+    var id = b.dataset.ocupar;
+    if (tocando[id]) return;
+
+    tocando[id] = true;
+    b.disabled = true;
+    b.textContent = 'Sentando...';
+
+    LP.estadoDeMesa(sb, id, 'Ocupada').then(function (ok) {
+      delete tocando[id];
+      if (!ok) {
+        b.disabled = false;
+        b.textContent = 'Llegaron';
+        LP.toast('No pudimos sentarlos. Proba de nuevo.', 'err');
+        return;
+      }
+      cargar(true);
+    });
+  });
 
   /* ----------------------------------------------------------- cerrar -- */
   lista.addEventListener('click', function (ev) {
@@ -218,7 +387,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var id = b.dataset.cerrar;
     if (cerrando[id]) return;
 
-    var m = mesas.filter(function (x) { return String(x.sesion.id) === String(id); })[0];
+    var m = cuentaDe(id);
     if (!m) return;
 
     /* Cerrar con saldo pendiente es una decision del local -a veces se cobra
@@ -233,14 +402,15 @@ document.addEventListener('DOMContentLoaded', function () {
     b.disabled = true;
     b.textContent = 'Cerrando...';
 
-    LP.cerrarSesion(sb, id, 'Salon').then(function (hecho) {
+    var textoBoton = b.textContent;
+    LP.cerrarSesion(sb, id, YO).then(function (hecho) {
       delete cerrando[id];
 
       /* La mesa todavia tiene comida en curso. No se cierra a la primera:
          casi siempre es un error, y si no lo es, se confirma y se fuerza. */
       if (hecho && hecho.bloqueado) {
         b.disabled = false;
-        b.textContent = 'Cerrar la mesa';
+        b.textContent = textoBoton;
         var igual = window.confirm(
           m.mesa + ' todavia tiene ' + hecho.enCurso +
           (hecho.enCurso === 1 ? ' pedido sin terminar' : ' pedidos sin terminar') +
@@ -250,7 +420,7 @@ document.addEventListener('DOMContentLoaded', function () {
         cerrando[id] = true;
         b.disabled = true;
         b.textContent = 'Cerrando...';
-        LP.cerrarSesion(sb, id, 'Salon', true).then(function () {
+        LP.cerrarSesion(sb, id, YO, true).then(function () {
           delete cerrando[id];
           LP.toast(m.mesa + ' cerrada.', 'ok');
           cargar(true);
@@ -260,7 +430,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       if (!hecho) {
         b.disabled = false;
-        b.textContent = 'Cerrar la mesa';
+        b.textContent = textoBoton;
         LP.toast('No pudimos cerrarla. Puede que ya la haya cerrado otro.', 'err');
         cargar(true);
         return;
@@ -279,11 +449,14 @@ document.addEventListener('DOMContentLoaded', function () {
       return Promise.resolve();
     }
     enVuelo = true;
-    return LP.mesasAbiertas(sb).then(function (datos) {
+    return LP.planoDelSalon(sb).then(function (datos) {
       enVuelo = false;
       if (datos === null) {
         conn.set(navigator.onLine ? 'retry' : 'off');
         if (!cargado) {
+          /* Ojo con tocar esto: si un error de conexion cayera en el camino
+             normal, la pantalla pintaria las doce mesas libres, que es el
+             peor error posible aca. Por eso planoDelSalon devuelve null. */
           estado.innerHTML = '<div class="estado-vacio"><h3>No pudimos cargar las mesas</h3>' +
             '<p>Revisa la conexion del local.</p></div>';
         } else if (!silencioso) {
@@ -292,7 +465,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
       conn.set(navigator.onLine ? 'live' : 'off');
-      mesas = datos;
+      plano = datos;
       cargado = true;
       pintar();
     });

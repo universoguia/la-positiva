@@ -24,6 +24,7 @@
   var FOTOS_TABLE = CFG.FOTOS_TABLE || 'la_positiva_fotos';
   var AGOTADOS_TABLE = CFG.AGOTADOS_TABLE || 'la_positiva_agotados';
   var SESIONES_TABLE = CFG.SESIONES_TABLE || 'la_positiva_sesiones';
+  var MESAS_TABLE = CFG.MESAS_TABLE || 'la_positiva_mesas';
   var NOTAS_TABLE = CFG.NOTAS_TABLE || 'la_positiva_notas';
   var PERSONAS_TABLE = CFG.PERSONAS_TABLE || 'la_positiva_personas';
   var BUCKET = CFG.BUCKET;
@@ -927,6 +928,127 @@
       });
   }
 
+  /* --- Estado de las mesas ------------------------------------------------
+     Una mesa esta en uno de cuatro estados:
+
+       Libre        no tiene sesion abierta
+       Ocupada      alguien esta sentado (con o sin pedidos todavia)
+       Limpieza     pago todo, falta levantar
+       Reservada    apartada, no sentar a nadie
+
+     Los tres ultimos son una sesion abierta con su columna 'estado'. Libre es
+     la AUSENCIA de sesion, que es lo que permite que "libre" exista sin tener
+     que crear una fila por cada mesa vacia.
+
+     El indice unico parcial de la base (una sola sesion abierta por mesa) es
+     lo que impide que dos personas sienten gente en la misma mesa.        */
+
+  /* Devuelve null si la consulta fallo. Esa diferencia con [] importa: un
+     salon vacio y un salon que no se pudo leer se ven igual en pantalla, y
+     el segundo mostraria las doce mesas libres cuando en realidad estan
+     todas ocupadas.                                                       */
+  function mesasDelLocal(sb) {
+    if (!sb) return Promise.resolve(null);
+    return sb.from(MESAS_TABLE).select('*').eq('activa', true)
+      .order('orden', { ascending: true })
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return null; }
+        return res.data || [];
+      }, function (e) { humanError(e); return null; });
+  }
+
+  /* El plano del salon: cada mesa del catalogo con su estado y, si esta
+     ocupada, su cuenta. Una sola consulta de sesiones y otra de pedidos para
+     todas: pedir una por mesa no aguanta un servicio.                     */
+  function planoDelSalon(sb) {
+    if (!sb) return Promise.resolve(null);
+    return Promise.all([mesasDelLocal(sb), mesasAbiertas(sb)])
+      .then(function (r) {
+        var mesas = r[0];
+        var abiertas = r[1];
+        // Cualquiera de las dos que falle invalida el plano entero.
+        if (mesas === null || abiertas === null) return null;
+
+        var porMesa = {};
+        abiertas.forEach(function (a) { porMesa[a.mesa] = a; });
+
+        return mesas.map(function (m) {
+          // Las sesiones guardan "Mesa 7"; el catalogo guarda "7".
+          var cuenta = porMesa['Mesa ' + m.numero] || porMesa[m.numero] || null;
+          return {
+            mesa: m,
+            etiqueta: 'Mesa ' + m.numero,
+            estado: estadoReal(cuenta),
+            cuenta: cuenta
+          };
+        });
+      });
+  }
+
+  /* La columna 'estado' dice lo que alguien marco; la cuenta dice lo que
+     esta pasando. Cuando se contradicen, manda la cuenta:
+
+       reservada pero ya pidieron  -> estan sentados, es una mesa ocupada
+       para limpiar pero deben     -> volvieron a pedir, todavia no se levanta
+
+     Sin esto, una mesa con gente comiendo podia quedar contada como
+     reservada, o pintada de verde como si estuviera libre para limpiar. */
+  function estadoReal(cuenta) {
+    if (!cuenta) return 'Libre';
+    var marcado = cuenta.sesion.estado || 'Ocupada';
+    if (marcado === 'Reservada' && cuenta.rondas > 0) return 'Ocupada';
+    if (marcado === 'Limpieza' && cuenta.debe > 0) return 'Ocupada';
+    return marcado;
+  }
+
+  /* Sentar gente. Se usa cuando llegan, ANTES de que pidan: hasta ahora la
+     mesa aparecia recien con el primer pedido.                            */
+  function abrirMesa(sb, etiqueta, quien, estado) {
+    if (!sb || !etiqueta) return Promise.resolve({ ok: false, motivo: 'Falta la mesa.' });
+    return buscarAbierta(sb, etiqueta).then(function (ya) {
+      if (ya) {
+        // Otro la abrio primero. No es un error: es el indice haciendo su trabajo.
+        return { ok: false, ocupada: true,
+                 motivo: etiqueta + ' ya esta abierta' +
+                         (ya.abierta_por ? ' (la abrio ' + ya.abierta_por + ')' : '') + '.' };
+      }
+      return sb.from(SESIONES_TABLE)
+        .insert({ mesa: etiqueta, estado: estado || 'Ocupada',
+                  abierta_por: (quien || '').slice(0, 40) || null })
+        .select().single()
+        .then(function (res) {
+          if (res.error) {
+            if (res.error.code === '23505') {
+              return { ok: false, ocupada: true,
+                       motivo: etiqueta + ' la acaba de abrir otra persona.' };
+            }
+            humanError(res.error);
+            return { ok: false, motivo: 'No pudimos abrir la mesa.' };
+          }
+          return { ok: true, sesion: res.data };
+        });
+    });
+  }
+
+  /* Cambia el estado de una mesa abierta (Ocupada / Limpieza / Reservada). */
+  function estadoDeMesa(sb, sesionId, estado) {
+    if (!sb || !sesionId) return Promise.resolve(false);
+    return sb.from(SESIONES_TABLE).update({ estado: estado })
+      .eq('id', sesionId).is('cerrada_en', null)
+      .then(function (res) { return !res.error; }, function () { return false; });
+  }
+
+  /* Reservar una mesa libre: se abre una sesion sin gente todavia. No es un
+     sistema de reservas -no hay hora ni nombre-: es el cartelito de "no
+     sentar aca", que es lo que el mozo necesita en el momento.
+
+     Va en UNA escritura, no insert + update: asi no existe el instante en
+     que la mesa figura ocupada, y lo que se devuelve es lo que quedo en la
+     base y no el valor previo.                                            */
+  function reservarMesa(sb, etiqueta, quien) {
+    return abrirMesa(sb, etiqueta, quien, 'Reservada');
+  }
+
   /* --- Sesiones de mesa ---------------------------------------------------
      Una sesion = una cuenta = muchas rondas. Se abre con el primer pedido de
      la mesa y se cierra cuando paga y se levanta. Sin esto, una mesa que pide
@@ -1480,6 +1602,12 @@
     reponerPlato: reponerPlato,
     agotadosEnElCarrito: agotadosEnElCarrito,
     SESIONES_TABLE: SESIONES_TABLE,
+    MESAS_TABLE: MESAS_TABLE,
+    mesasDelLocal: mesasDelLocal,
+    planoDelSalon: planoDelSalon,
+    abrirMesa: abrirMesa,
+    estadoDeMesa: estadoDeMesa,
+    reservarMesa: reservarMesa,
     NOTAS_TABLE: NOTAS_TABLE,
     PERSONAS_TABLE: PERSONAS_TABLE,
     personas: personas,
