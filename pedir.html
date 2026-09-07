@@ -497,7 +497,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   var params = new URLSearchParams(location.search);
   // La mesa viene de la URL: se limita y se escapa antes de mostrarla.
-  var MESA = (params.get('mesa') || '7').replace(/[^\w\s-]/g, '').slice(0, 12) || '7';
+  /* Sin numero de mesa NO se pide. Antes habia un '7' por defecto: quien
+     abriera el link sin escanear terminaba pidiendo para la mesa de otro, y
+     el plato salia a una mesa equivocada. */
+  var MESA = (params.get('mesa') || '').replace(/[^\w\s-]/g, '').slice(0, 12);
+  var SIN_MESA = !MESA;
 
   /* Fotos que cargo el local desde el celular. Arranca vacio a proposito: la
      carta se pinta enseguida con las que ya vienen en menu-data.js y no espera
@@ -547,7 +551,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return claveEnvio;
   }
-  document.getElementById('mesaPill').textContent = 'Mesa ' + MESA;
+  document.getElementById('mesaPill').textContent = SIN_MESA ? 'Sin mesa' : ('Mesa ' + MESA);
 
   var CATS = [];
   for (var i = 0; i < MENU.length; i++) {
@@ -930,6 +934,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function validateCheckout() {
     document.getElementById('formErr').textContent = '';
+    /* Sin numero de mesa el pedido no puede salir: no habria a donde llevarlo.
+       Se frena aca, que es por donde pasan todos los caminos al envio. */
+    if (SIN_MESA) {
+      document.getElementById('formErr').textContent =
+        'No sabemos en que mesa estas. Escanea el codigo QR de tu mesa, ' +
+        'o pedile el pedido a un mozo.';
+      return false;
+    }
     if (!cartCount()) {
       document.getElementById('formErr').textContent = 'Tu pedido esta vacio.';
       return false;

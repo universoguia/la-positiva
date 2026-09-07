@@ -845,8 +845,34 @@
      avisaba y cobrar.html no. El mismo hecho -confirmar un pago- notificaba
      o no segun desde donde se hiciera, y el mozo que cobraba con el QR en el
      salon dejaba a Jonathan sin enterarse.                               */
+  /* Cuando se cobra el ultimo pedido impago de la mesa, la cuenta pasa sola
+     a 'Limpieza'. Antes cobrar no tocaba la sesion: la mesa seguia figurando
+     abierta hasta que alguien entraba a mano a mesas.html, asi que una mesa ya
+     pagada se veia igual que una comiendo y se perdia rotacion.
+
+     No cierra la sesion: cerrar es decir "la mesa esta libre", y eso lo sabe
+     quien la levanta, no la caja.                                        */
+  function liberarSiPagado(sb, pedido) {
+    if (!sb || !pedido || !pedido.sesion_id) return Promise.resolve(false);
+
+    return sb.from(TABLE).select('id', { count: 'exact', head: true })
+      .eq('sesion_id', pedido.sesion_id)
+      .eq('pagado', false)
+      .not('estado', 'in', '("Rechazado")')
+      .then(function (res) {
+        if (res.error || (res.count || 0) > 0) return false;   // todavia deben
+        return sb.from(SESIONES_TABLE)
+          .update({ estado: 'Limpieza' })
+          .eq('id', pedido.sesion_id).is('cerrada_en', null)
+          .then(function (up) { return !up.error; }, function () { return false; });
+      }, function () { return false; });
+  }
+
   function avisarPago(sb, pedido) {
     if (!pedido) return Promise.resolve({ ok: false, motivo: 'Sin pedido.' });
+
+    // Sin bloquear el aviso: que falle la liberacion no puede frenar el cobro.
+    liberarSiPagado(sb, pedido);
     var cuerpo = pedido.mesa + ' pago ' + money(pedido.total) + '. Ya podes seguir.';
 
     avisarWhatsapp(sb, {
@@ -1407,6 +1433,7 @@
     AVISOS: AVISOS,
     avisarEstado: avisarEstado,
     avisarPago: avisarPago,
+    liberarSiPagado: liberarSiPagado,
     cambiarEstado: cambiarEstado,
     aprobarPedido: aprobarPedido,
     rechazarPedido: rechazarPedido,

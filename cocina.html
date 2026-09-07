@@ -93,6 +93,18 @@
   .kcard-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
   .kmesa{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:22px;line-height:1.15}
   .kmeta{color:var(--muted);font-size:14px;margin-top:3px}
+  /* Lo que el comensal aviso de palabra. Va con el color de atencion y no
+     junto al resto del texto: si se lee igual que los ingredientes, no se
+     lee. Puede decir "alergia al mani". */
+  .kojo{
+    margin:9px 0 0;padding:9px 12px;border-radius:var(--r-sm);
+    background:var(--warn-bg);color:var(--warn);
+    font-size:15px;line-height:1.4;font-weight:500;
+  }
+  .kojo b{
+    display:block;font-size:11px;letter-spacing:.07em;text-transform:uppercase;
+    font-weight:700;margin-bottom:2px;
+  }
   .kmeta.urgent{color:var(--err-ink);font-weight:600}
   .kpay{font-size:13px;color:var(--muted-strong);margin-top:5px;text-align:right}
   .klines{
@@ -331,7 +343,9 @@ document.addEventListener('DOMContentLoaded', function () {
   var STEPS = ['En cocina', 'Cocinando', 'Listo', 'Entregado'];
   var TAB_LABEL = { 'En cocina': 'Comandas', Cocinando: 'Cocinando',
                     Listo: 'Listos', Entregado: 'Entregados' };
-  var NEXT = { 'En cocina': 'Cocinando', Cocinando: 'Listo', Listo: 'Entregado' };
+  /* La cadena termina en 'Listo' para la cocina: entregar es del mozo, que
+     es quien camina hasta la mesa. */
+  var NEXT = { 'En cocina': 'Cocinando', Cocinando: 'Listo' };
   // Un solo boton para "la recibimos Y la estamos haciendo", como se pidio.
   var NEXT_LABEL = { 'En cocina': 'Recibido y cocinando', Cocinando: 'Marcar listo',
                      Listo: 'Marcar entregado' };
@@ -421,6 +435,9 @@ document.addEventListener('DOMContentLoaded', function () {
           '<div class="kpay">' + esc(pago) + '</div>' +
         '</div>' +
       '</div>' +
+      (o.detalle_comensal
+        ? '<p class="kojo"><b>Ojo</b>' + esc(o.detalle_comensal) + '</p>'
+        : '') +
       '<div class="klines">' + lines + '</div>' +
       '<div class="ktotal">' + money(o.total) + '</div>' +
       '<p class="kerr" role="alert" data-err="' + esc(o.id) + '"></p>' +
@@ -428,7 +445,8 @@ document.addEventListener('DOMContentLoaded', function () {
         ? '<button type="button" class="btn btn-primary btn-block" data-adv="' + esc(o.id) + '" ' +
             'data-next="' + esc(next) + '"' + (busy ? ' disabled' : '') + '>' +
             (busy ? 'Guardando...' : esc(NEXT_LABEL[o.estado])) + '</button>'
-        : '<button type="button" class="btn btn-block" disabled>Completado</button>');
+        : '<button type="button" class="btn btn-block" disabled>' +
+          (o.estado === 'Listo' ? 'Esperando al mozo' : 'Completado') + '</button>');
   }
 
   /* ------------------------------------------------- render con diffing -- */

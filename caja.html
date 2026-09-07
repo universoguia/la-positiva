@@ -443,7 +443,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (inFlight) return Promise.resolve();
     if (!sb) { showFatal(); return Promise.resolve(); }
     inFlight = true;
-    return sb.from(LP.TABLE).select('*')
+    /* Lo rechazado no se cobra: el mozo lo freno antes de que existiera. */
+    return sb.from(LP.TABLE).select('*').neq('estado', 'Rechazado')
       .order('created_at', { ascending: false }).limit(60)
       .then(function (res) {
         inFlight = false;

@@ -40,6 +40,10 @@
     border-radius:var(--r-lg);padding:16px 18px 18px;
   }
   .mesa.debe{border-color:#e0bc7a}
+  /* La que ya pago y falta levantar: es la unica que se puede volver a vender,
+     asi que se ve distinta de las que estan comiendo. */
+  .mesa.limpiar{border-color:var(--ok);background:var(--ok-soft)}
+  .chip.limpiar{background:var(--ok-bg);color:var(--ok);border:1px solid #bfe0ce}
   .mesa-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
   .mesa-top h2{margin:0;font-size:23px}
   .mesa-top .desde{font-size:13px;color:var(--muted);margin-top:2px}
@@ -165,6 +169,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function mesaHTML(m) {
     var debe = m.debe > 0;
+    // Pago todo y falta levantar: es la mesa que hay que ir a limpiar YA,
+    // porque es la unica que se puede volver a vender.
+    var limpiar = !debe && m.sesion.estado === 'Limpieza';
     var rondas = m.pedidos.map(function (p, i) {
       var items = (p.lines || []).map(function (l) {
         return l.qty + '× ' + l.name;
@@ -178,15 +185,16 @@ document.addEventListener('DOMContentLoaded', function () {
         '</li>';
     }).join('');
 
-    return '<li class="mesa' + (debe ? ' debe' : '') + '" data-sesion="' + m.sesion.id + '">' +
+    return '<li class="mesa' + (limpiar ? ' limpiar' : (debe ? ' debe' : '')) +
+      '" data-sesion="' + m.sesion.id + '">' +
         '<div class="mesa-top">' +
           '<div>' +
             '<h2>' + esc(m.mesa) + '</h2>' +
             '<div class="desde">Abierta ' + esc(LP.timeAgo(m.sesion.abierta_en)) +
               ' · ' + m.rondas + (m.rondas === 1 ? ' ronda' : ' rondas') + '</div>' +
           '</div>' +
-          '<span class="chip ' + (debe ? 'debe' : 'ok') + '">' +
-            (debe ? 'Falta cobrar' : 'Todo pago') + '</span>' +
+          '<span class="chip ' + (limpiar ? 'limpiar' : (debe ? 'debe' : 'ok')) + '">' +
+            (limpiar ? 'Para limpiar' : (debe ? 'Falta cobrar' : 'Todo pago')) + '</span>' +
         '</div>' +
         '<ul class="rondas">' + rondas + '</ul>' +
         '<div class="totales">' +
@@ -197,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function () {
         '</div>' +
         '<div class="acciones">' +
           '<button type="button" class="btn btn-primary" data-cerrar="' + m.sesion.id + '">' +
-            'Cerrar la mesa</button>' +
+            (limpiar ? 'Mesa limpia, liberar' : 'Cerrar la mesa') + '</button>' +
           '<a class="btn btn-secondary" href="cobrar.html">Cobrar con QR</a>' +
         '</div>' +
       '</li>';
