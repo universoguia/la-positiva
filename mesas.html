@@ -17,16 +17,6 @@
 <style>
   .wrap{max-width:760px;padding-top:calc(18px + var(--sa-t));padding-bottom:40px}
 
-  /* Cuatro cifras. En el celular, dos por fila: con flex la cuarta quedaba
-     sola abajo y el ojo la perdia. */
-  .resumen{
-    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px;
-    margin:0 0 16px;padding:13px 17px;background:var(--card);
-    border:1px solid var(--border);border-radius:var(--r-md);
-  }
-  @media (min-width:520px){.resumen{grid-template-columns:repeat(4,minmax(0,1fr))}}
-  .resumen div span{display:block;font-size:13px;color:var(--muted)}
-  .resumen div b{font-size:22px;color:var(--ink)}
 
   /* ------------------------------------------------------- las plantas -- */
   .plantas{display:flex;gap:8px;margin-bottom:12px}
@@ -231,18 +221,18 @@
     </div>
   </header>
 
-  <div class="resumen" id="resumen" hidden>
-    <div><span>Libres</span><b id="rLibres">0</b></div>
-    <div><span>Ocupadas</span><b id="rOcupadas">0</b></div>
-    <div><span>Para limpiar</span><b id="rLimpiar">0</b></div>
-    <div><span>Falta cobrar</span><b id="rDebe">$0</b></div>
+  <div class="cifras" id="resumen" hidden>
+    <div class="cifra"><span>Libres</span><b id="rLibres">0</b></div>
+    <div class="cifra"><span>Ocupadas</span><b id="rOcupadas">0</b></div>
+    <div class="cifra"><span>Para limpiar</span><b id="rLimpiar">0</b></div>
+    <div class="cifra" id="cifraDebe"><span>Falta cobrar</span><b id="rDebe">$0</b></div>
   </div>
 
   <div class="plantas" id="plantas" hidden role="group" aria-label="Planta del local"></div>
 
   <div class="plano-caja" id="planoCaja" hidden>
-    <svg class="plano" id="plano" viewBox="-8 -8 116 150" role="img"
-         aria-label="Plano del salon con el estado de cada mesa"></svg>
+    <svg class="plano" id="plano" viewBox="-8 -8 116 150" role="group"
+         aria-label="Plano del sal&oacute;n: cada mesa es un bot&oacute;n"></svg>
     <div class="leyenda">
       <span><i class="l-libre"></i>Libre</span>
       <span><i class="l-ocupada"></i>Ocupada</span>
@@ -471,6 +461,8 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('rOcupadas').textContent = ocupadas;
     document.getElementById('rLimpiar').textContent = limpiar;
     document.getElementById('rDebe').textContent = money(debe);
+    // Con deuda, la cifra se pone ambar, igual que el total de la hoja.
+    document.getElementById('cifraDebe').className = 'cifra' + (debe > 0 ? ' alerta' : '');
 
     pintarPlantas();
     pintarPlano();
@@ -700,15 +692,17 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   /* --------------------------------------------------- sacar: los pasos -- */
+  function vivasDe(pedido) {
+    var v = [];
+    LP.lineasDe(pedido).forEach(function (l, i) { if (!LP.lineaSacada(l)) v.push({ l: l, i: i }); });
+    return v;
+  }
+
   function verQue(pedido) {
     sacando = pedido;
     vista = 'que';
     hojaBack.hidden = false;
-
-    var vivas = [];
-    LP.lineasDe(pedido).forEach(function (l, i) {
-      if (!LP.lineaSacada(l)) vivas.push({ l: l, i: i });
-    });
+    var vivas = vivasDe(pedido);
     // Un solo plato vivo: no tiene sentido preguntar cual.
     if (vivas.length === 1) { verMotivo(vivas[0].i, vivas[0].l); return; }
 
@@ -772,7 +766,10 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   hojaBack.addEventListener('click', function () {
-    if (vista === 'porque' && sacando) { verQue(sacando); return; }
+    /* Con un solo plato vivo, "que sale" se saltea y la flecha tiene que
+       volver a la mesa; si no, rebotaba a "por que sale" y el mozo quedaba
+       encerrado con la X como unica salida. */
+    if (vista === 'porque' && sacando && vivasDe(sacando).length > 1) { verQue(sacando); return; }
     if (mesaAbierta) verMesa(mesaAbierta);
   });
   document.getElementById('hojaX').addEventListener('click', cerrarHoja);

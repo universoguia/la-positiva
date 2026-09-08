@@ -262,7 +262,22 @@ header.top .sub{color:var(--muted);font-size:15px;margin:3px 0 0}
 }
 .back-link:hover{color:var(--ink)}
 /* Cuando va en la cabecera, al lado de los chips, sin el margen de pie. */
-.head-right .back-link{margin-top:0}
+.head-right .back-link{margin-top:0;padding:0 4px}
+
+/* Las cifras de un vistazo (el salon, el encargado): grilla con bordes de
+   1px, dos por fila en el celular y cuatro de 560px en adelante. Estaba en
+   admin.html; mesas.html tenia otra version del mismo bloque. */
+.cifras{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:1px;margin:0 0 16px;
+  background:var(--border);border:1px solid var(--border);
+  border-radius:var(--r-md);overflow:hidden;
+}
+@media (min-width:560px){.cifras{grid-template-columns:repeat(4,1fr)}}
+.cifra{background:var(--card);padding:14px 16px}
+.cifra span{display:block;font-size:12px;color:var(--muted);line-height:1.4}
+.cifra b{font-size:24px;font-variant-numeric:tabular-nums;line-height:1.2}
+.cifra.alerta b{color:var(--warn)}
+.cifra.mal b{color:var(--err-ink)}
 
 /* Fila de acciones al pie de una tarjeta o de una hoja. */
 .acciones{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
@@ -377,11 +392,11 @@ header.top .sub{color:var(--muted);font-size:15px;margin:3px 0 0}
   min-width:152px;
 }
 .conn .dot{width:9px;height:9px;border-radius:50%;flex:none}
-.conn-live{background:var(--ok-soft);color:var(--ok);border-color:#bfe0ce}
+.conn-live{background:var(--ok-soft);color:var(--ok);border-color:var(--ok-border)}
 .conn-live .dot{background:var(--ok);animation:pulse 2.2s infinite}
-.conn-retry{background:var(--warn-soft);color:var(--warn);border-color:#e8d3a8}
+.conn-retry{background:var(--warn-soft);color:var(--warn);border-color:var(--warn-border)}
 .conn-retry .dot{background:var(--warn)}
-.conn-off{background:var(--err-bg);color:var(--err-ink);border-color:#f0cfc9}
+.conn-off{background:var(--err-bg);color:var(--err-ink);border-color:var(--err-border)}
 .conn-off .dot{background:var(--err)}
 @keyframes pulse{
   0%{box-shadow:0 0 0 0 rgba(20,81,54,.5)}

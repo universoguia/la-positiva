@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* Se comprueba contra la base y no solo contra el navegador: el permiso
      dado no significa que el aparato haya quedado registrado. */
-  function repasar() {
+  function repasar(conservar) {
     return LP.estadoPush().then(function (st) {
       if (st === 'no-soportado') {
         boton('No disponible en este celular', true);
@@ -241,7 +241,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
       } else {
         boton('Activar los avisos', false);
-        limpiar();
+        if (!conservar) limpiar();
         pasos(LP.esIOS() ? 'Que va a pasar' : 'Que va a pasar',
           ['Toca el boton de arriba.',
            'El celular te va a preguntar si permitis las notificaciones: deci que si.',
@@ -256,17 +256,17 @@ document.addEventListener('DOMContentLoaded', function () {
     boton('Activando...', true);
     limpiar();
     LP.suscribirPush(sb, ROL).then(function (st) {
-      if (st === 'denegado') {
-        decir('err', 'No diste permiso',
-          CFG.sinPermiso);
-      } else if (st === 'sin-decidir') {
-        decir('warn', 'Quedo sin decidir',
-          'Toca de nuevo el boton y elegi Permitir.');
-      } else if (st === 'no-guardado') {
-        decir('err', 'No pudimos registrarlo',
-          'El celular quedo listo, pero no se anoto en el sistema. Proba de nuevo.');
+      /* 'denegado' y 'no-guardado' los pinta mejor repasar() (con la guia de
+         desbloqueo y "falta registrar este celular"). Los dos que repasar()
+         no sabe ver son estos: */
+      if (st === 'sin-decidir') {
+        decir('warn', 'Qued\u00f3 sin decidir',
+          'Toc\u00e1 de nuevo el bot\u00f3n y eleg\u00ed Permitir.');
+      } else if (st === 'error') {
+        decir('err', 'No pudimos activarlos',
+          LP.humanError(null, 'Prob\u00e1 de nuevo en un momento.'));
       }
-      repasar();
+      repasar(st === 'sin-decidir' || st === 'error');
     });
   });
 

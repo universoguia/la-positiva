@@ -197,7 +197,7 @@
       live:       { cls: 'conn-live',  txt: 'En vivo' },
       connecting: { cls: 'conn-retry', txt: 'Conectando...' },
       retry:      { cls: 'conn-retry', txt: 'Reconectando...' },
-      off:        { cls: 'conn-off',   txt: 'Sin conexion' }
+      off:        { cls: 'conn-off',   txt: 'Sin conexi\u00f3n' }
     };
     var m = map[state] || map.off;
     this.el.className = 'conn ' + m.cls;
@@ -467,7 +467,7 @@
   function avisar(sb, empleado, title, body, pedidoId, url, insistir) {
     if (!sb) {
       return Promise.resolve({ ok: false, config: false, codigo: 'sin-cliente',
-        motivo: 'No hay conexion con el sistema.' });
+        motivo: 'No hay conexi\u00f3n con el sistema.' });
     }
     return sb.functions.invoke('notify-empleado', {
       body: {
@@ -563,7 +563,7 @@
   }
 
   function agregarWhatsapp(sb, rol, telefono, nombre) {
-    if (!sb) return Promise.resolve({ ok: false, motivo: 'No hay conexion con el sistema.' });
+    if (!sb) return Promise.resolve({ ok: false, motivo: 'No hay conexi\u00f3n con el sistema.' });
     var tel = normalizarTelefono(telefono);
     if (!tel) {
       return Promise.resolve({
@@ -605,7 +605,7 @@
   function avisarWhatsapp(sb, opts) {
     if (!sb) {
       return Promise.resolve({ ok: false, codigo: 'sin-cliente',
-        motivo: 'No hay conexion con el sistema.' });
+        motivo: 'No hay conexi\u00f3n con el sistema.' });
     }
     return sb.functions.invoke('notify-whatsapp', { body: opts }).then(function (res) {
       var delServidor = (res.data && res.data.error) || null;
@@ -735,18 +735,18 @@
      persona busca "los pagos", no "caja.html".                          */
   var FUNCIONES_POR_ROL = {
     Duenio: [
-      { url: 'admin.html',       texto: 'Como viene el salon' },
-      { url: 'mesas.html',       texto: 'El salon y las cuentas' },
+      { url: 'admin.html',       texto: 'C\u00f3mo viene el sal\u00f3n' },
+      { url: 'mesas.html',       texto: 'El sal\u00f3n y las cuentas' },
       { url: 'mozo.html',        texto: 'Los pedidos de las mesas' },
-      { url: 'cocina.html',      texto: 'Las comandas de la cocina' },
+      { url: 'cocina.html',      texto: 'Las comandas' },
       { url: 'caja.html',        texto: 'Los pagos' },
       { url: 'cobrar.html',      texto: 'Mostrar el QR de cobro' },
-      { url: 'carta-fotos.html', texto: 'La carta y lo que se termino' },
+      { url: 'carta-fotos.html', texto: 'La carta y lo que se termin\u00f3' },
       { url: 'qr-mesa.html',     texto: 'Los QR de las mesas' }
     ],
     Mozo: [
       { url: 'mozo.html',  texto: 'Los pedidos de las mesas' },
-      { url: 'mesas.html', texto: 'El salon y las cuentas' }
+      { url: 'mesas.html', texto: 'El sal\u00f3n y las cuentas' }
     ],
     Caja: [
       { url: 'caja.html',   texto: 'Los pagos' },
@@ -757,7 +757,7 @@
       /* Va a la carta entera y NO al filtro de agotados: si preseleccionara
          "solo los que se terminaron", el cocinero caeria en una lista vacia
          justo cuando todavia no marco nada, que es siempre la primera vez. */
-      { url: 'carta-fotos.html', texto: 'Marcar lo que se termino' }
+      { url: 'carta-fotos.html', texto: 'Marcar lo que se termin\u00f3' }
     ]
   };
 
@@ -929,7 +929,7 @@
      Devuelve { ok, pedido, sacoTodo, devolver } o { ok:false, motivo }.  */
   function sacarPlato(sb, pedido, indice, motivo, quien) {
     if (!sb || !pedido) {
-      return Promise.resolve({ ok: false, motivo: 'No hay conexion con el sistema.' });
+      return Promise.resolve({ ok: false, motivo: 'No hay conexi\u00f3n con el sistema.' });
     }
     var todas = lineasDe(pedido);
     // 'indice' puede ser uno solo o varios: sacar la ronda entera es lo mismo
@@ -1014,7 +1014,7 @@
      linea (`era`).                                                       */
   function volverAPoner(sb, pedido, indice, quien) {
     if (!sb || !pedido) {
-      return Promise.resolve({ ok: false, motivo: 'No hay conexion con el sistema.' });
+      return Promise.resolve({ ok: false, motivo: 'No hay conexi\u00f3n con el sistema.' });
     }
     var todas = lineasDe(pedido);
     var linea = todas[indice];
@@ -1173,7 +1173,7 @@
      ninguna transicion quede sin su notificacion.                        */
   function cambiarEstado(sb, id, nuevo, campos, esperado) {
     if (!sb || !id) {
-      return Promise.resolve({ ok: false, motivo: 'No hay conexion con el sistema.' });
+      return Promise.resolve({ ok: false, motivo: 'No hay conexi\u00f3n con el sistema.' });
     }
     var parche = { estado: nuevo, updated_at: new Date().toISOString() };
     for (var k in (campos || {})) {
@@ -1814,7 +1814,7 @@
      Resuelve { ok, motivo, url }.                                         */
   function subirFotoPlato(sb, platoId, file, quien) {
     if (!sb) {
-      return Promise.resolve({ ok: false, motivo: 'No hay conexion con el sistema.' });
+      return Promise.resolve({ ok: false, motivo: 'No hay conexi\u00f3n con el sistema.' });
     }
     if (!file || !/^image\//.test(file.type || '')) {
       return Promise.resolve({ ok: false, motivo: 'Eso no parece una imagen.' });

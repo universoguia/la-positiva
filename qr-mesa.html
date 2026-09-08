@@ -111,12 +111,14 @@
     <div class="aviso" id="avisoLocal" hidden></div>
 
     <div class="controles">
-      <button type="button" class="btn btn-primary" id="imprimir">Imprimir todas</button>
-      <span class="cuantas" id="cuantas">Generando los c&oacute;digos...</span>
+      <button type="button" class="btn btn-primary" id="imprimir" disabled>Imprimir todas</button>
+      <span class="cuantas" id="cuantas" role="status" aria-live="polite"></span>
     </div>
   </div>
 
-  <div class="piezas" id="piezas"></div>
+  <div class="piezas" id="piezas">
+    <div class="state"><div class="spinner"></div><p>Buscando las mesas del local...</p></div>
+  </div>
 
   <div class="destino no-imprimir" id="destino"></div>
 
@@ -138,6 +140,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var caja = document.getElementById('piezas');
   var cuantas = document.getElementById('cuantas');
   var cajaDestino = document.getElementById('destino');
+  var btnImprimir = document.getElementById('imprimir');
   var avisoLocal = document.getElementById('avisoLocal');
 
   /* La URL se arma contra el origen donde esta corriendo ESTA pagina. Es a
@@ -199,7 +202,7 @@ document.addEventListener('DOMContentLoaded', function () {
           '<h2>La Positiva</h2>' +
           '<p class="mesa">' + esc(etiqueta) + '</p>' +
           '<div class="codigo">' + codigo + '</div>' +
-          '<p class="pedi">Escanea para ver la carta y pedir</p>' +
+          '<p class="pedi">Escane\u00e1 para ver la carta y pedir</p>' +
           '<p class="chico">Desde tu celular, sin instalar nada.</p>' +
         '</div>' +
         '<button type="button" class="sola no-imprimir" data-sola="' + esc(numero) + '">' +
@@ -209,12 +212,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function pintar(numeros) {
     if (!numeros.length) {
-      caja.innerHTML = '';
+      btnImprimir.disabled = true;
+      caja.innerHTML = '<div class="state"><h2>No hay mesas cargadas</h2>' +
+        '<p>Todav\u00eda no est\u00e1n cargadas las mesas del local, as\u00ed que no hay c\u00f3digos que generar.</p></div>';
       cuantas.textContent = '';
-      cajaDestino.innerHTML = '<b>No hay mesas cargadas</b>' +
-        'Todavia no estan cargadas las mesas del local, asi que no hay codigos que generar.';
+      cajaDestino.hidden = true;
       return;
     }
+    btnImprimir.disabled = false;
+    cajaDestino.hidden = false;
     caja.innerHTML = numeros.map(piezaHTML).join('');
     cuantas.textContent = numeros.length === 1
       ? 'Hay 1 mesa cargada'
@@ -250,12 +256,13 @@ document.addEventListener('DOMContentLoaded', function () {
   /* Las mesas salen del catalogo del local, no de un numero tipeado a mano:
      antes se podia imprimir el QR de una mesa que no existe, y ese codigo
      abria una carta que despues no aparecia en ningun panel.             */
-  cuantas.textContent = 'Buscando las mesas del local...';
   LP.mesasDelLocal(sb).then(function (mesas) {
     if (mesas === null) {
+      btnImprimir.disabled = true;
+      caja.innerHTML = '<div class="state state-err"><h2>No pudimos leer las mesas</h2>' +
+        '<p>Revis\u00e1 la conexi\u00f3n del local y volv\u00e9 a entrar.</p></div>';
       cuantas.textContent = '';
-      cajaDestino.innerHTML = '<b>No pudimos leer las mesas</b>' +
-        'Revisa la conexion del local y volve a entrar.';
+      cajaDestino.hidden = true;
       return;
     }
     pintar(mesas.map(function (m) { return String(m.numero); }));

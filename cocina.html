@@ -25,13 +25,17 @@
 
   /* ---------------------------------------------------- tabs (celular) -- */
   .tabs{
-    display:flex;gap:8px;overflow-x:auto;
+    display:flex;gap:8px;
     position:sticky;top:0;z-index:20;
     background:var(--ink);
     padding:10px 0;margin:0 0 12px;
-    scrollbar-width:none;
   }
-  .tabs::-webkit-scrollbar{display:none}
+  /* En el celular las cuatro no entran en una fila (508px en 343): con el
+     scroll escondido nadie descubria "Entregados". Dos por fila. */
+  @media (max-width:559px){
+    .tabs{display:grid;grid-template-columns:1fr 1fr;padding:8px 0}
+    .tab{min-width:0;padding:8px 10px}
+  }
   .tab{
     flex:1 0 auto;min-height:var(--tap);
     display:inline-flex;align-items:center;justify-content:center;gap:7px;
@@ -211,16 +215,15 @@
     .col-head{display:none}
   }
   /* Tablet: scroll horizontal controlado, columnas con ancho minimo util. */
+  /* Tablet vertical: 2x2. Apaisada (el caso de la cocina): las cuatro a la
+     vista. Nunca scroll de costado: antes a 1024px habia que arrastrar 90px
+     para ver "Entregados". */
   @media (min-width:768px){
     .tabs{display:none}
-    .cols{
-      grid-auto-flow:column;
-      grid-auto-columns:minmax(260px,1fr);
-      overflow-x:auto;padding-bottom:8px;
-    }
+    .cols{grid-template-columns:repeat(2,minmax(0,1fr))}
   }
-  @media (min-width:1180px){
-    .cols{grid-auto-flow:row;grid-template-columns:repeat(4,minmax(0,1fr));overflow-x:visible}
+  @media (min-width:1024px){
+    .cols{grid-template-columns:repeat(4,minmax(0,1fr))}
   }
 </style>
 </head>

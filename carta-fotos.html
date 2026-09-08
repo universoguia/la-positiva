@@ -32,9 +32,9 @@
     background:var(--card);color:var(--ink);font-family:inherit;
   }
   .filtros input{flex:1 1 190px;min-width:0}
-  .filtros select{flex:0 1 200px}
+  .filtros select{flex:1 1 140px;min-width:0}
   .filtros input:focus,.filtros select:focus{outline:2px solid var(--accent);outline-offset:1px}
-  .cuenta{font-size:14px;color:var(--muted);flex:none;width:100%}
+  .cuenta{font-size:14px;color:var(--muted);margin:0 0 12px}
 
   /* --------------------------------------------------------- listado --- */
   .platos{list-style:none;margin:0;padding:0;display:grid;gap:12px}
@@ -65,7 +65,7 @@
   .datos{flex:1;min-width:0}
   .datos b{display:block;font-size:16px;color:var(--ink);line-height:1.3}
   .datos .cat{font-size:13px;color:var(--muted);margin-top:2px}
-  .datos
+
   /* El input file real se oculta pero sigue siendo enfocable con teclado. */
   .subir input[type=file]{
     position:absolute;width:1px;height:1px;padding:0;margin:-1px;
@@ -151,8 +151,8 @@
       <option value="sin">Solo los que faltan</option>
       <option value="agotados">Solo los que se terminaron</option>
     </select>
-    <p class="cuenta" id="cuenta"></p>
   </div>
+  <p class="cuenta" id="cuenta"></p>
 
   <ul class="platos" id="lista"></ul>
   <div class="vacio" id="vacio" hidden>No hay platos que coincidan con la busqueda.</div>
@@ -307,7 +307,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     decir(platoId, 'Preparando la foto...', '');
 
-    LP.subirFotoPlato(sb, platoId, file, 'Carta').then(function (r) {
+    LP.subirFotoPlato(sb, platoId, file, YO).then(function (r) {
       if (!r.ok) { decir(platoId, r.motivo, 'err'); return; }
       propias[platoId] = r.url;
       pintar();
@@ -411,7 +411,7 @@ document.addEventListener('DOMContentLoaded', function () {
     b.disabled = true;
     b.textContent = apagar ? 'Apagando...' : 'Prendiendo...';
 
-    var accion = apagar ? LP.agotarPlato(sb, plato, 'Carta')
+    var accion = apagar ? LP.agotarPlato(sb, plato, YO)
                         : LP.reponerPlato(sb, platoId);
 
     accion.then(function (ok) {

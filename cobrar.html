@@ -125,9 +125,17 @@ document.addEventListener('DOMContentLoaded', function () {
     ]).then(function (res) {
       qr = res[0];
       pendientes = res[1];
-      /* Si se abrio desde una mesa y quedo un solo pedido, ya viene elegido:
-         es el caso normal y le saca un paso al mozo. */
-      if (SESION && pendientes.length === 1) elegido = pendientes[0];
+      /* Desde una mesa: si hay mas de una ronda, se arma "Toda la mesa" con la
+         suma, y viene elegida. Con una sola, esa. Le saca un paso al mozo y
+         evita que el cliente pague dos veces con dos QR. */
+      if (SESION && pendientes.length > 1) {
+        var suma = 0;
+        pendientes.forEach(function (p) { suma += LP.cobrable(p); });
+        pendientes.unshift({ id: 'mesa', mesa: pendientes[0].mesa, lines: [], total: suma,
+                             estado: pendientes[0].estado, pagado: false,
+                             _ids: pendientes.map(function (p) { return p.id; }) });
+      }
+      if (SESION && pendientes.length) elegido = pendientes[0];
       pintar();
     });
   }
@@ -151,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var opciones = '<option value="">Cobro sin monto (el cliente lo escribe)</option>' +
       pendientes.map(function (o) {
         return '<option value="' + esc(o.id) + '"' + (elegido && elegido.id === o.id ? ' selected' : '') + '>' +
-          esc(o.mesa) + ' - ' + money(LP.cobrable(o)) + (o.cliente ? ' - ' + esc(o.cliente) : '') + '</option>';
+          (o.id === 'mesa' ? 'Toda la mesa' : esc(o.mesa)) + ' - ' + money(LP.cobrable(o)) + (o.cliente ? ' - ' + esc(o.cliente) : '') + '</option>';
       }).join('');
 
     cont.innerHTML =
@@ -344,7 +352,7 @@ document.addEventListener('DOMContentLoaded', function () {
        y en el medio el mozo puede haber sacado el plato. Filtrar solo la
        consulta que pinta la pantalla no alcanza: hay que filtrar la escritura. */
     sb.from(LP.TABLE).update({ pagado: true, updated_at: new Date().toISOString() })
-      .eq('id', id).eq('pagado', false)
+      .in('id', elegido._ids || [id]).eq('pagado', false)
       .not('estado', 'in', LP.NO_SE_COBRA_SQL)
       .select()
       .then(function (res) {
@@ -358,7 +366,7 @@ document.addEventListener('DOMContentLoaded', function () {
           /* No pego el update. Puede ser que ya estuviera pago (normal) o que
              lo hayan sacado de la cuenta (hay que decirlo fuerte: si no, el
              mozo cree que cobro y el cliente pago algo que no se le sirvio). */
-          sb.from(LP.TABLE).select('estado, pagado').eq('id', id).maybeSingle()
+          sb.from(LP.TABLE).select('estado, pagado').eq('id', (elegido._ids || [id])[0]).maybeSingle()
             .then(function (v) {
               var p = v && v.data;
               if (p && !LP.seCobra(p)) {
@@ -376,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function () {
            avisaba a nadie: cobrar con el QR desde el salon dejaba a Jonathan
            sin enterarse. Solo si el pago se confirmo recien, para no volver
            a avisar cuando ya estaba pago.                                */
-        LP.avisarPago(sb, res.data[0]);
+        res.data.forEach(function (p) { LP.avisarPago(sb, p); });
         elegido = null;
         cargar();
       }, function (e) {

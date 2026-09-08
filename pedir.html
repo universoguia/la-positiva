@@ -147,15 +147,21 @@
   .dish-cat{color:var(--muted-soft);font-size:12px;margin-top:2px}
 
   /* Precio y boton comparten renglon, abajo de todo. */
+  /* Se deja partir en dos renglones: a 320px el contador (124px) mas el precio
+     no entran al lado de la foto y el "+" quedaba cortado por el borde. */
   .dish-foot{
     display:flex;align-items:center;justify-content:space-between;
-    gap:10px;margin-top:auto;padding-top:8px;
+    flex-wrap:wrap;gap:8px 10px;margin-top:auto;padding-top:8px;
   }
   .dish-price{
     color:var(--accent);font-weight:600;font-size:18px;
     font-variant-numeric:tabular-nums;white-space:nowrap;
   }
-  .dish-actions{flex:none}
+  .dish-actions{flex:none;margin-left:auto}
+  @media (max-width:360px){
+    .dish-media{width:88px}
+    .dish-body{padding:10px}
+  }
 
   /* Agotado: se muestra igual, apagado y sin boton. No se esconde a
      proposito: si el plato desaparece, el comensal no sabe si existe y
@@ -1242,8 +1248,14 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function renderStatus(order) {
-    if (lastEstado === order.estado) return;   // no repinta si nada cambio
-    lastEstado = order.estado;
+    /* Se compara una firma del pedido y no solo el estado: sacar un plato o
+       confirmar el pago cambian lines/pagado SIN cambiar el estado, y el
+       comensal se quedaba viendo el total viejo hasta que la cocina moviera
+       la comanda. */
+    var firma = order.estado + '|' + (order.pagado ? 1 : 0) + '|' + LP.cobrable(order) + '|' +
+                LP.lineasDe(order).filter(LP.lineaSacada).length;
+    if (lastEstado === firma) return;
+    lastEstado = firma;
 
     /* Un pedido rechazado no entra en la barra de pasos: antes caia en
        'idx = 0' y el comensal veia "Pedido enviado" con el seguimiento
@@ -1335,16 +1347,20 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!currentOrderId) return;
     fetchOrder(currentOrderId).then(function (o) {
       if (o) { lastEstado = null; showStatus(o); startPolling(); }
-      else { LP.toast('Ese pedido ya no esta disponible.', 'err'); clearActiveOrder(); }
+      else if (o === null) { LP.toast('Ese pedido ya no esta.', 'err'); clearActiveOrder(); }
+      else LP.toast('No pudimos consultar tu pedido. Proba de nuevo.', 'err');
     });
   });
 
+  /* null = el pedido no existe. undefined = no pudimos consultar (sin red,
+     timeout). Antes eran lo mismo, y un corte de wifi de dos segundos borraba
+     el seguimiento de un pedido en marcha con el cartel "ya no esta". */
   function fetchOrder(id) {
-    if (!sb) return Promise.resolve(null);
+    if (!sb) return Promise.resolve(undefined);
     return sb.from(LP.TABLE).select('*').eq('id', id).maybeSingle().then(function (res) {
-      if (res.error) { LP.humanError(res.error); return null; }
+      if (res.error) { LP.humanError(res.error); return undefined; }
       return res.data;
-    }, function (e) { LP.humanError(e); return null; });
+    }, function (e) { LP.humanError(e); return undefined; });
   }
 
   // Encadenado con setTimeout: nunca se solapan dos consultas.
@@ -1487,8 +1503,8 @@ document.addEventListener('DOMContentLoaded', function () {
   try { saved = localStorage.getItem(ORDER_KEY); } catch (e) {}
   if (saved && sb) {
     fetchOrder(saved).then(function (o) {
-      if (o && o.estado !== 'Entregado') { currentOrderId = o.id; updateTrackChip(); }
-      else clearActiveOrder();
+      if (o) { if (o.estado === 'Entregado') clearActiveOrder(); else { currentOrderId = o.id; updateTrackChip(); } }
+      else if (o === null) clearActiveOrder();   // undefined: se deja como esta
     });
   }
 

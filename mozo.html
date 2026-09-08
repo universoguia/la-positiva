@@ -61,12 +61,12 @@
 
   .campo{margin-top:12px}
   .campo label{display:block;font-size:13px;color:var(--muted-strong);margin-bottom:5px}
-  .campo textarea,.campo input{
-    width:100%;min-height:46px;padding:9px 12px;font-size:16px;
+  .campo textarea,.campo input,.nota-alta input{
+    width:100%;min-height:var(--tap);padding:9px 12px;font-size:16px;
     border:1px solid var(--border-strong);border-radius:var(--r-md);
     background:var(--bg);color:var(--ink);font-family:inherit;resize:vertical;
   }
-  .campo textarea:focus,.campo input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .campo textarea:focus,.campo input:focus,.nota-alta input:focus{outline:2px solid var(--accent);outline-offset:1px}
 
   .hs-sub{font-size:14px;color:var(--muted);margin:-6px 0 14px}
   .hs-et{font-size:14px;color:var(--muted-strong);margin:0 0 8px;font-weight:500}
@@ -92,7 +92,7 @@
   .nota b{display:block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
           color:var(--muted-strong);margin-bottom:2px}
   .nota-alta{display:flex;gap:7px;margin-top:8px}
-  .nota-alta input{flex:1;min-width:0}
+  .nota-alta input{flex:1;min-width:0;resize:none}
   .nota-alta button{flex:none;min-height:var(--tap);padding:0 16px;font-size:14px}
 
   .detalle-fijo{
@@ -235,7 +235,24 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   /* ---------------------------------------------------------- pintado -- */
+  /* Si el mozo esta escribiendo en un campo de las tarjetas, repintar le
+     destruye el campo: pierde el foco, salta el cursor y en el celular se le
+     cierra el teclado a mitad de la palabra. Se posterga hasta que suelte. */
+  var renderPendiente = false;
+  function escribiendo() {
+    var a = document.activeElement;
+    return !!(a && a.hasAttribute && a.hasAttribute('data-borrador') &&
+              (elAprobar.contains(a) || elCurso.contains(a)));
+  }
+  document.addEventListener('focusout', function (ev) {
+    if (!ev.target || !ev.target.hasAttribute || !ev.target.hasAttribute('data-borrador')) return;
+    // 300 ms: que el repintado no se coma el toque en "Enviar" que provoco el focusout
+    setTimeout(function () { if (renderPendiente && !escribiendo()) render(); }, 300);
+  });
+
   function render() {
+    if (escribiendo()) { renderPendiente = true; return; }
+    renderPendiente = false;
     var aprobar = pedidos.filter(function (p) { return p.estado === 'Por aprobar'; });
     var curso = pedidos.filter(function (p) { return EN_CURSO.indexOf(p.estado) !== -1; });
 
@@ -352,7 +369,7 @@ document.addEventListener('DOMContentLoaded', function () {
         delete ocupado[id];
         delete borradores['det-' + id];
         if (!r.ok) { b.disabled = false; b.textContent = 'Enviar a cocina';
-                     LP.toast(r.motivo, 'err'); return; }
+                     LP.toast(r.motivo, 'err'); cargar(true); return; }
         LP.toast('Comanda enviada a la cocina.', 'ok');
         cargar(true);
       });
@@ -377,7 +394,7 @@ document.addEventListener('DOMContentLoaded', function () {
       LP.cambiarEstado(sb, idE, 'Entregado', null, 'Listo').then(function (r) {
         delete ocupado[idE];
         if (!r.ok) { b.disabled = false; b.textContent = 'Lo lleve a la mesa';
-                     LP.toast(r.motivo, 'err'); return; }
+                     LP.toast(r.motivo, 'err'); cargar(true); return; }
         cargar(true);
       });
       return;

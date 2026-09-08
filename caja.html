@@ -141,7 +141,7 @@
   <header class="top">
     <div>
       <h1>Caja</h1>
-      <p class="sub">Confirma el pago y avisale a Jonathan sin que tenga que venir a preguntar.</p>
+      <p class="sub">Confirm&aacute; el pago y avisale al encargado sin que tenga que venir a preguntar.</p>
     </div>
     <div class="head-right">
       <a class="soy" href="./" data-quien hidden></a>
@@ -208,6 +208,8 @@
        recorte a 9 ni el limite de 60 de la lista comun: si no, la unica
        ficha que dice "hay que devolver plata" se hunde abajo de los pagos
        de la noche y nadie la ve nunca. -->
+  <div id="boardState"></div>
+
   <section class="section" id="devoluciones" aria-labelledby="h-dev" hidden>
     <div class="section-head">
       <h2 id="h-dev">Hay que devolver</h2>
@@ -234,7 +236,6 @@
 
 
 
-  <div id="boardState"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
@@ -320,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
       foot = '<button type="button" class="btn btn-primary btn-block" data-pay="' + esc(o.id) + '"' +
         (busy ? ' disabled' : '') + '>' +
-        (busy ? 'Confirmando...' : 'Confirmar pago y avisar a Jonathan') + '</button>' +
+        (busy ? 'Confirmando...' : 'Confirmar pago y avisar al encargado') + '</button>' +
         '<p class="pnote warn" data-err="' + esc(o.id) + '" role="alert"></p>';
     }
 
@@ -464,18 +465,18 @@ document.addEventListener('DOMContentLoaded', function () {
        servidor, no leyendo el mensaje.                                    */
     LP.avisarPago(sb, o).then(function (r) {
       if (r.ok) {
-        done('ok', isRetry ? 'Aviso enviado a Jonathan.'
-                           : 'Pago confirmado y aviso enviado a Jonathan.', 'ok');
+        done('ok', isRetry ? 'Aviso enviado al encargado.'
+                           : 'Pago confirmado y aviso enviado al encargado.', 'ok');
         return;
       }
       if (r.codigo === 'sin-config') {
         done('fail', 'Pago confirmado. Los avisos estan sin configurar en el servidor: ' +
                      'avisale a quien administra el sistema.', 'err');
       } else if (r.codigo === 'clave-no-coincide') {
-        done('fail', 'Pago confirmado. Jonathan tiene que volver a activar los avisos ' +
+        done('fail', 'Pago confirmado. El encargado tiene que volver a activar los avisos ' +
                      'en su celular: las claves cambiaron.', 'err');
       } else if (r.codigo === 'sin-destinos') {
-        done('fail', 'Pago confirmado. Jonathan todavia no activo las notificaciones ' +
+        done('fail', 'Pago confirmado. El encargado todav\u00eda no activ\u00f3 las notificaciones ' +
                      'en ningun celular.', 'err');
       } else {
         done('fail', isRetry
@@ -529,6 +530,7 @@ document.addEventListener('DOMContentLoaded', function () {
     ]).then(function (res) {
         inFlight = false;
         if (res[0].error) { showError(res[0].error, quiet); return; }
+        ocultarListas(false);
         orders = res[0].data || [];
         devoluciones = res[1].filter(function (o) {
           return LP.pendienteDeDevolver(o) > 0;
@@ -539,15 +541,22 @@ document.addEventListener('DOMContentLoaded', function () {
       }, function (e) { inFlight = false; showError(e, quiet); });
   }
 
+  /* Sin datos no hay listas que mostrar: si no, el mensaje de error quedaba
+     debajo de dos esqueletos grises que nunca se borraban. */
+  function ocultarListas(v) {
+    ['pendientes', 'pagados'].forEach(function (id) { document.getElementById(id).hidden = v; });
+  }
+
   function showError(err, quiet) {
     LP.humanError(err);
     if (loaded) {
       if (!quiet) LP.toast('No pudimos actualizar la lista. Seguimos intentando.', 'err');
       return;
     }
+    ocultarListas(true);   // sin datos no hay listas: si no, el error quedaba debajo de dos esqueletos
     elState.innerHTML =
       '<div class="state state-err"><h3>No pudimos cargar los pedidos</h3>' +
-      '<p>Revisa la conexion.</p>' +
+      '<p>Revisá la conexión.</p>' +
       '<button type="button" class="btn btn-primary" id="retryBtn">Reintentar</button></div>';
     document.getElementById('retryBtn').addEventListener('click', function () {
       elState.innerHTML = '<div class="state"><div class="spinner"></div><p>Cargando...</p></div>';
@@ -567,6 +576,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function showFatal() {
+    ocultarListas(true);
     elState.innerHTML = '<div class="state state-err"><h3>Sin conexion con el sistema</h3>' +
       '<p>No se pudo cargar la libreria de datos.</p></div>';
   }
@@ -702,7 +712,11 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   function cargarQR() {
-    if (!sb) { elQrEstado.innerHTML = ''; pintarLink(null, null); return; }
+    if (!sb) {
+      pintarQR(null); pintarLink(null, null);
+      elQrFile.disabled = true; elQrLabel.setAttribute('aria-disabled', 'true');
+      return;
+    }
     LP.qrActivo(sb).then(function (qr) { pintarQR(qr); pintarLink(qr, null); });
   }
 
