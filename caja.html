@@ -228,7 +228,7 @@
 
   <section class="section" id="pagados" aria-labelledby="h-pag">
     <div class="section-head">
-      <h2 id="h-pag">Pagados</h2>
+      <h2 id="h-pag">&Uacute;ltimos pagados</h2>
       <span class="n" data-count="pag">0</span>
     </div>
     <div class="cards" data-body="pag"></div>
@@ -266,7 +266,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* -------------------------------------------------------- tarjetas -- */
   function signature(o) {
-    return [o.id, o.pagado, o.updated_at, pending[o.id] ? 1 : 0,
+    return [o.id, o.pagado, o.updated_at, LP.timeAgo(o.created_at), pending[o.id] ? 1 : 0,
             notifying[o.id] ? 1 : 0, notifyState[o.id] || '',
             LP.pendienteDeDevolver(o), devolviendo[o.id] ? 1 : 0].join('|');
   }
@@ -344,17 +344,18 @@ document.addEventListener('DOMContentLoaded', function () {
   /* -------------------------------------------- render sin pisar el DOM -- */
   function render() {
     var pend = orders.filter(function (o) { return !o.pagado; });
-    var pag = orders.filter(function (o) { return o.pagado; }).slice(0, VISIBLES_PAGADOS);
+    var todosPag = orders.filter(function (o) { return o.pagado; });
+    var pag = todosPag.slice(0, VISIBLES_PAGADOS);
     // Sin recorte: las devoluciones son pocas y ninguna se puede perder.
     document.getElementById('devoluciones').hidden = !devoluciones.length;
     paint('dev', devoluciones, '', 'dev');
     paint('pend', pend, 'No hay pagos pendientes.');
-    paint('pag', pag, 'Todavia no se confirmo ningun pago.');
+    paint('pag', pag, 'Todav\u00eda no se confirm\u00f3 ning\u00fan pago.', null, todosPag.length);
   }
 
-  function paint(key, list, emptyMsg, modo) {
+  function paint(key, list, emptyMsg, modo, total) {
     var body = document.querySelector('[data-body="' + key + '"]');
-    document.querySelector('[data-count="' + key + '"]').textContent = list.length;
+    document.querySelector('[data-count="' + key + '"]').textContent = (total != null) ? total : list.length;
 
     if (!list.length) {
       if (body.dataset.mode !== 'empty') {

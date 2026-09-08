@@ -28,6 +28,7 @@
   }
   .brand{display:flex;align-items:center;justify-content:space-between;gap:12px}
   .brand h1{margin:0;font-size:24px}
+  .mesa-pill.is-warn{background:var(--err);color:#fff}
   .mesa-pill{
     background:var(--ink);color:var(--gold);
     font-size:13px;font-weight:500;padding:6px 12px;
@@ -573,7 +574,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return claveEnvio;
   }
-  document.getElementById('mesaPill').textContent = SIN_MESA ? 'Sin mesa' : ('Mesa ' + MESA);
+  var mesaPill = document.getElementById('mesaPill');
+  mesaPill.textContent = SIN_MESA ? 'Sin mesa' : ('Mesa ' + MESA);
+  mesaPill.classList.toggle('is-warn', SIN_MESA);   // que se vea como aviso, no como una mesa
 
   var CATS = [];
   for (var i = 0; i < MENU.length; i++) {
@@ -884,6 +887,11 @@ document.addEventListener('DOMContentLoaded', function () {
     LP.closeDialog(cartSheet);
     document.getElementById('checkoutTotal').textContent = money(totalAPagar());
     renderPayFields();
+    if (SIN_MESA) {
+      document.getElementById('formErr').textContent =
+        'No sabemos en qu\u00e9 mesa est\u00e1s. Escane\u00e1 el c\u00f3digo QR de tu mesa o pedile a un mozo.';
+      document.getElementById('payBtn').disabled = true;
+    }
     LP.openDialog(checkoutSheet);
   });
 
@@ -975,7 +983,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (SIN_MESA) {
       document.getElementById('formErr').textContent =
         'No sabemos en que mesa estas. Escanea el codigo QR de tu mesa, ' +
-        'o pedile el pedido a un mozo.';
+        'o pedile a un mozo.';
       return false;
     }
     if (!cartCount()) {
@@ -1087,7 +1095,8 @@ document.addEventListener('DOMContentLoaded', function () {
         caja.textContent = 'No podemos tomar el pedido desde el celular. ' +
                            'Llama al mozo y te lo cargamos nosotros.';
         caja.scrollIntoView({ block: 'nearest' });
-        return;                       // el boton queda deshabilitado a proposito
+        btn.textContent = 'Sin conexi\u00f3n con el sistema';   // deshabilitado, pero ya no dice Enviando
+        return;
       }
 
       /* El pedido se suma a la cuenta abierta de la mesa. Si la mesa no tenia

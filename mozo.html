@@ -113,6 +113,7 @@
   .aviso-bloque:last-child{border-bottom:none}
   .aviso-bloque h3{margin:0 0 6px;font-size:18px}
   .aviso-bloque p{margin:0 0 10px;color:var(--muted);font-size:15px;line-height:1.5}
+  .aviso-estado:empty{display:none}
   .aviso-estado{
     padding:10px 13px;border-radius:var(--r-md);font-size:14px;line-height:1.5;
     background:var(--ok-soft);color:var(--ok);border:1px solid var(--ok-border);margin:0 0 10px;
@@ -146,10 +147,10 @@
   </div>
 
   <h2 class="seccion">Para aprobar <span class="n" id="nPorAprobar">0</span></h2>
-  <ul class="lista" id="porAprobar"></ul>
+  <ul class="lista" id="porAprobar"><li class="vacio">Cargando los pedidos...</li></ul>
 
   <h2 class="seccion">En curso <span class="n" id="nEnCurso">0</span></h2>
-  <ul class="lista" id="enCurso"></ul>
+  <ul class="lista" id="enCurso"><li class="vacio">Cargando...</li></ul>
 </div>
 
 <div class="sheet" id="avisosSheet" role="dialog" aria-modal="true" aria-labelledby="avisosTitle" hidden>
@@ -519,7 +520,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function cargar(silencioso) {
     if (enVuelo) { otraPendiente = true; return Promise.resolve(); }
-    if (!sb) return Promise.resolve();
+    if (!sb) {
+      conn.set('off');
+      elAprobar.innerHTML = elCurso.innerHTML = '<li class="vacio">No hay conexi\u00f3n con el sistema.</li>';
+      return Promise.resolve();
+    }
     enVuelo = true;
 
     return sb.from(LP.TABLE).select('*')
@@ -528,8 +533,12 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function (res) {
         enVuelo = false;
         if (res.error) {
+          LP.humanError(res.error);
           conn.set(navigator.onLine ? 'retry' : 'off');
-          if (!silencioso && cargado) LP.toast('No pudimos actualizar.', 'err');
+          if (!cargado) {
+            elAprobar.innerHTML = elCurso.innerHTML =
+              '<li class="vacio">No pudimos traer los pedidos. Revis\u00e1 la conexi\u00f3n, seguimos intentando.</li>';
+          } else if (!silencioso) LP.toast('No pudimos actualizar.', 'err');
           reintentar(silencioso);
           return;
         }

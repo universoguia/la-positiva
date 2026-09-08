@@ -273,8 +273,12 @@ document.addEventListener('DOMContentLoaded', function () {
         .in('estado', ['Por aprobar', 'En cocina', 'Cocinando', 'Listo'])
     ]).then(function (res) {
       enVuelo = false;
+      var mesas = res[0], ped = res[1];
+      // Con error, se dejan los numeros anteriores y el cartel dice la verdad:
+      // antes un salon lleno se pintaba vacio y en verde.
+      if (mesas === null || !ped || ped.error) { conn.set(navigator.onLine ? 'retry' : 'off'); return; }
       conn.set(navigator.onLine ? 'live' : 'off');
-      pintarSalon(res[0] || [], (res[1] && res[1].data) || []);
+      pintarSalon(mesas, ped.data || []);
     }, function () {
       enVuelo = false;
       conn.set(navigator.onLine ? 'retry' : 'off');
@@ -282,8 +286,9 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   if (!sb) {
-    document.getElementById('roles').innerHTML =
-      '<p class="cargando">No hay conexión con el sistema.</p>';
+    conn.set('off');
+    document.getElementById('roles').innerHTML = '<p class="cargando">No hay conexi\u00f3n con el sistema.</p>';
+    var dem = document.getElementById('demorados'); if (dem) dem.hidden = true;
     return;
   }
 
@@ -301,8 +306,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   LP.onCleanup(function () { try { sb.removeChannel(canal); } catch (e) {} });
 
+  // Al volver de alta.html (a veces desde la cache del celular, sin recargar)
+  // la fila de avisos tiene que volver a contar.
+  window.addEventListener('pageshow', function (e) { if (e.persisted) { cargar(); pintarRoles(); } });
   document.addEventListener('visibilitychange', function () {
-    if (!document.hidden) cargar();
+    if (!document.hidden) cargar(); pintarRoles();
   });
   // Los minutos de demora corren aunque no cambie nada en la base.
   setInterval(function () { if (!document.hidden) cargar(); }, 30000);
@@ -323,7 +331,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!sb) { input.disabled = true; btn.disabled = true; return; }
 
   LP.ajustes(sb).then(function (m) {
-    var n = Math.round(Number(m.cubierto_por_mesa));
+    var n = Number(String(m.cubierto_por_mesa || '').replace(/[^0-9]/g, ''));   // igual que importeCubierto
     input.value = isFinite(n) && n > 0 ? String(n) : '0';
   });
 

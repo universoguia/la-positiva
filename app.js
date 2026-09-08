@@ -2034,9 +2034,10 @@
       .eq('activo', true).order('created_at', { ascending: false })
       .limit(1).maybeSingle()
       .then(function (res) {
-        if (res.error) { humanError(res.error); return null; }
+        // false = no pudimos consultar. null = no hay QR. No es lo mismo.
+        if (res.error) { humanError(res.error); return false; }
         return res.data;
-      }, function (e) { humanError(e); return null; });
+      }, function (e) { humanError(e); return false; });
   }
 
   function subirQR(sb, file, etiqueta, quien) {
