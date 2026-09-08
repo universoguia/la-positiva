@@ -16,9 +16,6 @@
 <link rel="stylesheet" href="styles.css">
 <style>
   /* Colores propios de la cabecera (el resto viene de styles.css). */
-  header.top h1{color:#fff}
-  header.top .sub{color:var(--dark-muted)}
-  body{background:var(--ink)}
   .wrap{max-width:820px;padding-top:calc(18px + var(--sa-t))}
 
   #avisosBtn.on{border-color:var(--gold);color:var(--gold);background:var(--dark-card-hover)}
@@ -115,6 +112,7 @@
   .aviso-bloque h3{margin:0 0 6px;font-size:18px}
   .aviso-bloque p{margin:0 0 10px;color:var(--muted);font-size:15px;line-height:1.5}
   .aviso-estado:empty{display:none}
+  .aviso-estado.destinos{margin-top:10px}
   .aviso-estado{
     padding:10px 13px;border-radius:var(--r-md);font-size:14px;line-height:1.5;
     background:var(--ok-soft);color:var(--ok);border:1px solid var(--ok-border);margin:0 0 10px;
@@ -165,15 +163,14 @@
       <p>Suena cada vez que una mesa pide algo o la cocina responde.</p>
       <p class="aviso-estado" id="sonidoEstado"></p>
       <button type="button" class="btn btn-primary btn-block" id="sonidoBtn">Activar sonido</button>
-      <button type="button" class="btn btn-secondary btn-block" id="sonidoProbar"
-              style="margin-top:8px" hidden>Probar el sonido</button>
+      <button type="button" class="btn btn-secondary btn-block" id="sonidoProbar" hidden>Probar el sonido</button>
     </section>
     <section class="aviso-bloque">
       <h3>Avisos al celular</h3>
       <p>Llegan aunque tengas el panel cerrado. Es lo que te avisa mientras andas por el salon.</p>
       <p class="aviso-estado" id="pushEstado"></p>
       <button type="button" class="btn btn-primary btn-block" id="pushBtn" disabled>Comprobando...</button>
-      <p class="aviso-estado" id="pushDestinos" style="margin-top:10px"></p>
+      <p class="aviso-estado destinos" id="pushDestinos"></p>
     </section>
   </div>
 </div>

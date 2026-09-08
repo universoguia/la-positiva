@@ -168,6 +168,11 @@ body.dark :focus-visible{outline-color:var(--gold)}
   text-align:center;transition:background-color .18s,color .18s,transform .06s,border-color .18s;
 }
 .btn-block{display:flex;width:100%}
+/* Botones apilados: una sola separacion, del sistema y no de cada boton. */
+.btn-block + .btn-block{margin-top:8px}
+.acciones .btn-block + .btn-block{margin-top:0}   /* ahi ya separa el gap */
+/* El boton grande de "seguir" (enviar el pedido, activar los avisos). */
+.btn-grande{min-height:58px;font-size:18px}
 .btn-primary{background:var(--accent);color:#fff}
 .btn-primary:active:not(:disabled){transform:translateY(1px)}
 .btn-secondary{background:var(--card);color:var(--muted-strong);border:1px solid var(--border-strong)}
@@ -242,6 +247,11 @@ body.sheet-open{overflow:hidden}
 /* ------------------------------------------- cabecera de cada pantalla --
    La misma en las siete pantallas de trabajo. Antes cada una la definia con
    medidas distintas: el titulo a 28, 29 o 30px segun el archivo.         */
+/* Las pantallas oscuras del equipo (mozo, cocina): estaba copiado en cada una. */
+body.dark{background:var(--ink)}
+body.dark header.top h1{color:#fff}
+body.dark header.top .sub{color:var(--dark-muted)}
+
 header.top{
   display:flex;justify-content:space-between;align-items:flex-start;
   gap:12px;flex-wrap:wrap;margin-bottom:16px;

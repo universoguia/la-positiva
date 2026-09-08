@@ -80,6 +80,8 @@
   /* El vacio se lee como "vacio a proposito": tarjeta punteada, no un
      hueco gris. La reserva de alto se mantiene (anti-salto). */
   .cards .estado-vacio{grid-column:1/-1}
+  .qr-link + .btn,.pdevolver + .btn{margin-top:10px}
+  .pnote + .btn{margin-top:8px}
   [data-body="pend"] .estado-vacio{min-height:249px;display:flex;align-items:center;justify-content:center}
 
   /* -------------------------------------------------- QR de cobro ----- */
@@ -201,7 +203,7 @@
         <p class="qr-msg" id="qrLinkMsg" role="status" aria-live="polite"></p>
       </div>
 
-      <a class="btn btn-secondary btn-block" href="cobrar.html" style="margin-top:10px">
+      <a class="btn btn-secondary btn-block" href="cobrar.html">
         Ir a mostrar el QR a un cliente
       </a>
     </div>
@@ -305,8 +307,8 @@ document.addEventListener('DOMContentLoaded', function () {
       foot = '<div class="pdevolver"><b>Devolverle ' + money(cuanto) + '</b>' +
           '<span class="quep">' + esc(que.join(', ') || 'Ya lo habia pagado') + '</span>' +
         '</div>' +
-        '<button type="button" class="btn btn-primary btn-block" data-devuelto="' + esc(o.id) + '" ' +
-          'style="margin-top:10px"' + (devolviendo[o.id] ? ' disabled' : '') + '>' +
+        '<button type="button" class="btn btn-primary btn-block" data-devuelto="' + esc(o.id) + '"' +
+          (devolviendo[o.id] ? ' disabled' : '') + '>' +
           (devolviendo[o.id] ? 'Anotando...' : 'Ya se lo devolvi') + '</button>';
     } else if (o.pagado) {
       // Confirmacion persistente en la ficha, ademas del mensaje temporal.
@@ -316,8 +318,8 @@ document.addEventListener('DOMContentLoaded', function () {
          FALLA, que es la unica de las dos que pide hacer algo. */
       if (nstate === 'fail') {
         nota = '<p class="pnote warn">El pago quedo confirmado, pero el aviso no salio.</p>' +
-          '<button type="button" class="btn btn-secondary btn-block" data-retry="' + esc(o.id) + '" ' +
-          'style="margin-top:8px"' + (notifying[o.id] ? ' disabled' : '') + '>' +
+          '<button type="button" class="btn btn-secondary btn-block" data-retry="' + esc(o.id) + '"' +
+          (notifying[o.id] ? ' disabled' : '') + '>' +
           (notifying[o.id] ? 'Reintentando...' : 'Reintentar aviso') + '</button>';
       }
       foot = '<span class="badge b-ok">Pago confirmado</span>' + nota;

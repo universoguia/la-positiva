@@ -33,7 +33,6 @@
   h1{font-size:29px;margin:0 0 6px}
   p.lead{color:var(--muted);margin:0 0 24px;font-size:16px;line-height:1.55}
 
-  .btn-grande{min-height:58px;font-size:18px}
   /* Apagado lleva el estado ("Permiso bloqueado"): sin opacidad, que se lea. */
   .btn-grande:disabled{opacity:1}
   /* Exito: verde, no un boton apagado. */
@@ -73,9 +72,6 @@
     margin-top:26px;padding-top:18px;border-top:1px dashed var(--border);
     display:flex;flex-direction:column;gap:10px;align-items:center;
   }
-  .abajo a{color:var(--muted-strong);font-size:15px;text-decoration:underline;
-           min-height:var(--tap);display:inline-flex;align-items:center}
-  .abajo a:hover{color:var(--ink)}
 </style>
 </head>
 <body>
@@ -95,15 +91,15 @@
     Comprobando...
   </button>
   <button type="button" class="btn btn-secondary btn-block" id="probar"
-          style="margin-top:10px" hidden>Probar el aviso</button>
+          hidden>Probar el aviso</button>
 
   <div class="estado" id="estado" role="status" aria-live="polite"></div>
   <div class="guia" id="guia"></div>
   <p class="cuantos" id="cuantos"></p>
 
   <div class="abajo">
-    <a href="cocina.html" id="irAlPanel">Ir a mi panel</a>
-    <a href="./">Volver a la entrada</a>
+    <a class="back-link" href="cocina.html" id="irAlPanel">Ir a mi panel</a>
+    <a class="back-link" href="./">Volver al inicio</a>
   </div>
 </div>
 

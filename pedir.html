@@ -357,7 +357,7 @@
     .cat-btn:hover{background:#fff;border-color:var(--muted)}
     .btn-add:hover{background:var(--accent-dark)}
     .qty-row .icon-btn:hover{background:var(--accent);color:#fff}
-    .cartbar-btn:hover{background:#241c18}
+    .cartbar-btn:hover{background:var(--dark-card)}
     .pay-opts label:hover{background:#fff}
   }
 
@@ -366,7 +366,7 @@
   .status-screen .total{margin-top:-4px}
   .status-screen .qr-aviso.arriba{margin-bottom:14px}
   .status-screen .btn{margin-top:18px}
-  .btn-cta{min-height:56px;font-size:18px;margin-top:18px}
+  .btn-cta{margin-top:18px}
   .btn-back{margin-top:8px}
   .sheet-head .close-x{margin-left:auto}
   .check{
@@ -456,7 +456,7 @@
     </div>
     <div id="cartLines"></div>
     <div class="totals"><span class="lbl">Total</span><span class="val" id="cartSheetTotal">$0</span></div>
-    <button type="button" class="btn btn-primary btn-block btn-cta" id="goCheckoutBtn">
+    <button type="button" class="btn btn-primary btn-block btn-grande btn-cta" id="goCheckoutBtn">
       Elegir como pagar
     </button>
   </div>
@@ -509,7 +509,7 @@
       </div>
 
       <p class="field-err" id="formErr" role="alert"></p>
-      <button type="submit" class="btn btn-primary btn-block btn-cta" id="payBtn"
+      <button type="submit" class="btn btn-primary btn-block btn-grande btn-cta" id="payBtn"
               >Enviar pedido</button>
       <button type="button" class="btn btn-ghost btn-block btn-back" id="backToCart">Volver al pedido</button>
     </form>

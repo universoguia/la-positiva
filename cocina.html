@@ -17,9 +17,6 @@
 <style>
   /* Sobre fondo tinta: el titulo y el subtitulo claros. El tamanio y la
      disposicion vienen de la cabecera compartida en styles.css. */
-  header.top h1{color:#fff}
-  header.top .sub{color:var(--dark-muted)}
-  body{background:var(--ink)}
   .wrap{max-width:1400px;padding-top:calc(18px + var(--sa-t))}
 
 
@@ -144,7 +141,7 @@
   /* Esqueleto de carga: el tablero ocupa su sitio desde el primer pintado,
      asi la llegada de los datos no empuja el layout (CLS). */
   .skel{
-    background:#241c18;border:1px solid var(--dark-border);
+    background:var(--dark-card);border:1px solid var(--dark-border);
     border-radius:var(--r-md);margin-bottom:12px;
     /* Medido sobre tarjetas reales (224-244px): si el marcador es mas bajo,
        el tablero crece al llegar los datos y eso cuenta como CLS. */
@@ -160,6 +157,7 @@
     color:var(--muted-strong);margin:0 0 8px;
   }
   .aviso-bloque p{margin:0 0 12px;color:var(--muted);font-size:15px;line-height:1.5}
+  .aviso-estado.destinos{margin-top:10px}
   .aviso-estado{
     padding:10px 12px;border-radius:var(--r-sm);font-size:15px;line-height:1.45;
     background:var(--ok-soft);color:var(--ok);border:1px solid var(--ok-border);
@@ -211,6 +209,7 @@
   @keyframes latido{0%,100%{opacity:1}50%{opacity:.25}}
   @media (prefers-reduced-motion:reduce){#sinVerChip .punto{animation:none}}
 
+  .board-state .btn{margin-top:14px}
   .board-state{color:var(--dark-ink);text-align:center;padding:50px 20px}
   .board-state h3{color:#fff;font-size:22px;margin:0 0 6px}
   .board-state p{color:var(--dark-muted);margin:0 0 4px}
@@ -320,8 +319,7 @@
          Es lo mas util si el panel vive en una tablet o un monitor de la cocina.</p>
       <p class="aviso-estado" id="sonidoEstado"></p>
       <button type="button" class="btn btn-primary btn-block" id="sonidoBtn">Activar sonido</button>
-      <button type="button" class="btn btn-secondary btn-block" id="sonidoProbar"
-              style="margin-top:8px" hidden>Probar el sonido</button>
+      <button type="button" class="btn btn-secondary btn-block" id="sonidoProbar" hidden>Probar el sonido</button>
     </section>
 
     <section class="aviso-bloque" aria-labelledby="h-push">
@@ -330,10 +328,9 @@
          Sirve para el encargado que anda por el salon.</p>
       <p class="aviso-estado" id="pushEstado"></p>
       <button type="button" class="btn btn-primary btn-block" id="pushBtn" disabled>Comprobando...</button>
-      <button type="button" class="btn btn-secondary btn-block" id="pushProbar"
-              style="margin-top:8px" hidden>Probar el aviso al celular</button>
+      <button type="button" class="btn btn-secondary btn-block" id="pushProbar" hidden>Probar el aviso al celular</button>
       <!-- Sin esto, cero dispositivos registrados se ve igual que todo bien. -->
-      <p class="aviso-estado" id="pushDestinos" style="margin-top:10px"></p>
+      <p class="aviso-estado destinos" id="pushDestinos"></p>
       <div id="pushGuia"></div>
     </section>
   </div>
@@ -743,7 +740,7 @@ document.addEventListener('DOMContentLoaded', function () {
     elState.innerHTML =
       '<div class="board-state"><h3>No pudimos cargar los pedidos</h3>' +
       '<p>Revisa la conexion del local.</p>' +
-      '<button type="button" class="btn btn-primary" id="retryBtn" style="margin-top:14px">Reintentar</button></div>';
+      '<button type="button" class="btn btn-primary" id="retryBtn">Reintentar</button></div>';
     document.getElementById('retryBtn').addEventListener('click', function () {
       elState.innerHTML = '<div class="board-state"><div class="spinner"></div><p>Cargando...</p></div>';
       load();
