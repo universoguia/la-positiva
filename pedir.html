@@ -407,7 +407,7 @@
 <body>
 <a class="skip-link" href="#menuList">Ir a la carta</a>
 
-<div class="offline-bar" id="offlineBar" hidden>Sin conexion. Revisa el wifi o los datos.</div>
+<div class="offline-bar" id="offlineBar" hidden>Sin conexión. Revisá el wifi o los datos.</div>
 
 <div class="container">
   <header class="top">
@@ -420,12 +420,12 @@
       <label class="visually-hidden" for="searchInput">Buscar un plato</label>
       <input id="searchInput" type="search" inputmode="search" autocomplete="off"
              placeholder="Buscar un plato..." aria-describedby="searchHelp">
-      <button type="button" class="clear" id="searchClear" hidden aria-label="Borrar la busqueda">&#10005;</button>
+      <button type="button" class="clear" id="searchClear" hidden aria-label="Borrar la búsqueda">&#10005;</button>
     </div>
-    <p id="searchHelp" class="visually-hidden">Los resultados se actualizan mientras escribis.</p>
+    <p id="searchHelp" class="visually-hidden">Los resultados se actualizan mientras escribís.</p>
 
     <div class="cats-shell" id="catsShell">
-      <div class="cats" id="cats" role="group" aria-label="Categorias de la carta"></div>
+      <div class="cats" id="cats" role="group" aria-label="Categorías de la carta"></div>
     </div>
   </header>
 
@@ -466,7 +466,7 @@
 <div class="sheet" id="checkoutSheet" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle" hidden>
   <div class="sheet-panel">
     <div class="sheet-head">
-      <h2 id="checkoutTitle">Como pagas</h2>
+      <h2 id="checkoutTitle">Cómo pagás</h2>
       <button type="button" class="close-x" data-close="checkoutSheet" aria-label="Cerrar">&#10005;</button>
     </div>
 
@@ -477,25 +477,25 @@
       </div>
 
       <fieldset>
-        <legend class="visually-hidden">Elegi como pagar</legend>
+        <legend class="visually-hidden">Elegí como pagar</legend>
         <div class="pay-opts">
           <label>
             <input type="radio" name="pago" value="QR" checked>
             <span class="pay-dot" aria-hidden="true"></span>
             <span class="pay-txt"><strong>Con QR desde tu celular</strong>
-              <span>Te acercamos el codigo. Pagas con la billetera que uses.</span></span>
+              <span>Te acercamos el código. Pagás con la billetera que uses.</span></span>
           </label>
           <label>
             <input type="radio" name="pago" value="Efectivo">
             <span class="pay-dot" aria-hidden="true"></span>
             <span class="pay-txt"><strong>Efectivo al mozo</strong>
-              <span>Pagas cuando te traen el pedido.</span></span>
+              <span>Pagás cuando te traen el pedido.</span></span>
           </label>
           <label>
             <input type="radio" name="pago" value="Tarjeta">
             <span class="pay-dot" aria-hidden="true"></span>
             <span class="pay-txt"><strong>Tarjeta</strong>
-              <span>Simulado en esta demostracion.</span></span>
+              <span>Simulado en esta demostración.</span></span>
           </label>
         </div>
       </fieldset>
@@ -686,7 +686,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var noHay = !!agotados[d.id];
     var ini = esc((d.name || '?').trim().charAt(0).toUpperCase());
     var actions = noHay
-      ? '<span class="sin-stock">Se termino por hoy</span>'
+      ? '<span class="sin-stock">Se terminó por hoy</span>'
       : q > 0
       ? '<div class="qty-row">' +
           '<button type="button" class="icon-btn" data-act="dec" data-id="' + esc(d.id) + '" ' +
@@ -720,7 +720,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var items = visibleItems();
     if (!items.length) {
       elMenu.innerHTML = '<div class="state"><h2>No encontramos ese plato</h2>' +
-        '<p>Proba con otra palabra o elegi una categoria.</p></div>';
+        '<p>Probá con otra palabra o elegí una categoria.</p></div>';
       return;
     }
     var head = query
@@ -755,9 +755,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // Solo arriba de todo, sin busqueda activa y si no hay nada en el carrito.
     if (!ultimo || !ultimo.length || query || cartCount()) return '';
     var resumen = ultimo.slice(0, 3).map(function (l) { return l.qty + ' x ' + l.name; }).join(', ');
-    if (ultimo.length > 3) resumen += ' y ' + (ultimo.length - 3) + ' mas';
+    if (ultimo.length > 3) resumen += ' y ' + (ultimo.length - 3) + ' más';
     return '<div class="repeat-box">' +
-      '<h2 class="serif">Lo de la ultima vez</h2>' +
+      '<h2 class="serif">Lo de la última vez</h2>' +
       '<p>' + esc(resumen) + '</p>' +
       '<button type="button" class="btn btn-primary btn-block" data-repeat="1">' +
         'Volver a pedir lo mismo</button>' +
@@ -780,11 +780,11 @@ document.addEventListener('DOMContentLoaded', function () {
     guardarCarrito();
     if (puestos) {
       elLive.textContent = 'Repetimos tu pedido anterior.';
-      LP.toast('Listo, pusimos lo de la ultima vez.', 'ok');
+      LP.toast('Listo, pusimos lo de la última vez.', 'ok');
       renderCartLines();
       LP.openDialog(cartSheet);
     } else {
-      LP.toast('Esos platos ya no estan en la carta.', 'err');
+      LP.toast('Esos platos ya no están en la carta.', 'err');
     }
   }
 
@@ -881,7 +881,7 @@ document.addEventListener('DOMContentLoaded', function () {
       '</div>';
     }
     document.getElementById('cartLines').innerHTML =
-      html || '<div class="state"><p>Todavia no agregaste nada.</p></div>';
+      html || '<div class="state"><p>Todavía no agregaste nada.</p></div>';
     document.getElementById('cartSheetTotal').textContent = money(totalAPagar());
     document.getElementById('goCheckoutBtn').disabled = vals.length === 0;
   }
@@ -937,11 +937,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (metodo === 'Tarjeta') {
       el.innerHTML =
-        '<p class="demo-note"><strong>Pago simulado para esta demostracion.</strong> ' +
-        'No se procesa ningun cobro real y los datos no se guardan ni se envian a ningun lado. ' +
-        'Podes usar la tarjeta de prueba 4242 4242 4242 4242.</p>' +
+        '<p class="demo-note"><strong>Pago simulado para esta demostración.</strong> ' +
+        'No se procesa ningún cobro real y los datos no se guardan ni se envian a ningún lado. ' +
+        'Podés usar la tarjeta de prueba 4242 4242 4242 4242.</p>' +
         '<div class="field">' +
-          '<label for="cardNum">Numero de tarjeta de prueba</label>' +
+          '<label for="cardNum">Número de tarjeta de prueba</label>' +
           '<input id="cardNum" type="text" inputmode="numeric" autocomplete="off" ' +
                  'maxlength="19" placeholder="4242 4242 4242 4242" aria-describedby="cardNumErr">' +
           '<p class="field-err" id="cardNumErr"></p>' +
@@ -959,8 +959,8 @@ document.addEventListener('DOMContentLoaded', function () {
       btn.textContent = 'Pagar ' + money(totalAPagar());
       wireCardMasks();
     } else if (metodo === 'QR') {
-      el.innerHTML = '<p class="demo-note">Cuando mandes el pedido, alguien del salon te acerca ' +
-        'el codigo QR para que lo escanees con tu billetera. Podes pagar desde cualquier app o banco.</p>';
+      el.innerHTML = '<p class="demo-note">Cuando mandes el pedido, alguien del salón te acerca ' +
+        'el código QR para que lo escanees con tu billetera. Podés pagar desde cualquier app o banco.</p>';
       btn.textContent = 'Enviar pedido y pagar con QR';
     } else {
       el.innerHTML = '<p class="demo-note">Vas a pagar en efectivo cuando te acerquen el pedido. ' +
@@ -1005,12 +1005,12 @@ document.addEventListener('DOMContentLoaded', function () {
        Se frena aca, que es por donde pasan todos los caminos al envio. */
     if (SIN_MESA) {
       document.getElementById('formErr').textContent =
-        'No sabemos en que mesa estas. Escanea el codigo QR de tu mesa, ' +
+        'No sabemos en que mesa estas. Escaneá el código QR de tu mesa, ' +
         'o pedile a un mozo.';
       return false;
     }
     if (!cartCount()) {
-      document.getElementById('formErr').textContent = 'Tu pedido esta vacio.';
+      document.getElementById('formErr').textContent = 'Tu pedido está vacío.';
       return false;
     }
     if (selectedMetodo() !== 'Tarjeta') return true;
@@ -1021,13 +1021,13 @@ document.addEventListener('DOMContentLoaded', function () {
     var cvv = document.getElementById('cardCvv').value;
 
     if (!/^\d{13,16}$/.test(num)) {
-      setFieldError('cardNum', 'Ingresa un numero de prueba de 13 a 16 digitos.');
+      setFieldError('cardNum', 'Ingresá un número de prueba de 13 a 16 digitos.');
       ok = false; firstBad = firstBad || 'cardNum';
     } else setFieldError('cardNum', '');
 
     var m = exp.match(/^(\d{2})\/(\d{2})$/);
     if (!m || +m[1] < 1 || +m[1] > 12) {
-      setFieldError('cardExp', 'Usa el formato MM/AA.');
+      setFieldError('cardExp', 'Usá el formato MM/AA.');
       ok = false; firstBad = firstBad || 'cardExp';
     } else setFieldError('cardExp', '');
 
@@ -1077,7 +1077,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                          : 'Enviar pedido a cocina');
       var caja = document.getElementById('formErr');
       caja.textContent = (faltan.length === 1
-        ? 'Se termino: ' + faltan[0] + '. Sacalo del pedido para continuar.'
+        ? 'Se terminó: ' + faltan[0] + '. Sacalo del pedido para continuar.'
         : 'Se terminaron: ' + faltan.join(', ') + '. Sacalos del pedido para continuar.');
       caja.scrollIntoView({ block: 'nearest' });
       LP.platosAgotados(sb).then(function (m) { agotados = m || {}; renderMenu(); });
@@ -1096,7 +1096,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     var payload = {
       mesa: 'Mesa ' + MESA,
-      modo: 'Salon',
+      modo: 'Salón',
       cliente: document.getElementById('clienteNombre').value.trim().slice(0, 40) || null,
       lines: lines,
       total: cartTotal(),
@@ -1116,7 +1116,7 @@ document.addEventListener('DOMContentLoaded', function () {
         submitting = false;
         var caja = document.getElementById('formErr');
         caja.textContent = 'No podemos tomar el pedido desde el celular. ' +
-                           'Llama al mozo y te lo cargamos nosotros.';
+                           'Llamá al mozo y te lo cargamos nosotros.';
         caja.scrollIntoView({ block: 'nearest' });
         btn.textContent = 'Sin conexi\u00f3n con el sistema';   // deshabilitado, pero ya no dice Enviando
         return;
@@ -1237,20 +1237,37 @@ document.addEventListener('DOMContentLoaded', function () {
                       : (metodo === 'QR' ? 'Enviar pedido y pagar con QR'
                                          : 'Enviar pedido a cocina');
       var box = document.getElementById('formErr');
-      box.textContent = LP.humanError(err, 'No pudimos enviar el pedido. Proba de nuevo.');
+      box.textContent = LP.humanError(err, 'No pudimos enviar el pedido. Probá de nuevo.');
       box.scrollIntoView({ block: 'nearest' });
     }
   }
 
   /* ------------------------------------------------------- seguimiento -- */
   var STEPS = ['Por aprobar', 'En cocina', 'Cocinando', 'Listo', 'Entregado'];
+
+  /* El motivo del mozo esta escrito en su voz ("Lo cargue en la mesa
+     equivocada"). Al comensal se le dice en la suya, y si no esta en la
+     lista no se le muestra nada raro. Se aceptan las dos grafias. */
+  var MOTIVO_CLIENTE = {
+    'Se arrepintieron': 'Lo cancelaron desde la mesa.',
+    'Salio mal o frio': 'Sali\u00f3 mal de la cocina.',
+    'Sali\u00f3 mal o fr\u00edo': 'Sali\u00f3 mal de la cocina.',
+    'No hay ingrediente': 'Nos quedamos sin un ingrediente.',
+    'Lo cargue en la mesa equivocada': 'Estaba cargado en otra mesa.',
+    'Lo cargu\u00e9 en la mesa equivocada': 'Estaba cargado en otra mesa.'
+  };
+  function motivoCliente(order) {
+    if (!order.rechazado_motivo) return '';
+    var crudo = String(order.rechazado_motivo).split(' - lo saco ')[0];
+    return MOTIVO_CLIENTE[crudo] || '';
+  }
   /* En lenguaje de comensal, no de sistema. 'Por aprobar' no dice que lo
      estan aprobando -eso suena a que puede rechazarse-: dice que el mozo lo
      esta viendo, que es lo que efectivamente pasa.                       */
   var STEP_LABEL = {
     'Por aprobar': 'El mozo lo esta viendo',
     'En cocina': 'Enviado a la cocina',
-    Cocinando: 'Lo estan preparando',
+    Cocinando: 'Lo están preparando',
     Listo: 'Listo para servir',
     Entregado: 'Entregado'
   };
@@ -1303,12 +1320,10 @@ document.addEventListener('DOMContentLoaded', function () {
         '<h3>Sacamos este pedido de tu cuenta</h3>' +
         '<p class="order-no">Pedido #' + esc(order.id) + ' &middot; ' + esc(order.mesa) + '</p>' +
         '<div class="qr-aviso"><strong>No te lo vamos a cobrar</strong>' +
-        (order.rechazado_motivo
-          ? esc(String(order.rechazado_motivo).split(' - lo saco ')[0]) + '. '
-          : '') +
+        (motivoCliente(order) ? esc(motivoCliente(order)) + ' ' : '') +
         (devolverle > 0
-          ? 'Ya lo habias pagado: te devolvemos ' + money(devolverle) + ' en la mesa.'
-          : 'Si necesitas algo, avisale a un mozo.') +
+          ? 'Ya lo hab\u00edas pagado: te devolvemos ' + money(devolverle) + ' en la mesa.'
+          : 'Si necesitás algo, avisale a un mozo.') +
         '</div>' +
         '<button type="button" class="btn btn-secondary btn-block" id="keepBrowsing">Volver a la carta</button>';
       document.getElementById('keepBrowsing').addEventListener('click', function () {
@@ -1337,7 +1352,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var steps = STEPS.map(function (s, i) {
       var cls = i < idx ? 'done' : (i === idx ? 'current' : '');
-      var mark = i < idx ? 'Listo' : (i === idx ? 'Ahora' : '');
+      var mark = i < idx ? 'Hecho' : (i === idx ? 'Ahora' : '');   // "Listo  Listo" se leia doble
       return '<div class="track-step ' + cls + '">' +
         '<span class="track-dot" aria-hidden="true"></span>' +
         '<span>' + esc(STEP_LABEL[s]) + '</span>' +
@@ -1346,15 +1361,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }).join('');
 
     var pago = order.pagado ? 'Pagado'
-             : (order.metodo_pago === 'QR' ? 'Pagas con QR' : 'Paga en efectivo');
+             : (order.metodo_pago === 'QR' ? 'Pagás con QR' : 'Pagás en efectivo');
     var avisoQR = (!order.pagado && order.metodo_pago === 'QR')
       ? '<div class="qr-aviso"><strong>Te acercamos el QR</strong>' +
-        'Alguien del salon va a pasar con el codigo para que lo escanees con tu billetera.</div>'
+        'Alguien del salón va a pasar con el código para que lo escanees con tu billetera.</div>'
       : '';
 
     document.getElementById('statusScreen').innerHTML =
       '<div class="check" aria-hidden="true">&#10003;</div>' +
-      '<h3>Pedido enviado</h3>' +
+      // El titulo acompania al estado: con la hoja abierta un rato, "Pedido
+      // enviado" contradecia al "Entregado" de abajo.
+      '<h3>' + esc(idx === 0 ? 'Pedido enviado' : (STEP_LABEL[order.estado] || 'Pedido enviado')) + '</h3>' +
       '<p class="order-no">Pedido #' + esc(order.id) + ' &middot; ' + esc(order.mesa) +
         ' &middot; ' + esc(pago) + '</p>' +
       avisoSacado +
@@ -1378,8 +1395,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!currentOrderId) return;
     fetchOrder(currentOrderId).then(function (o) {
       if (o) { lastEstado = null; showStatus(o); startPolling(); }
-      else if (o === null) { LP.toast('Ese pedido ya no esta.', 'err'); clearActiveOrder(); }
-      else LP.toast('No pudimos consultar tu pedido. Proba de nuevo.', 'err');
+      else if (o === null) { LP.toast('Ese pedido ya no está.', 'err'); clearActiveOrder(); }
+      else LP.toast('No pudimos consultar tu pedido. Probá de nuevo.', 'err');
     });
   });
 

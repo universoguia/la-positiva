@@ -127,7 +127,7 @@
   <header class="top">
     <div>
       <h1>Mozo</h1>
-      <p class="sub">Aproba lo que piden las mesas y manda la comanda</p>
+      <p class="sub">Aprobá lo que piden las mesas y mandá la comanda</p>
     </div>
     <div class="head-right">
       <a class="soy" href="./" data-quien hidden></a>
@@ -162,12 +162,12 @@
       <h3>Sonido en esta pantalla</h3>
       <p>Suena cada vez que una mesa pide algo o la cocina responde.</p>
       <p class="aviso-estado" id="sonidoEstado"></p>
-      <button type="button" class="btn btn-primary btn-block" id="sonidoBtn">Activar sonido</button>
+      <button type="button" class="btn btn-primary btn-block" id="sonidoBtn">Activar el sonido</button>
       <button type="button" class="btn btn-secondary btn-block" id="sonidoProbar" hidden>Probar el sonido</button>
     </section>
     <section class="aviso-bloque">
       <h3>Avisos al celular</h3>
-      <p>Llegan aunque tengas el panel cerrado. Es lo que te avisa mientras andas por el salon.</p>
+      <p>Llegan aunque tengas el panel cerrado. Es lo que te avisa mientras andas por el salón.</p>
       <p class="aviso-estado" id="pushEstado"></p>
       <button type="button" class="btn btn-primary btn-block" id="pushBtn" disabled>Comprobando...</button>
       <p class="aviso-estado destinos" id="pushDestinos"></p>
@@ -227,8 +227,8 @@ document.addEventListener('DOMContentLoaded', function () {
   // El mismo color que en la tablet de la cocina para el mismo estado.
   var BADGE = { 'En cocina': 'b-nuevo', 'Cocinando': 'b-cocinando', 'Listo': 'b-listo' };
   var ETIQUETA = {
-    'En cocina': 'Comanda enviada, la cocina todavia no la tomo',
-    'Cocinando': 'La cocina la esta haciendo',
+    'En cocina': 'Comanda enviada, la cocina todavía no la tomó',
+    'Cocinando': 'La cocina la está haciendo',
     'Listo': 'Listo para llevar a la mesa'
   };
 
@@ -259,7 +259,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     elAprobar.innerHTML = aprobar.length
       ? aprobar.map(tarjetaAprobar).join('')
-      : '<li class="vacio">No hay pedidos esperando. Cuando una mesa pida, aparece aca.</li>';
+      : '<li class="vacio">No hay pedidos esperando. Cuando una mesa pida, aparece acá.</li>';
 
     elCurso.innerHTML = curso.length
       ? curso.map(tarjetaCurso).join('')
@@ -290,9 +290,9 @@ document.addEventListener('DOMContentLoaded', function () {
         '<div class="items">' + itemsHTML(p) + '</div>' +
         '<div class="total">' + money(p.total) + '</div>' +
         '<div class="campo">' +
-          '<label for="det-' + p.id + '">Algo que dijo el comensal y no esta en la carta</label>' +
+          '<label for="det-' + p.id + '">Algo que dijo el comensal y no está en la carta</label>' +
           '<textarea id="det-' + p.id + '" data-borrador="det-' + p.id + '" ' +
-            'placeholder="Sin sal, la carne bien cocida, alergia al mani..."></textarea>' +
+            'placeholder="Sin sal, la carne bien cocida, alergia al maní..."></textarea>' +
         '</div>' +
         '<div class="acciones">' +
           '<button type="button" class="btn btn-primary" data-aprobar="' + p.id + '">' +
@@ -320,7 +320,7 @@ document.addEventListener('DOMContentLoaded', function () {
           ? '<div class="detalle-fijo"><b>Detalle del comensal</b>' +
             esc(p.detalle_comensal) + '</div>' : '') +
         (listo ? '<div class="acciones"><button type="button" class="btn btn-primary" ' +
-                 'data-entregar="' + p.id + '">Lo lleve a la mesa</button></div>' : '') +
+                 'data-entregar="' + p.id + '">Lo llevé a la mesa</button></div>' : '') +
         notasHTML(p) +
       '</li>';
   }
@@ -391,7 +391,7 @@ document.addEventListener('DOMContentLoaded', function () {
       // 'Listo' es el unico estado desde el que se puede entregar.
       LP.cambiarEstado(sb, idE, 'Entregado', null, 'Listo').then(function (r) {
         delete ocupado[idE];
-        if (!r.ok) { b.disabled = false; b.textContent = 'Lo lleve a la mesa';
+        if (!r.ok) { b.disabled = false; b.textContent = 'Lo llevé a la mesa';
                      LP.toast(r.motivo, 'err'); cargar(true); return; }
         cargar(true);
       });
@@ -447,7 +447,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     hsTit.textContent = 'Sacar de la cuenta';
     hsSub.textContent = p.mesa + ' \u00b7 ' + money(LP.cobrable(p));
-    hsCuerpo.innerHTML = '<p class="hs-et">Que sale?</p>' +
+    hsCuerpo.innerHTML = '<p class="hs-et">¿Qué sale?</p>' +
       vivas.map(function (v) {
         return '<button type="button" class="opcion" data-linea="' + v.i + '">' +
             '<span>' + v.l.qty + '\u00d7 ' + esc(v.l.name) + '</span>' +
@@ -465,7 +465,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Con varios platos se puede volver a "Que sale?"; con uno solo no hay a donde.
     hsBack.hidden = LP.lineasVivas(sacando).length <= 1;
     var cuanto = todo ? LP.cobrable(sacando) : LP.importeDeLinea(linea);
-    hsTit.textContent = 'Por que sale?';
+    hsTit.textContent = '¿Por qué sale?';
     hsSub.textContent = (todo ? 'Todo el pedido' : linea.qty + '\u00d7 ' + linea.name) +
       ' \u00b7 ' + money(cuanto);
     hsCuerpo.innerHTML =
@@ -643,7 +643,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!reg) return;
         reg.showNotification(cuantos === 1 ? 'Pedido para aprobar'
                                            : cuantos + ' pedidos para aprobar', {
-          body: 'Una mesa esta esperando que mandes la comanda.',
+          body: 'Una mesa está esperando que mandes la comanda.',
           icon: 'icons/icon-192.png', badge: 'icons/icon-192.png',
           tag: 'mozo-por-aprobar', renotify: true, requireInteraction: true,
           vibrate: [200, 100, 200],
@@ -716,7 +716,7 @@ document.addEventListener('DOMContentLoaded', function () {
       sonidoEstado.textContent = 'Sonido activado y funcionando.';
       sonidoEstado.className = 'aviso-estado';
     }
-    sonidoBtn.textContent = sonidoOn ? 'Apagar el sonido' : 'Activar sonido';
+    sonidoBtn.textContent = sonidoOn ? 'Apagar el sonido' : 'Activar el sonido';
     sonidoProbar.hidden = !sonidoOn;
     avisosBtn.classList.toggle('on', sonidoOn && st === 'listo');
     avisosBtn.classList.toggle('off', !sonidoOn || st === 'falta-toque');
@@ -730,7 +730,7 @@ document.addEventListener('DOMContentLoaded', function () {
     pintarSonido();
   });
   sonidoProbar.addEventListener('click', function () {
-    if (!sonar(false)) LP.toast('Toca la pantalla y proba de nuevo.', 'err');
+    if (!sonar(false)) LP.toast('Tocá la pantalla y probá de nuevo.', 'err');
     pintarSonido();
   });
 
@@ -740,7 +740,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (st === 'activo') {
         return LP.pushRegistrado(sb, ROL).then(function (reg) {
           if (reg === null) {
-            pintar2('aviso-estado warn', 'No pudimos comprobar el registro. Revisa la conexion.',
+            pintar2('aviso-estado warn', 'No pudimos comprobar el registro. Revisá la conexión.',
                     'Volver a registrar', false);
           } else {
             pushOk = reg;
@@ -759,7 +759,7 @@ document.addEventListener('DOMContentLoaded', function () {
         label = 'Falta instalar la app'; }
       else if (st === 'denegado') { cls += ' err'; off = true;
         txt = 'Bloqueaste los avisos en este dispositivo.'; label = 'Permiso bloqueado'; }
-      else { cls += ' off'; txt = 'Los avisos al celular estan apagados.';
+      else { cls += ' off'; txt = 'Los avisos al celular están apagados.';
         label = 'Activar avisos al celular'; }
       pushOk = false;
       pintar2(cls, txt, label, off);
@@ -777,7 +777,7 @@ document.addEventListener('DOMContentLoaded', function () {
     return LP.contarSubs(sb, ROL).then(function (n) {
       if (n === null) { pushDestinos.textContent = ''; return; }
       pushDestinos.textContent = n === 0
-        ? 'Ningun dispositivo recibe los avisos del mozo: hoy no le llega a nadie.'
+        ? 'Ningún dispositivo recibe los avisos del mozo: hoy no le llega a nadie.'
         : (n === 1 ? '1 dispositivo recibe los avisos del mozo.'
                    : n + ' dispositivos reciben los avisos del mozo.');
       pushDestinos.className = 'aviso-estado' + (n === 0 ? ' err' : '');
@@ -790,7 +790,7 @@ document.addEventListener('DOMContentLoaded', function () {
     LP.suscribirPush(sb, ROL).then(function (st) {
       if (st === 'activo') LP.toast('Avisos activados para el mozo.', 'ok');
       else if (st === 'denegado') LP.toast('No diste permiso.', 'err');
-      else if (st === 'no-guardado') LP.toast('El permiso quedo dado, pero no se registro. Proba de nuevo.', 'err');
+      else if (st === 'no-guardado') LP.toast('El permiso quedó dado, pero no se registró. Probá de nuevo.', 'err');
       else LP.toast('No se pudo activar.', 'err');
       pintarPush();
     });
@@ -806,7 +806,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     if (!sonidoOn && !pushOk) {
       mostrar('', 'Esta pantalla no te va a avisar',
-        'El sonido esta apagado y este aparato no tiene avisos al celular. Un pedido puede quedar esperando.',
+        'El sonido está apagado y este aparato no tiene avisos al celular. Un pedido puede quedar esperando.',
         'Activar avisos', function () { pintarSonido(); pintarPush(); LP.openDialog(sheet); });
       return;
     }

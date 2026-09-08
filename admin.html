@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f3ece2">
-<meta name="description" content="El estado del salon y los ajustes del local de La Positiva.">
+<meta name="description" content="El estado del salón y los ajustes del local de La Positiva.">
 <title>La Positiva - Encargado</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
@@ -111,7 +111,7 @@
   <h2>El salón ahora</h2>
   <div class="cifras" id="cifras">
     <div class="cifra"><span>Mesas abiertas</span><b>—</b></div>
-    <div class="cifra"><span>Sin aprobar</span><b>—</b></div>
+    <div class="cifra"><span>Para aprobar</span><b>—</b></div>
     <div class="cifra"><span>En cocina</span><b>—</b></div>
     <div class="cifra"><span>Falta cobrar</span><b>—</b></div>
   </div>
@@ -137,11 +137,11 @@
 
   <h2>Otras pantallas</h2>
   <div class="atajos">
-    <a class="atajo" href="mesas.html"><span><b>Mesas abiertas</b>
+    <a class="atajo" href="mesas.html"><span><b>El salón y las cuentas</b>
       <span>La cuenta de cada mesa, ronda por ronda.</span></span></a>
-    <a class="atajo" href="carta-fotos.html"><span><b>Fotos de la carta</b>
-      <span>Sacar la foto de un plato desde el celular.</span></span></a>
-    <a class="atajo" href="qr-mesa.html"><span><b>QR de las mesas</b>
+    <a class="atajo" href="carta-fotos.html"><span><b>La carta y lo que se terminó</b>
+      <span>Fotos, precios y marcar lo que ya no hay.</span></span></a>
+    <a class="atajo" href="qr-mesa.html"><span><b>Los QR de las mesas</b>
       <span>Generar e imprimir el código de cada mesa.</span></span></a>
   </div>
 
@@ -161,7 +161,7 @@ document.addEventListener('DOMContentLoaded', function () {
   /* Los tres roles que reciben avisos. 'Jonathan' es el rol del encargado y
      de la caja: en un local de este tamanio son la misma persona mirando. */
   var ROLES = [
-    { id: 'Mozo',     nombre: 'Mozo',     que: 'Los pedidos que esperan aprobación' },
+    { id: 'Mozo',     nombre: 'Mozo',     que: 'Los pedidos para aprobar' },
     { id: 'Cocina',   nombre: 'Cocina',   que: 'Las comandas que manda el mozo' },
     { id: 'Jonathan', nombre: 'Encargado', que: 'Los pagos que confirma la caja' }
   ];

@@ -59,7 +59,7 @@
     var ms = Date.now() - new Date(ts).getTime();
     if (!isFinite(ms)) return '';
     var min = Math.max(0, Math.round(ms / 60000));
-    if (min <= 0) return 'recien';
+    if (min <= 0) return 'recién';
     if (min < 60) return 'hace ' + min + ' min';
     var h = Math.floor(min / 60);
     return 'hace ' + h + ' h ' + (min % 60) + ' min';
@@ -73,9 +73,9 @@
     // no fallas del navegador. Deja rastro sin ensuciar la consola.
     if (err) { try { console.warn('[La Positiva]', err); } catch (e) {} }
     if (!navigator.onLine) {
-      return 'Parece que te quedaste sin internet. Revisa la conexion y proba de nuevo.';
+      return 'Parece que te quedaste sin internet. Revisá la conexión y probá de nuevo.';
     }
-    return fallback || 'No pudimos completar la accion. Proba de nuevo en un momento.';
+    return fallback || 'No pudimos completar la acción. Probá de nuevo en un momento.';
   }
 
   /* --- Toasts con aria-live ---------------------------------------------- */
@@ -568,7 +568,7 @@
     if (!tel) {
       return Promise.resolve({
         ok: false,
-        motivo: 'El numero tiene que ir en formato internacional, con el codigo de pais. ' +
+        motivo: 'El número tiene que ir en formato internacional, con el código de país. ' +
                 'Por ejemplo +5491122334455.'
       });
     }
@@ -579,15 +579,15 @@
         if (res.error) {
           // 23505 = ese numero ya estaba cargado para ese rol.
           if (res.error.code === '23505') {
-            return { ok: false, motivo: 'Ese numero ya estaba cargado para ' + rol + '.' };
+            return { ok: false, motivo: 'Ese número ya estaba cargado para ' + rol + '.' };
           }
           humanError(res.error);
-          return { ok: false, motivo: 'No pudimos guardar el numero.' };
+          return { ok: false, motivo: 'No pudimos guardar el número.' };
         }
         return { ok: true, fila: res.data };
       }, function (e) {
         humanError(e);
-        return { ok: false, motivo: 'No pudimos guardar el numero.' };
+        return { ok: false, motivo: 'No pudimos guardar el número.' };
       });
   }
 
@@ -740,7 +740,7 @@
       { url: 'mozo.html',        texto: 'Los pedidos de las mesas' },
       { url: 'cocina.html',      texto: 'Las comandas' },
       { url: 'caja.html',        texto: 'Los pagos' },
-      { url: 'cobrar.html',      texto: 'Mostrar el QR de cobro' },
+      { url: 'cobrar.html',      texto: 'Cobrar con QR' },
       { url: 'carta-fotos.html', texto: 'La carta y lo que se termin\u00f3' },
       { url: 'qr-mesa.html',     texto: 'Los QR de las mesas' }
     ],
@@ -855,9 +855,9 @@
      parado en el salon con el celular en una mano. */
   var MOTIVOS_SACAR = [
     'Se arrepintieron',
-    'Salio mal o frio',
+    'Salió mal o frío',
     'No hay ingrediente',
-    'Lo cargue en la mesa equivocada'
+    'Lo cargué en la mesa equivocada'
   ];
 
   function lineasDe(pedido) {
@@ -941,7 +941,7 @@
     var indices = (Object.prototype.toString.call(indice) === '[object Array]')
       ? indice : [indice];
     var linea = todas[indices[0]];
-    if (!linea) return Promise.resolve({ ok: false, motivo: 'Ese plato ya no esta.' });
+    if (!linea) return Promise.resolve({ ok: false, motivo: 'Ese plato ya no está.' });
     if (indices.every(function (i) { return lineaSacada(todas[i]); })) {
       return Promise.resolve({ ok: false, motivo: 'Eso ya estaba sacado.' });
     }
@@ -952,7 +952,7 @@
       for (var k in l) if (Object.prototype.hasOwnProperty.call(l, k)) copia[k] = l[k];
       copia.anulada = true;
       copia.motivo = motivo || 'Sin motivo';
-      copia.por = (quien || 'Salon').slice(0, 40);
+      copia.por = (quien || 'Salón').slice(0, 40);
       copia.en = new Date().toISOString();
       copia.era = pedido.estado;          // en que punto estaba cuando salio
       copia.cobrada = !!pedido.pagado;    // ver el comentario de arriba
@@ -981,12 +981,12 @@
       .then(function (res) {
         if (res.error) {
           humanError(res.error);
-          return { ok: false, motivo: 'No pudimos sacarlo. Proba de nuevo.' };
+          return { ok: false, motivo: 'No pudimos sacarlo. Probá de nuevo.' };
         }
         var fila = (res.data || [])[0];
         if (!fila) {
           return { ok: false, choque: true,
-                   motivo: 'Ese pedido lo acaba de cambiar otra persona. Fijate como quedo.' };
+                   motivo: 'Ese pedido lo acaba de cambiar otra persona. Fijate cómo quedó.' };
         }
         avisarSacado(sb, fila, linea, sacoTodo);
         liberarSiPagado(sb, fila);   // puede haber quedado la mesa sin deuda
@@ -994,7 +994,7 @@
                  devolver: pendienteDeDevolver(fila) };
       }, function (e) {
         humanError(e);
-        return { ok: false, motivo: 'No pudimos sacarlo. Proba de nuevo.' };
+        return { ok: false, motivo: 'No pudimos sacarlo. Probá de nuevo.' };
       });
   }
 
@@ -1023,11 +1023,11 @@
     var todas = lineasDe(pedido);
     var linea = todas[indice];
     if (!linea || !lineaSacada(linea)) {
-      return Promise.resolve({ ok: false, motivo: 'Ese plato no estaba sacado.' });
+      return Promise.resolve({ ok: false, motivo: 'Ese plato no estába sacado.' });
     }
     if (linea.devuelto) {
       return Promise.resolve({ ok: false,
-        motivo: 'La caja ya devolvio esa plata. Cargalo como un pedido nuevo.' });
+        motivo: 'La caja ya devolvió esa plata. Cargalo como un pedido nuevo.' });
     }
 
     var nuevas = todas.map(function (l, i) {
@@ -1053,12 +1053,12 @@
         var fila = (res.data || [])[0];
         if (!fila) {
           return { ok: false, choque: true,
-                   motivo: 'Ese pedido lo acaba de cambiar otra persona. Fijate como quedo.' };
+                   motivo: 'Ese pedido lo acaba de cambiar otra persona. Fijate cómo quedó.' };
         }
         /* Si volvio a la vida y la cocina lo tenia, hay que avisarle: dejo de
            estar tachado y hay que hacerlo.                               */
         if (parche.estado && SIN_TERMINAR.indexOf(parche.estado) !== -1) {
-          avisar(sb, 'Cocina', 'Volvio un plato a la comanda',
+          avisar(sb, 'Cocina', 'Volvió un plato a la comanda',
                  fila.mesa + ' - ' + (linea.name || 'un plato') + ': hay que hacerlo.',
                  fila.id, 'cocina.html', true);
         }
@@ -1166,7 +1166,7 @@
     return avisar(sb, cfg.a, cfg.titulo, cuerpo, pedido.id, cfg.url, cfg.insistir)
       .then(function (r) {
         if (!r.ok && r.codigo !== 'sin-destinos') {
-          console.warn('[La Positiva] aviso de "' + pedido.estado + '" no llego a ' +
+          console.warn('[La Positiva] aviso de "' + pedido.estado + '" no llegó a ' +
                        cfg.a + ': ' + (r.motivo || 'motivo desconocido'));
         }
         return r;
@@ -1203,18 +1203,18 @@
       .then(function (res) {
         if (res.error) {
           humanError(res.error);
-          return { ok: false, motivo: 'No se pudo cambiar el estado. Proba de nuevo.' };
+          return { ok: false, motivo: 'No se pudo cambiar el estado. Probá de nuevo.' };
         }
         var fila = (res.data || [])[0];
         if (!fila) {
           return { ok: false, choque: true,
-                   motivo: 'Ese pedido lo acaba de cambiar otra persona. Fijate como quedo.' };
+                   motivo: 'Ese pedido lo acaba de cambiar otra persona. Fijate cómo quedó.' };
         }
         avisarEstado(sb, fila);              // sin await: no frena la pantalla
         return { ok: true, pedido: fila };
       }, function (e) {
         humanError(e);
-        return { ok: false, motivo: 'No se pudo cambiar el estado. Proba de nuevo.' };
+        return { ok: false, motivo: 'No se pudo cambiar el estado. Probá de nuevo.' };
       });
   }
 
@@ -1276,7 +1276,7 @@
 
     // Sin bloquear el aviso: que falle la liberacion no puede frenar el cobro.
     liberarSiPagado(sb, pedido);
-    var cuerpo = pedido.mesa + ' pago ' + money(cobrable(pedido)) + '. Ya podes seguir.';
+    var cuerpo = pedido.mesa + ' pago ' + money(cobrable(pedido)) + '. Ya podés seguir.';
 
     avisarWhatsapp(sb, {
       rol: 'Jonathan',
@@ -1286,7 +1286,7 @@
     return avisar(sb, 'Jonathan', 'Pago confirmado', cuerpo, pedido.id, 'caja.html', false)
       .then(function (r) {
         if (!r.ok && r.codigo !== 'sin-destinos') {
-          console.warn('[La Positiva] aviso de pago no llego: ' +
+          console.warn('[La Positiva] aviso de pago no llegó: ' +
                        (r.motivo || 'motivo desconocido'));
         }
         return r;
@@ -1410,8 +1410,8 @@
       if (ya) {
         // Otro la abrio primero. No es un error: es el indice haciendo su trabajo.
         return { ok: false, ocupada: true,
-                 motivo: etiqueta + ' ya esta abierta' +
-                         (ya.abierta_por ? ' (la abrio ' + ya.abierta_por + ')' : '') + '.' };
+                 motivo: etiqueta + ' ya está abierta' +
+                         (ya.abierta_por ? ' (la abrió ' + ya.abierta_por + ')' : '') + '.' };
       }
       return sb.from(SESIONES_TABLE)
         .insert({ mesa: etiqueta, estado: estado || 'Ocupada',
@@ -1839,7 +1839,7 @@
         };
       }
       if (blob.size > 5 * 1024 * 1024) {
-        return { ok: false, motivo: 'La imagen sigue pesando mas de 5 MB.' };
+        return { ok: false, motivo: 'La imagen sigue pesando más de 5 MB.' };
       }
 
       var ext = (blob.type === 'image/jpeg') ? 'jpg'
@@ -1880,7 +1880,7 @@
         });
     }).then(null, function (e) {
       humanError(e);
-      return { ok: false, motivo: 'No pudimos subir la foto. Proba de nuevo.' };
+      return { ok: false, motivo: 'No pudimos subir la foto. Probá de nuevo.' };
     });
   }
 
@@ -2046,7 +2046,7 @@
     var lectura = decodificarQR(file);
     return prepararImagen(file).then(function (blob) {
       if (blob.size > 5 * 1024 * 1024) {
-        throw new Error('La imagen sigue pesando mas de 5 MB.');
+        throw new Error('La imagen sigue pesando más de 5 MB.');
       }
       var ext = (blob.type === 'image/jpeg') ? 'jpg'
               : (file.name || '').split('.').pop().toLowerCase().slice(0, 5) || 'jpg';

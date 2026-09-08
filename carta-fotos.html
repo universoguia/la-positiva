@@ -158,7 +158,7 @@
   <p class="cuenta" id="cuenta"></p>
 
   <ul class="platos" id="lista"></ul>
-  <div class="vacio" id="vacio" hidden>No hay platos que coincidan con la busqueda.</div>
+  <div class="vacio" id="vacio" hidden>No hay platos que coincidan con la búsqueda.</div>
 
   <a class="back-link" href="./">Volver al inicio</a>
 </div>
@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var sb = LP.client();
 
   var lista = document.getElementById('lista');
-  var vacio = document.getElementById('vacio');
+  var vacio = document.getElementById('vacío');
   var cuenta = document.getElementById('cuenta');
   var inBuscar = document.getElementById('buscar');
   var selCat = document.getElementById('categoria');
@@ -264,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function () {
           '<div class="acciones">' +
             '<button type="button" class="pill' + (noHay ? ' no' : '') + '" ' +
               'aria-pressed="' + (noHay ? 'true' : 'false') + '" data-stock="' + esc(p.id) + '">' +
-              (noHay ? 'Se termino' : 'Hay') + '</button>' +
+              (noHay ? 'Se terminó' : 'Hay') + '</button>' +
             '<label class="subir">' +
               '<input type="file" accept="image/*" data-subir="' + esc(p.id) + '">' +
               '<span class="pill">' + (propia ? 'Cambiar foto' : 'Cargar foto') + '</span>' +
@@ -368,7 +368,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!inp) return;
     var n = Math.round(Number(String(inp.value).replace(/[^0-9]/g, '')));
     var prev = lista.querySelector('[data-preview="' + inp.dataset.precioInput + '"]');
-    if (prev) prev.textContent = isFinite(n) && n > 0 ? 'Queda en ' + money(n) : 'Pone un numero';
+    if (prev) prev.textContent = isFinite(n) && n > 0 ? 'Queda en ' + money(n) : 'Pone un número';
   });
 
   lista.addEventListener('click', function (ev) {
@@ -399,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function () {
       // Solo digitos: "34.000" y "34000" valen lo mismo, "34,5" no existe.
       var n = Math.round(Number(String(input.value).replace(/[^0-9]/g, '')));
       if (!isFinite(n) || n <= 0) {
-        decir(id, 'Pone un numero mayor que cero, sin centavos.', 'err');
+        decir(id, 'Pone un número mayor que cero, sin centavos.', 'err');
         input.focus();
         return;
       }
@@ -464,8 +464,8 @@ document.addEventListener('DOMContentLoaded', function () {
     accion.then(function (ok) {
       b.disabled = false;
       if (!ok) {
-        b.textContent = apagar ? 'Hay' : 'Se termino';
-        decir(platoId, 'No pudimos cambiarlo. Proba de nuevo.', 'err');
+        b.textContent = apagar ? 'Hay' : 'Se terminó';
+        decir(platoId, 'No pudimos cambiarlo. Probá de nuevo.', 'err');
         return;
       }
       if (apagar) agotados[platoId] = true; else delete agotados[platoId];
@@ -487,7 +487,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!ok) { b.disabled = false; decir(platoId, 'No pudimos quitarla.', 'err'); return; }
       delete propias[platoId];
       repintarUno(platoId);
-      LP.toast('Volvio la foto original de la carta.', 'ok');
+      LP.toast('Volvió la foto original de la carta.', 'ok');
     });
   });
 
@@ -499,7 +499,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!sb) {
     lista.innerHTML = '';
     vacio.hidden = false;
-    vacio.textContent = 'No hay conexion con el sistema.';
+    vacio.textContent = 'No hay conexión con el sistema.';
     return;
   }
 

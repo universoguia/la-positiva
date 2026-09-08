@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#14100e">
 <meta name="description" content="Panel interno de cocina de La Positiva: los pedidos y su estado en vivo.">
-<title>La Positiva - Cocina y equipo</title>
+<title>La Positiva - Cocina</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -238,8 +238,8 @@
 <div class="wrap">
   <header class="top">
     <div>
-      <h1>La Positiva</h1>
-      <p class="sub">Panel de cocina y equipo</p>
+      <h1>Cocina</h1>
+      <p class="sub">Las comandas, en vivo</p>
     </div>
     <div class="head-right">
       <!-- El chip primero porque es un aviso; despues el mismo orden que mozo.
@@ -316,16 +316,16 @@
     <section class="aviso-bloque" aria-labelledby="h-sonido">
       <h3 id="h-sonido">Sonido en este panel</h3>
       <p>Suena cada vez que entra un pedido, mientras esta pantalla este abierta.
-         Es lo mas util si el panel vive en una tablet o un monitor de la cocina.</p>
+         Es lo más útil si el panel vive en una tablet o un monitor de la cocina.</p>
       <p class="aviso-estado" id="sonidoEstado"></p>
-      <button type="button" class="btn btn-primary btn-block" id="sonidoBtn">Activar sonido</button>
+      <button type="button" class="btn btn-primary btn-block" id="sonidoBtn">Activar el sonido</button>
       <button type="button" class="btn btn-secondary btn-block" id="sonidoProbar" hidden>Probar el sonido</button>
     </section>
 
     <section class="aviso-bloque" aria-labelledby="h-push">
       <h3 id="h-push">Avisos al celular</h3>
       <p>Llegan aunque tengas el panel cerrado o la pantalla apagada.
-         Sirve para el encargado que anda por el salon.</p>
+         Sirve para el encargado que anda por el salón.</p>
       <p class="aviso-estado" id="pushEstado"></p>
       <button type="button" class="btn btn-primary btn-block" id="pushBtn" disabled>Comprobando...</button>
       <button type="button" class="btn btn-secondary btn-block" id="pushProbar" hidden>Probar el aviso al celular</button>
@@ -638,7 +638,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function fail(err) {
       delete pendingIds[id];
       var box = elCols.querySelector('[data-err="' + id + '"]');
-      var msg = LP.humanError(err, 'No se pudo cambiar el estado. Proba de nuevo.');
+      var msg = LP.humanError(err, 'No se pudo cambiar el estado. Probá de nuevo.');
       if (box) box.textContent = msg; else LP.toast(msg, 'err');
       render();
     }
@@ -739,7 +739,7 @@ document.addEventListener('DOMContentLoaded', function () {
     elCols.innerHTML = '';
     elState.innerHTML =
       '<div class="board-state"><h3>No pudimos cargar los pedidos</h3>' +
-      '<p>Revisa la conexion del local.</p>' +
+      '<p>Revisá la conexión del local.</p>' +
       '<button type="button" class="btn btn-primary" id="retryBtn">Reintentar</button></div>';
     document.getElementById('retryBtn').addEventListener('click', function () {
       elState.innerHTML = '<div class="board-state"><div class="spinner"></div><p>Cargando...</p></div>';
@@ -748,7 +748,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function showFatal() {
-    elState.innerHTML = '<div class="board-state"><h3>No hay conexion con el sistema</h3>' +
+    elState.innerHTML = '<div class="board-state"><h3>No hay conexión con el sistema</h3>' +
       '<p>No se pudo cargar la libreria de datos.</p></div>';
   }
 
@@ -818,7 +818,7 @@ document.addEventListener('DOMContentLoaded', function () {
      2. aviso del sistema, si el panel quedo en segundo plano;
      3. push al celular, que llega aunque el navegador este cerrado.     */
 
-  var TITULO = 'La Positiva - Cocina y equipo';
+  var TITULO = 'La Positiva - Cocina';
   var SONIDO_KEY = 'lp_cocina_sonido';
   var sinVer = 0;
   var audioCtx = null;
@@ -1073,15 +1073,15 @@ document.addEventListener('DOMContentLoaded', function () {
       sonidoEstado.textContent = 'Este navegador no puede reproducir el aviso.';
       sonidoEstado.className = 'aviso-estado err';
     } else if (estadoAudio === 'falta-toque') {
-      sonidoEstado.textContent = 'El sonido esta puesto, pero el navegador todavia no lo dejo sonar. ' +
-                                 'Toca la pantalla una vez y queda listo.';
+      sonidoEstado.textContent = 'El sonido está puesto, pero el navegador todavía no lo dejó sonar. ' +
+                                 'Tocá la pantalla una vez y queda listo.';
       sonidoEstado.className = 'aviso-estado warn';
     } else {
       sonidoEstado.textContent = 'Sonido activado y funcionando en esta pantalla.';
       sonidoEstado.className = 'aviso-estado';
     }
 
-    sonidoBtn.textContent = sonidoOn ? 'Apagar el sonido' : 'Activar sonido';
+    sonidoBtn.textContent = sonidoOn ? 'Apagar el sonido' : 'Activar el sonido';
     sonidoProbar.hidden = !sonidoOn;
     // El boton de la cabecera muestra los dos estados, no solo el bueno.
     avisosBtn.classList.toggle('on', sonidoOn && estadoAudio === 'listo');
@@ -1099,7 +1099,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   sonidoProbar.addEventListener('click', function () {
     if (!sonar(false)) {
-      LP.toast('El navegador todavia no deja sonar. Toca la pantalla y proba de nuevo.', 'err');
+      LP.toast('El navegador todavía no deja sonar. Tocá la pantalla y probá de nuevo.', 'err');
     }
     pintarSonido();
   });
@@ -1119,7 +1119,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (sonidoOn && estadoAudio === 'falta-toque') {
       mostrarBarra('warn', 'Falta un toque para que suene',
-        'El navegador no deja sonar hasta que alguien toque la pantalla. Toca aca y queda listo para todo el servicio.',
+        'El navegador no deja sonar hasta que alguien toque la pantalla. Tocá acá y queda listo para todo el servicio.',
         'Activar el sonido', function () {
           sonar(false);
           pintarSonido();
@@ -1129,7 +1129,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!sonidoOn && !pushOk) {
       mostrarBarra('', 'Esta pantalla no va a avisar nada',
-        'El sonido esta apagado y este dispositivo no tiene los avisos al celular activados. Un pedido puede entrar y quedar sin hacer.',
+        'El sonido está apagado y este dispositivo no tiene los avisos al celular activados. Un pedido puede entrar y quedar sin hacer.',
         'Activar avisos', function () {
           pintarSonido(); pintarPush(); LP.openDialog(avisosSheet);
         });
@@ -1174,20 +1174,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
       if (st === 'no-soportado') {
         cls += ' err'; disabled = true;
-        txt = 'Este navegador no puede recibir avisos. Proba con Chrome en Android.';
+        txt = 'Este navegador no puede recibir avisos. Probá con Chrome en Android.';
         label = 'No disponible';
       } else if (st === 'ios-sin-instalar') {
         cls += ' warn'; disabled = true;
         txt = 'En iPhone hay que agregar la app a la pantalla de inicio primero.';
         label = 'Falta instalar la app';
-        guia(['Toca Compartir en la barra de Safari.',
-              'Elegi "Agregar a pantalla de inicio".',
-              'Abri La Positiva desde el icono nuevo y volve aca.']);
+        guia(['Tocá Compartir en la barra de Safari.',
+              'Elegí "Agregar a pantalla de inicio".',
+              'Abrí La Positiva desde el ícono nuevo y volvé acá.']);
       } else if (st === 'denegado') {
         cls += ' err'; disabled = true;
         txt = 'Bloqueaste los avisos en este dispositivo.';
         label = 'Permiso bloqueado';
-        guia(['Toca el candado al lado de la direccion web.',
+        guia(['Tocá el candado al lado de la dirección web.',
               'Entra en Permisos o Configuracion del sitio.',
               'Cambia Notificaciones a "Permitir" y recarga.']);
       } else if (st === 'activo') {
@@ -1196,7 +1196,7 @@ document.addEventListener('DOMContentLoaded', function () {
           if (reg === null) {
             // No es lo mismo "no esta registrado" que "no pudimos preguntar".
             pintarEstadoPush('aviso-estado warn',
-              'No pudimos comprobar si este dispositivo esta registrado. Revisa la conexion.',
+              'No pudimos comprobar si este dispositivo está registrado. Revisá la conexión.',
               'Volver a registrar', false, true);
             return pintarDestinos();
           }
@@ -1215,7 +1215,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
       } else {
         cls += ' off';
-        txt = 'Los avisos al celular estan apagados.';
+        txt = 'Los avisos al celular están apagados.';
         label = 'Activar avisos al celular';
       }
 
@@ -1244,7 +1244,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
       if (n === 0) {
-        pushDestinos.textContent = 'Ningun dispositivo tiene los avisos de cocina activados: ' +
+        pushDestinos.textContent = 'Ningún dispositivo tiene los avisos de cocina activados: ' +
                                    'hoy no le llega a nadie.';
         pushDestinos.className = 'aviso-estado err';
       } else {
@@ -1272,12 +1272,12 @@ document.addEventListener('DOMContentLoaded', function () {
     LP.suscribirPush(sb, 'Cocina').then(function (st) {
       if (st === 'activo') LP.toast('Avisos activados para cocina.', 'ok');
       else if (st === 'denegado') LP.toast('No diste permiso para los avisos.', 'err');
-      else if (st === 'sin-decidir') LP.toast('Quedo sin decidir. Proba de nuevo.', 'err');
+      else if (st === 'sin-decidir') LP.toast('Quedó sin decidir. Probá de nuevo.', 'err');
       else if (st === 'no-guardado') {
         // Antes esto culpaba a la conexion y mandaba a buscar el problema
         // al lugar equivocado: el permiso estaba dado, fallo el guardado.
-        LP.toast('El permiso quedo dado, pero el dispositivo no se registro en el sistema. Proba de nuevo.', 'err');
-      } else LP.toast('No se pudo activar. Revisa la conexion.', 'err');
+        LP.toast('El permiso quedó dado, pero el dispositivo no se registró en el sistema. Probá de nuevo.', 'err');
+      } else LP.toast('No se pudo activar. Revisá la conexión.', 'err');
       pintarPush();
     });
   });
@@ -1299,11 +1299,11 @@ document.addEventListener('DOMContentLoaded', function () {
         } else if (r.config) {
           // Reintentar no lo arregla: falta configuracion del servidor.
           pushEstado.className = 'aviso-estado err';
-          pushEstado.textContent = 'Los avisos al celular estan sin configurar en el servidor. ' +
+          pushEstado.textContent = 'Los avisos al celular están sin configurar en el servidor. ' +
             'Avisale a quien administra el sistema: no se arregla desde este dispositivo.';
           LP.toast('Falta configurar los avisos en el servidor.', 'err');
         } else {
-          LP.toast(r.motivo || 'No salio la notificacion de prueba.', 'err');
+          LP.toast(r.motivo || 'No salió la notificación de prueba.', 'err');
         }
       });
   });

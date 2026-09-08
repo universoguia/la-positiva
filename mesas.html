@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f3ece2">
-<meta name="description" content="El plano del salon de La Positiva: como esta cada mesa, en vivo.">
-<title>La Positiva - El salon</title>
+<meta name="description" content="El plano del salón de La Positiva: cómo está cada mesa, en vivo.">
+<title>La Positiva - El salón</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -274,7 +274,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   var puedoSacar = LP.puedeSacar();
   var soy = LP.quienSoy();
-  var YO = (soy && soy.nombre) || 'Salon';
+  var YO = (soy && soy.nombre) || 'Salón';
 
   var plano = [];                       // las mesas, con o sin cuenta
   var cargado = false;
@@ -425,11 +425,11 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function textoEstado(t) {
-    if (t.estado === 'Libre') return 'libre';
-    if (t.estado === 'Reservada') return 'reservada';
-    if (t.estado === 'Limpieza') return 'pago todo, hay que levantarla';
-    if (t.cuenta && t.cuenta.debe > 0) return 'falta cobrar ' + money(t.cuenta.debe);
-    return 'ocupada';
+    if (t.estado === 'Libre') return 'Libre';
+    if (t.estado === 'Reservada') return 'Reservada';
+    if (t.estado === 'Limpieza') return 'Pag\u00f3 todo, falta limpiarla';
+    if (t.cuenta && t.cuenta.debe > 0) return 'Falta cobrar ' + money(t.cuenta.debe);
+    return 'Ocupada';
   }
 
   /* ---------------------------------------------------------- pintado --- */
@@ -439,7 +439,7 @@ document.addEventListener('DOMContentLoaded', function () {
       plantasBar.hidden = true;
       resumen.hidden = true;
       estado.innerHTML = '<div class="estado-vacio"><h3>No hay mesas cargadas</h3>' +
-        '<p>Todavia no estan cargadas las mesas del local.</p></div>';
+        '<p>Todavía no están cargadas las mesas del local.</p></div>';
       return;
     }
     estado.innerHTML = '';
@@ -534,7 +534,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var pie = t.estado === 'Libre'
       ? (m.capacidad ? m.capacidad + ' pers.' : '')
       : (t.cuenta && t.cuenta.debe > 0 ? money(t.cuenta.debe)
-         : (t.estado === 'Limpieza' ? 'levantar'
+         : (t.estado === 'Limpieza' ? 'limpiar'
             : (t.estado === 'Reservada' ? 'reservada' : 'ocupada')));
 
     return '<g class="mesa-g ' + claseDe(t) + '" data-mesa="' + esc(t.etiqueta) + '" ' +
@@ -597,7 +597,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function cuerpoReservada(t) {
     var ses = t.cuenta.sesion;
     return (ses.abierta_por
-        ? '<p class="abrio">La aparto ' + esc(ses.abierta_por) + ' ' +
+        ? '<p class="abrio">La apartó ' + esc(ses.abierta_por) + ' ' +
           esc(LP.timeAgo(ses.abierta_en)) + '</p>'
         : '') +
       '<div class="acciones">' +
@@ -625,7 +625,7 @@ document.addEventListener('DOMContentLoaded', function () {
         '</span>' + chip +
       '</div>' +
       (m.sesion.abierta_por
-        ? '<p class="abrio">La abrio ' + esc(m.sesion.abierta_por) + '</p>' : '');
+        ? '<p class="abrio">La abrió ' + esc(m.sesion.abierta_por) + '</p>' : '');
 
     var rondas = sinPedir ? '' :
       '<ul class="rondas">' + m.pedidos.map(rondaHTML).join('') + '</ul>' +
@@ -666,7 +666,7 @@ document.addEventListener('DOMContentLoaded', function () {
               (fuera
                 ? '<span class="porque">' + esc(l.motivo || 'Sin motivo') +
                   (l.por ? ' · lo saco ' + esc(l.por) : '') +
-                  (l.devuelto ? ' · ya se devolvio' : '') + '</span>' +
+                  (l.devuelto ? ' · ya se devolvió' : '') + '</span>' +
                   (l.devuelto ? '' :
                     '<button type="button" class="reponer" data-reponer="' +
                       esc(p.id) + ':' + j + '">Volver a ponerlo</button>')
@@ -707,7 +707,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     hojaTit.textContent = 'Sacar de la cuenta';
     hojaSub.textContent = pedido.mesa + ' · ' + money(LP.cobrable(pedido));
-    hojaCuerpo.innerHTML = '<p class="hoja-et">Que sale?</p>' +
+    hojaCuerpo.innerHTML = '<p class="hoja-et">¿Qué sale?</p>' +
       vivas.map(function (v) {
         return '<button type="button" class="opcion" data-linea="' + v.i + '">' +
             '<span>' + v.l.qty + '× ' + esc(v.l.name) + '</span>' +
@@ -715,7 +715,7 @@ document.addEventListener('DOMContentLoaded', function () {
           '</button>';
       }).join('') +
       '<button type="button" class="opcion toda" data-linea="todo">' +
-        '<span>Toda la ronda</span>' +
+        '<span>Todo el pedido</span>' +
         '<span class="plata">' + money(LP.cobrable(pedido)) + '</span>' +
       '</button>';
   }
@@ -726,8 +726,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var todo = indice === 'todo';
     var cuanto = todo ? LP.cobrable(sacando) : LP.importeDeLinea(linea);
 
-    hojaTit.textContent = 'Por que sale?';
-    hojaSub.textContent = (todo ? 'Toda la ronda' : linea.qty + '× ' + linea.name) +
+    hojaTit.textContent = '¿Por qué sale?';
+    hojaSub.textContent = (todo ? 'Todo el pedido' : linea.qty + '× ' + linea.name) +
       ' · ' + money(cuanto);
 
     /* Si ya esta pago se dice ANTES de tocar el motivo: no frena nada, pero
@@ -893,7 +893,7 @@ document.addEventListener('DOMContentLoaded', function () {
        en efectivo y no se marco-, pero no puede pasar de largo sin querer. */
     if (m.debe > 0) {
       var ok = window.confirm('A ' + m.mesa + ' le falta cobrar ' + money(m.debe) +
-        '.\n\nSi la cerras igual, la cuenta queda cerrada con ese saldo. Continuar?');
+        '.\n\nSi la cerrás igual, la cuenta queda cerrada con ese saldo. ¿Continuar?');
       if (!ok) return;
     }
 
@@ -908,9 +908,9 @@ document.addEventListener('DOMContentLoaded', function () {
       if (hecho && hecho.bloqueado) {
         soltar(b);
         var igual = window.confirm(
-          m.mesa + ' todavia tiene ' + hecho.enCurso +
+          m.mesa + ' todavía tiene ' + hecho.enCurso +
           (hecho.enCurso === 1 ? ' pedido sin terminar' : ' pedidos sin terminar') +
-          '.\n\nSi la cerras igual, esos pedidos quedan colgando de una cuenta ' +
+          '.\n\nSi la cerrás igual, esos pedidos quedan colgando de una cuenta ' +
           'cerrada. Cerrar de todos modos?');
         if (!igual) return;
         enVuelo['c' + id] = true;
@@ -930,7 +930,7 @@ document.addEventListener('DOMContentLoaded', function () {
         cargar(true);
         return;
       }
-      LP.toast(m.mesa + ' cerrada. El proximo pedido abre una cuenta nueva.', 'ok');
+      LP.toast(m.mesa + ' cerrada. El próximo pedido abre una cuenta nueva.', 'ok');
       cerrarHoja();
       cargar(true);
     });
@@ -944,7 +944,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function cargar(silencioso) {
     if (cargando) { pendiente = true; return Promise.resolve(); }
     if (!sb) {
-      estado.innerHTML = '<div class="estado-vacio"><h3>No hay conexion con el sistema</h3></div>';
+      estado.innerHTML = '<div class="estado-vacio"><h3>No hay conexión con el sistema</h3></div>';
       return Promise.resolve();
     }
     cargando = true;
@@ -958,7 +958,7 @@ document.addEventListener('DOMContentLoaded', function () {
              peor error posible aca. Por eso planoDelSalon devuelve null. */
           planoCaja.hidden = true;
           estado.innerHTML = '<div class="estado-vacio"><h3>No pudimos cargar las mesas</h3>' +
-            '<p>Revisa la conexion del local.</p></div>';
+            '<p>Revisá la conexión del local.</p></div>';
         } else if (!silencioso) {
           LP.toast('No pudimos actualizar. Seguimos intentando.', 'err');
         }

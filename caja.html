@@ -140,7 +140,7 @@
 </head>
 <body>
 <a class="skip-link" href="#pendientes">Ir a los pagos pendientes</a>
-<div class="offline-bar" id="offlineBar" hidden>Sin conexion. No vas a poder confirmar pagos hasta que vuelva.</div>
+<div class="offline-bar" id="offlineBar" hidden>Sin conexión. No vas a poder confirmar pagos hasta que vuelva.</div>
 
 <div class="wrap">
   <header class="top">
@@ -165,19 +165,19 @@
     </div>
     <div class="card qr-panel">
       <p class="qr-intro">
-        Sacale una foto al QR del posnet, o subi la captura de tu app de cobro.
-        Se carga <strong>una sola vez</strong> y despues cualquiera lo muestra desde su celular.
+        Sacale una foto al QR del posnet, o subí la captura de tu app de cobro.
+        Se carga <strong>una sola vez</strong> y después cualquiera lo muestra desde su celular.
       </p>
 
       <!-- Nace con el estado real (sin QR cargado), no con un spinner: asi el
            panel no cambia de alto cuando responde Supabase. -->
       <div id="qrEstado">
-        <p class="qr-vacio">Todavia no hay ningun QR cargado. Hasta que subas uno,
+        <p class="qr-vacio">Todavía no hay ningún QR cargado. Hasta que subas uno,
           la pantalla de cobro no le puede mostrar nada al cliente.</p>
       </div>
 
       <label class="btn btn-primary btn-block" for="qrFile" id="qrLabel">
-        Elegir de la galer&iacute;a o sacar la foto
+        Subir o sacar foto del QR
       </label>
       <!-- SIN capture, a proposito. Con capture="environment" el celular abria la
            camara de una y no habia manera de llegar al carrete: la cajera que ya
@@ -193,7 +193,7 @@
       <div class="qr-link">
         <label for="qrLinkInput">Link de pago (opcional)</label>
         <p class="qr-link-nota" id="qrLinkNota">
-          Sirve para mandarselo por mensaje a alguien que esta en otra mesa o en el piso de arriba.
+          Sirve para mandárselo por mensaje a alguien que esta en otra mesa o en el piso de arriba.
         </p>
         <div class="qr-link-row">
           <input id="qrLinkInput" type="url" inputmode="url" autocomplete="off"
@@ -305,11 +305,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       });
       foot = '<div class="pdevolver"><b>Devolverle ' + money(cuanto) + '</b>' +
-          '<span class="quep">' + esc(que.join(', ') || 'Ya lo habia pagado') + '</span>' +
+          '<span class="quep">' + esc(que.join(', ') || 'Ya lo había pagado') + '</span>' +
         '</div>' +
         '<button type="button" class="btn btn-primary btn-block" data-devuelto="' + esc(o.id) + '"' +
           (devolviendo[o.id] ? ' disabled' : '') + '>' +
-          (devolviendo[o.id] ? 'Anotando...' : 'Ya se lo devolvi') + '</button>';
+          (devolviendo[o.id] ? 'Anotando...' : 'Ya se lo devolví') + '</button>';
     } else if (o.pagado) {
       // Confirmacion persistente en la ficha, ademas del mensaje temporal.
       var nota = '';
@@ -317,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function () {
          nadie accionaba y que el toast ya habia dicho. Queda solo la nota de
          FALLA, que es la unica de las dos que pide hacer algo. */
       if (nstate === 'fail') {
-        nota = '<p class="pnote warn">El pago quedo confirmado, pero el aviso no salio.</p>' +
+        nota = '<p class="pnote warn">El pago quedó confirmado, pero el aviso no salió.</p>' +
           '<button type="button" class="btn btn-secondary btn-block" data-retry="' + esc(o.id) + '"' +
           (notifying[o.id] ? ' disabled' : '') + '>' +
           (notifying[o.id] ? 'Reintentando...' : 'Reintentar aviso') + '</button>';
@@ -412,7 +412,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (pending[id]) return;                 // sin doble confirmacion
     var o = findOrder(id);
     if (!o || o.pagado) return;
-    if (!sb) { LP.toast('Sin conexion con el sistema.', 'err'); return; }
+    if (!sb) { LP.toast('Sin conexión con el sistema.', 'err'); return; }
 
     pending[id] = true;
     render();
@@ -426,7 +426,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (res.error) { falloPago(id, res.error); return; }
         if (!res.data || !res.data.length) {
           // Otro puesto lo confirmo primero: es una carrera, no un error.
-          LP.toast('Ese pago ya habia sido confirmado en otro puesto.', 'ok');
+          LP.toast('Ese pago ya había sido confirmado en otro puesto.', 'ok');
           load(true);
           return;
         }
@@ -443,7 +443,7 @@ document.addEventListener('DOMContentLoaded', function () {
     delete pending[id];
     render();
     var box = document.querySelector('[data-err="' + id + '"]');
-    var msg = LP.humanError(err, 'No se pudo confirmar el pago. Proba de nuevo.');
+    var msg = LP.humanError(err, 'No se pudo confirmar el pago. Probá de nuevo.');
     if (box) box.textContent = msg;
     LP.toast(msg, 'err');
   }
@@ -462,7 +462,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (msg) LP.toast(msg, kind);
     };
 
-    if (!sb) { done('fail', 'El pago quedo confirmado, pero no se pudo avisar.', 'err'); return; }
+    if (!sb) { done('fail', 'El pago quedó confirmado, pero no se pudo avisar.', 'err'); return; }
 
     /* Mismo camino que cobrar.html: LP.avisarPago manda el push Y el WhatsApp.
        Antes esta pantalla tenia su propia llamada y la otra no avisaba nada,
@@ -476,18 +476,18 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
       if (r.codigo === 'sin-config') {
-        done('fail', 'Pago confirmado. Los avisos estan sin configurar en el servidor: ' +
+        done('fail', 'Pago confirmado. Los avisos están sin configurar en el servidor: ' +
                      'avisale a quien administra el sistema.', 'err');
       } else if (r.codigo === 'clave-no-coincide') {
         done('fail', 'Pago confirmado. El encargado tiene que volver a activar los avisos ' +
                      'en su celular: las claves cambiaron.', 'err');
       } else if (r.codigo === 'sin-destinos') {
         done('fail', 'Pago confirmado. El encargado todav\u00eda no activ\u00f3 las notificaciones ' +
-                     'en ningun celular.', 'err');
+                     'en ningún celular.', 'err');
       } else {
         done('fail', isRetry
-          ? 'El aviso sigue sin salir. Proba de nuevo en un momento.'
-          : 'Pago confirmado, pero el aviso no salio.', 'err');
+          ? 'El aviso sigue sin salir. Probá de nuevo en un momento.'
+          : 'Pago confirmado, pero el aviso no salió.', 'err');
       }
     });
   }
@@ -508,11 +508,11 @@ document.addEventListener('DOMContentLoaded', function () {
       delete devolviendo[id];
       if (!ok) {
         b.disabled = false;
-        b.textContent = 'Ya se lo devolvi';
-        LP.toast('No pudimos anotarlo. Proba de nuevo.', 'err');
+        b.textContent = 'Ya se lo devolví';
+        LP.toast('No pudimos anotarlo. Probá de nuevo.', 'err');
         return;
       }
-      LP.toast('Anotado. Queda registrado que se devolvio.', 'ok');
+      LP.toast('Anotado. Queda registrado que se devolvió.', 'ok');
       load(true);
     });
   });
@@ -583,7 +583,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function showFatal() {
     ocultarListas(true);
-    elState.innerHTML = '<div class="state state-err"><h3>Sin conexion con el sistema</h3>' +
+    elState.innerHTML = '<div class="state state-err"><h3>Sin conexión con el sistema</h3>' +
       '<p>No se pudo cargar la libreria de datos.</p></div>';
   }
 
@@ -641,7 +641,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function pintarQR(qr) {
     if (!qr) {
-      elQrEstado.innerHTML = '<p class="qr-vacio">Todavia no hay ningun QR cargado. ' +
+      elQrEstado.innerHTML = '<p class="qr-vacio">Todavía no hay ningún QR cargado. ' +
         'Hasta que subas uno, la pantalla de cobro no le puede mostrar nada al cliente.</p>';
       elQrLabel.textContent = 'Subir o sacar foto del QR';
       return;
@@ -678,18 +678,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var nota, aviso = false;
     if (!hayQR) {
-      nota = 'Primero subi el QR. Despues, si tenes un link de pago, se puede agregar aca.';
+      nota = 'Primero subí el QR. Después, si tenés un link de pago, se puede agregar acá.';
     } else if (qr.link_pago) {
       nota = 'Listo: este QR tiene link. Desde la pantalla de cobro se puede compartir por mensaje.';
     } else if (lectura && lectura.soportado === false) {
-      nota = 'Este navegador no sabe leer codigos QR. Si tenes el link de pago, pegalo a mano.';
+      nota = 'Este navegador no sabe leer codigos QR. Si tenés el link de pago, pegalo a mano.';
       aviso = true;
     } else if (lectura && lectura.texto) {
-      nota = 'Leimos el codigo, pero no es un link: es un QR interoperable y solo funciona ' +
-             'escaneandolo. Si tenes un link de pago, pegalo aca.';
+      nota = 'Leimos el código, pero no es un link: es un QR interoperable y solo funciona ' +
+             'escaneandolo. Si tenés un link de pago, pegalo acá.';
       aviso = true;
     } else {
-      nota = 'Este QR no tiene un link asociado. Si tenes uno, pegalo aca.';
+      nota = 'Este QR no tiene un link asociado. Si tenés uno, pegalo acá.';
     }
     elLinkNota.textContent = nota;
     elLinkNota.className = 'qr-link-nota' + (aviso ? ' aviso' : '');
@@ -732,7 +732,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!file || subiendo) return;
 
     if (!/^image\//.test(file.type || '')) {
-      msg('Eso no es una imagen. Subi una foto o captura del QR.', 'err');
+      msg('Eso no es una imagen. Subí una foto o captura del QR.', 'err');
       elQrFile.value = '';
       return;
     }
@@ -749,7 +749,7 @@ document.addEventListener('DOMContentLoaded', function () {
       pintarQR(qr);
       pintarLink(qr, qr.__lectura);
       msg(qr.link_pago
-        ? 'Listo. Ademas le leimos el link de pago.'
+        ? 'Listo. Además le leimos el link de pago.'
         : 'Listo. Ya lo pueden mostrar desde cualquier celular.', 'ok');
       LP.toast('QR de cobro actualizado.', 'ok');
     }, function (e) {
@@ -757,7 +757,7 @@ document.addEventListener('DOMContentLoaded', function () {
       elQrLabel.removeAttribute('aria-disabled');
       elQrLabel.textContent = 'Subir o sacar foto del QR';
       elQrFile.value = '';
-      msg(LP.humanError(e, 'No se pudo subir el QR. Proba de nuevo.'), 'err');
+      msg(LP.humanError(e, 'No se pudo subir el QR. Probá de nuevo.'), 'err');
     });
   });
 

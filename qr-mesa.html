@@ -158,7 +158,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // cliente no llega a localhost. Mejor decirlo antes de gastar papel.
   if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) {
     avisoLocal.textContent = 'Estas viendo esto en tu computadora (localhost). ' +
-      'El codigo apunta a esta maquina, asi que sirve para probar pero no para ' +
+      'El código apunta a esta maquina, así que sirve para probar pero no para ' +
       'imprimir: desde el celular de un cliente no va a abrir. Genera los ' +
       'definitivos desde el sitio publicado.';
     avisoLocal.hidden = false;
@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function () {
       ? 'Hay 1 mesa cargada'
       : 'Hay ' + numeros.length + ' mesas cargadas, una por hoja';
     cajaDestino.innerHTML = '<b>A donde llevan los codigos</b>' +
-      esc(urlDeMesa('N')) + ' , cambiando la N por el numero de cada mesa.';
+      esc(urlDeMesa('N')) + ' , cambiando la N por el número de cada mesa.';
   }
 
   document.getElementById('imprimir').addEventListener('click', function () {
