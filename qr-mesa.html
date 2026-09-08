@@ -55,6 +55,8 @@
     display:flex;align-items:center;justify-content:center;
   }
   .pieza .codigo svg{width:100%;height:100%;display:block}
+  /* El negro de la marca: la regla le gana al fill="black" de la libreria. */
+  .pieza .codigo svg path{fill:var(--ink)}
   .pieza .pedi{font-size:17px;color:var(--ink);margin:0 0 6px;line-height:1.45}
   .pieza .chico{font-size:13px;color:var(--muted);margin:0;line-height:1.5}
 
@@ -166,6 +168,7 @@ document.addEventListener('DOMContentLoaded', function () {
      Correccion de errores alta: el QR sigue leyendose con una mancha de grasa
      o un pliegue, que en un bodegon pasa. Tipo 0 = que la libreria elija el
      tamanio minimo que entre.                                            */
+  var avisado = false;
   function svgDelCodigo(destino, etiqueta) {
     try {
       var qr = qrcode(0, 'H');
@@ -177,19 +180,17 @@ document.addEventListener('DOMContentLoaded', function () {
       var svg = tmp.querySelector('svg');
       if (svg) {
         svg.setAttribute('role', 'img');
-        svg.setAttribute('aria-label', 'Codigo QR de la ' + etiqueta);
-        // El negro de la marca, no un negro puro cualquiera.
-        var paths = svg.querySelectorAll('path, rect');
-        for (var i = 0; i < paths.length; i++) {
-          if (paths[i].getAttribute('fill') === '#000000') {
-            paths[i].setAttribute('fill', '#14100e');
-          }
-        }
+        svg.setAttribute('aria-label', 'C\u00f3digo QR de la ' + etiqueta);
       }
       return tmp.innerHTML;
     } catch (e) {
-      LP.humanError(e);
-      return '';
+      // Un solo aviso por las 12 piezas, y un texto adentro del cuadro en vez
+      // de un hueco que se imprime en blanco.
+      if (!avisado) {
+        avisado = true;
+        LP.toast(LP.humanError(e, 'No pudimos dibujar los c\u00f3digos. Recarg\u00e1 la p\u00e1gina.'), 'err');
+      }
+      return '<p class="chico">No se pudo dibujar el c\u00f3digo</p>';
     }
   }
 

@@ -79,6 +79,7 @@
   }
   .subir span{background:var(--ink);color:#fff}
   .subir:hover span{background:var(--accent)}
+  .subir input:disabled + span{opacity:.7;cursor:progress}
   .subir input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
   .quitar{background:transparent;border-color:var(--border-strong);color:var(--err-ink)}
   .quitar:hover{background:var(--err-bg);border-color:var(--err-border)}
@@ -210,16 +211,36 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   /* ----------------------------------------------------------- pintado -- */
-  function pintar() {
-    var items = filtrados();
+  function actualizarCuenta(items) {
+    items = items || filtrados();
     var conPropia = MENU.filter(function (p) { return propias[p.id]; }).length;
     var sinStock = MENU.filter(function (p) { return agotados[p.id]; }).length;
     cuenta.textContent = items.length + ' de ' + MENU.length + ' platos · ' +
                          conPropia + ' con foto propia' +
                          (sinStock ? ' · ' + sinStock + ' sin stock hoy' : '');
+  }
 
+  function pintar() {
+    var items = filtrados();
+    actualizarCuenta(items);
     vacio.hidden = items.length > 0;
     lista.innerHTML = items.map(function (p) { return filaHTML(p); }).join('');
+  }
+
+  function platoPorId(id) {
+    for (var i = 0; i < MENU.length; i++) if (MENU[i].id === id) return MENU[i];
+    return null;
+  }
+
+  /* Tocar UN plato rehace SOLO su fila. Antes se rehacian los 156 <li>: se
+     cerraba el precio que alguien estaba escribiendo en otro plato, se borraba
+     un error que todavia no habia leido y se volvian a pedir todas las fotos. */
+  function repintarUno(id) {
+    var li = lista.querySelector('[data-plato="' + id + '"]');
+    var p = platoPorId(id);
+    if (!li || !p) { pintar(); return; }
+    li.outerHTML = filaHTML(p);
+    actualizarCuenta();
   }
 
   function filaHTML(p) {
@@ -305,12 +326,20 @@ document.addEventListener('DOMContentLoaded', function () {
     var file = input.files[0];
     input.value = '';                       // permite reintentar el mismo archivo
 
+    // Freno al doble toque: una foto grande tarda unos segundos y si eligen
+    // otra mientras tanto salian dos subidas y una quedaba huerfana.
+    input.disabled = true;
+    var rotulo = input.nextSibling, textoOriginal = rotulo.textContent;
+    rotulo.textContent = 'Subiendo...';
     decir(platoId, 'Preparando la foto...', '');
 
     LP.subirFotoPlato(sb, platoId, file, YO).then(function (r) {
-      if (!r.ok) { decir(platoId, r.motivo, 'err'); return; }
+      if (!r.ok) {
+        input.disabled = false; rotulo.textContent = textoOriginal;
+        decir(platoId, r.motivo, 'err'); return;
+      }
       propias[platoId] = r.url;
-      pintar();
+      repintarUno(platoId);
       decir(platoId, 'Foto guardada.', 'ok');
       LP.toast('Foto actualizada.', 'ok');
     });
@@ -359,15 +388,17 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       /* Si escribio el mismo precio de la carta, no hay nada que cambiar: se
          borra el cambio si lo habia, en vez de guardar uno igual. */
-      var platoG = null;
-      for (var g = 0; g < MENU.length; g++) if (MENU[g].id === id) platoG = MENU[g];
+      var platoG = platoPorId(id);
       var deLaCarta = platoG && platoG.precioCarta !== undefined ? platoG.precioCarta : null;
       if (deLaCarta !== null && n === deLaCarta) {
         b.disabled = true;
-        LP.quitarPrecio(sb, id).then(function () {
+        b.textContent = 'Guardando...';
+        LP.quitarPrecio(sb, id).then(function (ok) {
           b.disabled = false;
+          b.textContent = 'Guardar';
+          if (!ok) { decir(id, 'No pudimos guardar el precio. Prob\u00e1 de nuevo.', 'err'); return; }
           delete precios[id];
-          pintar();
+          repintarUno(id);
           LP.toast('Sigue en ' + money(n) + ', el de la carta.', 'ok');
         });
         return;
@@ -377,9 +408,9 @@ document.addEventListener('DOMContentLoaded', function () {
       LP.guardarPrecio(sb, id, n, YO).then(function (ok) {
         b.disabled = false;
         b.textContent = 'Guardar';
-        if (!ok) { decir(id, 'No pudimos guardar el precio. Proba de nuevo.', 'err'); return; }
+        if (!ok) { decir(id, 'No pudimos guardar el precio. Prob\u00e1 de nuevo.', 'err'); return; }
         precios[id] = n;
-        pintar();
+        repintarUno(id);
         LP.toast('Precio guardado: ' + money(n) + '. Ya se ve en la mesa.', 'ok');
       });
       return;
@@ -392,7 +423,7 @@ document.addEventListener('DOMContentLoaded', function () {
         b.disabled = false;
         if (!ok) { decir(idV, 'No pudimos volver al precio de la carta.', 'err'); return; }
         delete precios[idV];
-        pintar();
+        repintarUno(idV);
         LP.toast('Vuelve al precio de la carta impresa.', 'ok');
       });
     }
@@ -403,8 +434,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var b = ev.target.closest('[data-stock]');
     if (!b) return;
     var platoId = b.dataset.stock;
-    var plato = null;
-    for (var i = 0; i < MENU.length; i++) if (MENU[i].id === platoId) plato = MENU[i];
+    var plato = platoPorId(platoId);
     if (!plato) return;
 
     var apagar = !agotados[platoId];
@@ -422,7 +452,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
       if (apagar) agotados[platoId] = true; else delete agotados[platoId];
-      pintar();
+      repintarUno(platoId);
       LP.toast(apagar ? plato.name + ': ya no se puede pedir.'
                       : plato.name + ': vuelve a la carta.', 'ok');
     });
@@ -439,7 +469,7 @@ document.addEventListener('DOMContentLoaded', function () {
     LP.borrarFotoPlato(sb, platoId).then(function (ok) {
       if (!ok) { b.disabled = false; decir(platoId, 'No pudimos quitarla.', 'err'); return; }
       delete propias[platoId];
-      pintar();
+      repintarUno(platoId);
       LP.toast('Volvio la foto original de la carta.', 'ok');
     });
   });

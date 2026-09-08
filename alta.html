@@ -61,6 +61,7 @@
 
   .cuantos{margin-top:16px;font-size:14px;color:var(--muted);line-height:1.5}
   .cuantos.solo{color:var(--err-ink)}
+  .cuantos:empty{display:none}
 
   .abajo{
     margin-top:26px;padding-top:18px;border-top:1px dashed var(--border);
@@ -108,8 +109,8 @@ document.addEventListener('DOMContentLoaded', function () {
   'use strict';
   var esc = LP.esc;
   var sb = LP.client();
-  /* El rol viene por la URL. Si no viene o no se reconoce, se cae a Cocina,
-     que es el caso mas frecuente y el que menos sorprende.              */
+  /* El rol viene por la URL. Si no viene, se usa quien sos (guardado al
+     entrar). Si tampoco hay, Cocina, que es el caso mas frecuente.       */
   var ROLES = {
     Cocina: {
       titulo: 'Avisos de la cocina',
@@ -143,7 +144,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   };
 
-  var pedido = new URLSearchParams(location.search).get('rol') || '';
+  var yo = LP.quienSoy();
+  var pedido = new URLSearchParams(location.search).get('rol') ||
+               (yo && yo.rol ? LP.rolDeAvisos(yo.rol) : '');
   var ROL = Object.prototype.hasOwnProperty.call(ROLES, pedido) ? pedido : 'Cocina';
   var CFG = ROLES[ROL];
 
@@ -176,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function () {
      que todos crean que la cocina esta cubierta y no lo este.            */
   function contar() {
     return LP.contarSubs(sb, ROL).then(function (n) {
-      if (n === null) { cuantos.textContent = ''; return; }
+      if (n === null) { cuantos.textContent = ''; cuantos.className = 'cuantos'; return; }
       if (n === 0) {
         cuantos.textContent = 'Ningun celular tiene estos avisos activados todavia.';
         cuantos.className = 'cuantos solo';
