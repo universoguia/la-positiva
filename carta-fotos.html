@@ -262,7 +262,7 @@ document.addEventListener('DOMContentLoaded', function () {
           precioHTML(p) +
           '<div class="acciones">' +
             '<button type="button" class="stock' + (noHay ? ' no' : '') + '" ' +
-              'data-stock="' + esc(p.id) + '">' +
+              'aria-pressed="' + (noHay ? 'true' : 'false') + '" data-stock="' + esc(p.id) + '">' +
               (noHay ? 'Se termino' : 'Hay') + '</button>' +
             '<label class="subir">' +
               '<input type="file" accept="image/*" data-subir="' + esc(p.id) + '">' +
@@ -271,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function () {
             (propia ? '<button type="button" class="quitar" data-quitar="' + esc(p.id) + '">' +
                       'Quitar</button>' : '') +
           '</div>' +
-          '<p class="estado" data-estado="' + esc(p.id) + '"></p>' +
+          '<p class="estado" role="status" aria-live="polite" data-estado="' + esc(p.id) + '"></p>' +
         '</div>' +
       '</li>';
   }
@@ -293,7 +293,7 @@ document.addEventListener('DOMContentLoaded', function () {
       '</div>' +
       '<div class="precio-edit" data-edit="' + esc(p.id) + '" hidden>' +
         '<span class="pesos">$</span>' +
-        '<input type="text" inputmode="numeric" pattern="[0-9]*" ' +
+        '<input type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" ' +
           'aria-label="Precio nuevo de ' + esc(p.name) + '" ' +
           'value="' + esc(String(Math.round(vigente))) + '" data-precio-input="' + esc(p.id) + '">' +
         '<button type="button" class="btn btn-primary" data-guardar-precio="' + esc(p.id) + '">' +
@@ -347,6 +347,21 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   /* ------------------------------------------------------------ precio -- */
+  // Enter guarda y Escape cancela: en el celu el teclado numerico muestra
+  // "Ir" y antes no hacia nada.
+  lista.addEventListener('keydown', function (ev) {
+    var inp = ev.target.closest('[data-precio-input]');
+    if (!inp) return;
+    var id = inp.dataset.precioInput;
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      var g = lista.querySelector('[data-guardar-precio="' + id + '"]');
+      if (g) g.click();
+    } else if (ev.key === 'Escape') {
+      var c = lista.querySelector('[data-cancelar-precio="' + id + '"]');
+      if (c) c.click();
+    }
+  });
   lista.addEventListener('input', function (ev) {
     var inp = ev.target.closest('[data-precio-input]');
     if (!inp) return;

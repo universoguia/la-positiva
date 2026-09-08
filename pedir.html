@@ -36,7 +36,7 @@
   .mesa-pill.is-warn{background:var(--err);color:#fff}
   .mesa-pill{
     background:var(--ink);color:var(--gold);
-    font-size:13px;font-weight:500;padding:6px 12px;
+    font-size:14px;font-weight:500;padding:6px 12px;
     border-radius:var(--r-pill);letter-spacing:.04em;white-space:nowrap;
   }
 
@@ -97,7 +97,7 @@
   main{padding:14px max(14px,var(--sa-l)) 8px max(14px,var(--sa-r))}
   .catlabel{
     margin:14px 2px 12px;color:var(--muted-strong);
-    font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
+    font-size:14px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
   }
   .menu-grid{display:grid;gap:9px}
 
@@ -133,7 +133,7 @@
   .dish-tag{
     position:absolute;left:0;right:0;bottom:0;
     background:rgba(20,16,14,.82);color:var(--gold);
-    font-size:11px;font-weight:600;letter-spacing:.03em;
+    font-size:12px;font-weight:600;letter-spacing:.03em;
     padding:3px 6px;text-align:center;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
@@ -147,11 +147,11 @@
   /* La nota se limita a dos renglones: hay platos con descripciones largas
      ("Con Rabas, Mejillones, Langostinos...") que solos duplicaban la fila. */
   .dish-note{
-    color:var(--muted);font-size:13px;line-height:1.35;margin-top:2px;
+    color:var(--muted);font-size:14px;line-height:1.35;margin-top:2px;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
     overflow:hidden;
   }
-  .dish-cat{color:var(--muted-soft);font-size:12px;margin-top:2px}
+  .dish-cat{color:var(--muted-soft);font-size:13px;margin-top:2px}
 
   /* Precio y boton comparten renglon, abajo de todo. */
   /* Se deja partir en dos renglones: a 320px el contador (124px) mas el precio
@@ -173,10 +173,13 @@
   /* Agotado: se muestra igual, apagado y sin boton. No se esconde a
      proposito: si el plato desaparece, el comensal no sabe si existe y
      termina preguntandole al mozo, que es lo que se queria evitar. */
-  .dish.agotado{opacity:.62}
-  .dish.agotado .dish-media{filter:grayscale(1)}
+  /* Se apaga la foto, no el texto: "Se termino por hoy" tiene que leerse. */
+  .dish.agotado{background:var(--bg)}
+  .dish.agotado .dish-media{filter:grayscale(1);opacity:.55}
+  .dish.agotado .dish-name,.dish.agotado .dish-price{color:var(--muted)}
+  .dish.agotado .dish-note{color:var(--muted-soft)}
   .sin-stock{
-    font-size:13px;font-weight:600;color:var(--muted-strong);
+    font-size:14px;font-weight:600;color:var(--muted-strong);
     background:var(--border);border-radius:var(--r-pill);padding:6px 13px;
     display:inline-flex;align-items:center;white-space:nowrap;
   }
@@ -187,7 +190,7 @@
     display:flex;align-items:center;justify-content:center;
     min-width:88px;min-height:44px;padding:0 16px;
     border-radius:var(--r-pill);background:var(--accent);color:#fff;
-    font-size:15px;font-weight:500;
+    font-size:16px;font-weight:500;
     transition:background-color .18s;
   }
   .btn-add:hover{background:var(--accent-dark)}
@@ -434,7 +437,7 @@
   <div class="sheet-panel">
     <div class="sheet-head">
       <h2 id="cartTitle">Tu pedido</h2>
-      <button type="button" class="close-x" data-close="cartSheet" aria-label="Cerrar el pedido">&#10005;</button>
+      <button type="button" class="close-x" data-close="cartSheet" aria-label="Cerrar">&#10005;</button>
     </div>
     <div id="cartLines"></div>
     <div class="totals"><span class="lbl">Total</span><span class="val" id="cartSheetTotal">$0</span></div>
@@ -449,7 +452,7 @@
   <div class="sheet-panel">
     <div class="sheet-head">
       <h2 id="checkoutTitle">Como pagas</h2>
-      <button type="button" class="close-x" data-close="checkoutSheet" aria-label="Cerrar el checkout">&#10005;</button>
+      <button type="button" class="close-x" data-close="checkoutSheet" aria-label="Cerrar">&#10005;</button>
     </div>
 
     <form id="checkoutForm" novalidate>
@@ -504,7 +507,7 @@
     <div class="sheet-head">
       <h2 id="statusTitle" class="visually-hidden">Estado de tu pedido</h2>
       <span aria-hidden="true"></span>
-      <button type="button" class="close-x" data-close="statusSheet" aria-label="Cerrar el seguimiento">&#10005;</button>
+      <button type="button" class="close-x" data-close="statusSheet" aria-label="Cerrar">&#10005;</button>
     </div>
     <div class="status-screen" id="statusScreen"></div>
   </div>

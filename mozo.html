@@ -427,17 +427,17 @@ document.addEventListener('DOMContentLoaded', function () {
   var sacando = null;
   var sacarEnVuelo = false;
 
+  /* La hoja pasa por el helper de app.js: mueve el foco adentro, lo atrapa
+     y al cerrar lo devuelve al boton "Sacar". */
   function cerrarSacar() {
-    hs.hidden = true;
-    document.body.classList.remove('sheet-open');
+    LP.closeDialog(hs);
     hsCuerpo.innerHTML = '';
     sacando = null;
   }
 
   function abrirSacar(p) {
     sacando = p;
-    hs.hidden = false;
-    document.body.classList.add('sheet-open');
+    if (!LP.isDialogOpen(hs)) LP.openDialog(hs, { persistent: true, focus: '#hsX' });
     var vivas = [];
     LP.lineasDe(p).forEach(function (l, i) {
       if (!LP.lineaSacada(l)) vivas.push({ l: l, i: i });
@@ -512,9 +512,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
   document.getElementById('hsX').addEventListener('click', cerrarSacar);
   hs.addEventListener('click', function (ev) { if (ev.target === hs) cerrarSacar(); });
+  // En captura y antes que el helper, para que el cierre limpie el estado propio.
   document.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape' && !hs.hidden) cerrarSacar();
-  });
+    if (ev.key === 'Escape' && LP.isDialogOpen(hs)) cerrarSacar();
+  }, true);
 
   var enVuelo = false, otraPendiente = false;
 

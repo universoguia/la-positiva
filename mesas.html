@@ -89,7 +89,7 @@
     transition:fill .3s ease;pointer-events:none;
   }
   .mesa-i{
-    font-family:'Jost',sans-serif;font-size:3.4px;text-anchor:middle;
+    font-family:'Jost',sans-serif;font-size:4px;text-anchor:middle;   /* ~12px a 375 */
     fill:var(--muted);pointer-events:none;
   }
 
@@ -97,16 +97,16 @@
      Se separan a proposito: si el estado fuera el color de la tapa, el plano
      se volveria un semaforo y dejaria de parecer el salon. */
   .e-libre .mesa-f{fill:var(--wood-pale);stroke:#c4b298;stroke-dasharray:2.2 1.8;stroke-width:.8}
-  .e-libre .mesa-n{fill:#a8967d}
-  .e-libre .mesa-i{fill:#bcac93}
+  .e-libre .mesa-n{fill:var(--muted)}
+  .e-libre .mesa-i{fill:var(--muted-soft)}
 
   .e-ocupada .mesa-f{fill:var(--wood);stroke:var(--wood-dark);stroke-width:.9}
   .e-ocupada .mesa-n{fill:#fdf6ea}
-  .e-ocupada .mesa-i{fill:#e6cfb4}
+  .e-ocupada .mesa-i{fill:#fdf6ea}
 
   .e-debe .mesa-f{fill:var(--wood);stroke:var(--warn);stroke-width:1.7}
   .e-debe .mesa-n{fill:#fdf6ea}
-  .e-debe .mesa-i{fill:#f2d9a8}
+  .e-debe .mesa-i{fill:#fdf6ea}
 
   .e-reservada .mesa-f{fill:var(--wood-pale);stroke:var(--warn);stroke-dasharray:2.6 1.8;stroke-width:1.2}
   .e-reservada .mesa-n{fill:var(--warn)}
@@ -114,7 +114,7 @@
 
   .e-limpieza .mesa-f{fill:var(--wood);stroke:var(--ok);stroke-width:1.7}
   .e-limpieza .mesa-n{fill:#fdf6ea}
-  .e-limpieza .mesa-i{fill:var(--ok-border)}
+  .e-limpieza .mesa-i{fill:#fdf6ea}
 
   .mesa-g:hover .mesa-f{stroke-width:2.2}
   .mesa-g:focus-visible{outline:none}
@@ -552,9 +552,10 @@ document.addEventListener('DOMContentLoaded', function () {
   var hojaCuerpo = document.getElementById('hojaCuerpo');
   var hojaBack = document.getElementById('hojaBack');
 
+  /* La hoja pasa por el helper de app.js: foco adentro al abrir, Tab no se
+     escapa a la pagina tapada, y al cerrar el foco vuelve a la mesa. */
   function cerrarHoja() {
-    hoja.hidden = true;
-    document.body.classList.remove('sheet-open');
+    LP.closeDialog(hoja);
     hojaCuerpo.innerHTML = '';
     mesaAbierta = null;
     sacando = null;
@@ -569,8 +570,7 @@ document.addEventListener('DOMContentLoaded', function () {
     vista = 'mesa';
     sacando = null;
     hojaBack.hidden = true;
-    hoja.hidden = false;
-    document.body.classList.add('sheet-open');
+    if (!LP.isDialogOpen(hoja)) LP.openDialog(hoja, { persistent: true, focus: '#hojaX' });
 
     hojaTit.textContent = t.etiqueta;
     hojaSub.textContent = textoEstado(t) +
@@ -766,9 +766,10 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   document.getElementById('hojaX').addEventListener('click', cerrarHoja);
   hoja.addEventListener('click', function (ev) { if (ev.target === hoja) cerrarHoja(); });
+  // En captura y antes que el helper, para que el cierre limpie el estado propio.
   document.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape' && !hoja.hidden) cerrarHoja();
-  });
+    if (ev.key === 'Escape' && LP.isDialogOpen(hoja)) cerrarHoja();
+  }, true);
 
   /* Todo lo que se toca adentro de la hoja pasa por aca. */
   hojaCuerpo.addEventListener('click', function (ev) {
