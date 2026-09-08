@@ -1276,7 +1276,7 @@
 
     // Sin bloquear el aviso: que falle la liberacion no puede frenar el cobro.
     liberarSiPagado(sb, pedido);
-    var cuerpo = pedido.mesa + ' pago ' + money(cobrable(pedido)) + '. Ya podés seguir.';
+    var cuerpo = pedido.mesa + ' pag\u00f3 ' + money(cobrable(pedido)) + '. Ya pod\u00e9s seguir.';
 
     avisarWhatsapp(sb, {
       rol: 'Jonathan',
@@ -1309,7 +1309,7 @@
   function agregarNota(sb, pedido, autor, texto) {
     var limpio = String(texto || '').trim().slice(0, 500);
     if (!sb || !pedido || !limpio) {
-      return Promise.resolve({ ok: false, motivo: 'Escribi algo antes de mandar.' });
+      return Promise.resolve({ ok: false, motivo: 'Escrib\u00ed algo antes de mandar.' });
     }
     return sb.from(NOTAS_TABLE)
       .insert({ pedido_id: pedido.id, autor: autor, texto: limpio })
@@ -1834,7 +1834,7 @@
         return {
           ok: false,
           motivo: 'La foto esta en formato HEIC y no se ve en todos los celulares. ' +
-                  'En el iPhone: Ajustes > Camara > Formatos > "Mas compatible", ' +
+                  'En el iPhone: Ajustes > C\u00e1mara > Formatos > "M\u00e1s compatible", ' +
                   'y sacala de nuevo. O mandatela por WhatsApp y guarda esa copia.'
         };
       }

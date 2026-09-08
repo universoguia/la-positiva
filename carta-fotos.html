@@ -147,12 +147,12 @@
 
   <div class="filtros">
     <input type="search" id="buscar" placeholder="Buscar un plato" aria-label="Buscar un plato">
-    <select id="categoria" aria-label="Filtrar por categoria"></select>
-    <select id="soloSin" aria-label="Filtrar por estado de la foto">
+    <select id="categoria" aria-label="Filtrar por categor&iacute;a"></select>
+    <select id="soloSin" aria-label="Mostrar">
       <option value="">Todos los platos</option>
-      <option value="propias">Solo los que ya tienen foto propia</option>
-      <option value="sin">Solo los que faltan</option>
-      <option value="agotados">Solo los que se terminaron</option>
+      <option value="propias">Con foto propia</option>
+      <option value="sin">Sin foto propia</option>
+      <option value="agotados">Los que se terminaron</option>
     </select>
   </div>
   <p class="cuenta" id="cuenta"></p>
@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function () {
   /* -------------------------------------------------------- categorias -- */
   var cats = [];
   MENU.forEach(function (p) { if (cats.indexOf(p.cat) === -1) cats.push(p.cat); });
-  selCat.innerHTML = '<option value="">Todas las categorias</option>' +
+  selCat.innerHTML = '<option value="">Todas las categor\u00edas</option>' +
     cats.map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('');
 
   /* ---------------------------------------------------------- filtrado -- */
@@ -219,13 +219,23 @@ document.addEventListener('DOMContentLoaded', function () {
     var sinStock = MENU.filter(function (p) { return agotados[p.id]; }).length;
     cuenta.textContent = items.length + ' de ' + MENU.length + ' platos · ' +
                          conPropia + ' con foto propia' +
-                         (sinStock ? ' · ' + sinStock + ' sin stock hoy' : '');
+                         (sinStock ? ' · ' + sinStock + ' que se terminaron' : '');
   }
 
   function pintar() {
     var items = filtrados();
     actualizarCuenta(items);
     vacio.hidden = items.length > 0;
+    // El vacio dice por que: no es lo mismo no encontrar lo buscado que no
+    // tener ninguno que se haya terminado.
+    if (!items.length) {
+      var q = normalizar(inBuscar.value);
+      vacio.textContent = q ? 'No hay platos que coincidan con la b\u00fasqueda.'
+        : (selSin.value === 'agotados' ? 'Ning\u00fan plato se termin\u00f3 hoy.'
+        : (selSin.value === 'sin' ? 'Todos los platos tienen foto propia.'
+        : (selSin.value === 'propias' ? 'Todav\u00eda no hay platos con foto propia.'
+        : 'No hay platos en esta categor\u00eda.')));
+    }
     lista.innerHTML = items.map(function (p) { return filaHTML(p); }).join('');
   }
 
@@ -270,7 +280,7 @@ document.addEventListener('DOMContentLoaded', function () {
               '<span class="pill">' + (propia ? 'Cambiar foto' : 'Cargar foto') + '</span>' +
             '</label>' +
             (propia ? '<button type="button" class="pill peligro" data-quitar="' + esc(p.id) + '">' +
-                      'Quitar</button>' : '') +
+                      'Quitar la foto</button>' : '') +
           '</div>' +
           '<p class="estado" role="status" aria-live="polite" data-estado="' + esc(p.id) + '"></p>' +
         '</div>' +
@@ -368,7 +378,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!inp) return;
     var n = Math.round(Number(String(inp.value).replace(/[^0-9]/g, '')));
     var prev = lista.querySelector('[data-preview="' + inp.dataset.precioInput + '"]');
-    if (prev) prev.textContent = isFinite(n) && n > 0 ? 'Queda en ' + money(n) : 'Pone un número';
+    if (prev) prev.textContent = isFinite(n) && n > 0 ? 'Queda en ' + money(n) : 'Pon\u00e9 un n\u00famero';
   });
 
   lista.addEventListener('click', function (ev) {
@@ -399,7 +409,7 @@ document.addEventListener('DOMContentLoaded', function () {
       // Solo digitos: "34.000" y "34000" valen lo mismo, "34,5" no existe.
       var n = Math.round(Number(String(input.value).replace(/[^0-9]/g, '')));
       if (!isFinite(n) || n <= 0) {
-        decir(id, 'Pone un número mayor que cero, sin centavos.', 'err');
+        decir(id, 'Pon\u00e9 un n\u00famero mayor que cero, sin centavos.', 'err');
         input.focus();
         return;
       }
@@ -456,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var apagar = !agotados[platoId];
     b.disabled = true;
-    b.textContent = apagar ? 'Apagando...' : 'Prendiendo...';
+    b.textContent = 'Marcando...';
 
     var accion = apagar ? LP.agotarPlato(sb, plato, YO)
                         : LP.reponerPlato(sb, platoId);
@@ -470,7 +480,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       if (apagar) agotados[platoId] = true; else delete agotados[platoId];
       repintarUno(platoId);
-      LP.toast(apagar ? plato.name + ': ya no se puede pedir.'
+      LP.toast(apagar ? plato.name + ': se termin\u00f3 por hoy.'
                       : plato.name + ': vuelve a la carta.', 'ok');
     });
   });

@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function () {
         pasos('Como hacerlo en iPhone', [
           'Tocá el botón Compartir en la barra de Safari.',
           'Elegí "Agregar a pantalla de inicio" y confirma.',
-          'Cerra Safari y abri La Positiva desde el ícono nuevo.',
+          'Cerrá Safari y abrí La Positiva desde el ícono nuevo.',
           'Volve a esta página y toca el botón de activar.'
         ]);
       } else if (st === 'denegado') {
@@ -221,11 +221,11 @@ document.addEventListener('DOMContentLoaded', function () {
         decir('err', 'Los avisos están bloqueados en este celular',
           'Hay que volver a habilitarlos desde los ajustes del navegador.');
         pasos('Como desbloquearlos', LP.esIOS()
-          ? ['Abrí Ajustes del iPhone.', 'Entra en Notificaciones y busca La Positiva.',
-             'Activa "Permitir notificaciones".', 'Volve a abrir la app y probá de nuevo.']
+          ? ['Abrí Ajustes del iPhone.', 'Entrá en Notificaciones y buscá La Positiva.',
+             'Activá "Permitir notificaciones".', 'Volvé a abrir la app y probá de nuevo.']
           : ['Tocá el candado al lado de la dirección web.',
-             'Entra en Permisos o Configuracion del sitio.',
-             'Cambia Notificaciones a "Permitir".', 'Recarga esta página.']);
+             'Entrá en Permisos o Configuración del sitio.',
+             'Cambiá Notificaciones a "Permitir".', 'Recargá esta página.']);
       } else if (st === 'activo') {
         return LP.pushRegistrado(sb, ROL).then(function (reg) {
           if (reg === null) {
@@ -251,7 +251,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!conservar) limpiar();
         pasos(LP.esIOS() ? 'Que va a pasar' : 'Que va a pasar',
           ['Tocá el botón de arriba.',
-           'El celular te va a preguntar si permitis las notificaciones: deci que si.',
+           'El celular te va a preguntar si permitís las notificaciones: decí que sí.',
            'Listo. Podés comprobarlo con el botón de probar.']);
       }
       return contar();
@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', function () {
         probar.disabled = false;
         probar.textContent = 'Probar el aviso';
         if (r.ok) {
-          LP.toast('Aviso enviado. Deberia llegarte en unos segundos.', 'ok');
+          LP.toast('Aviso enviado. Debería llegarte en unos segundos.', 'ok');
         } else if (r.config) {
           decir('err', 'Los avisos están sin configurar en el servidor',
             'No se arregla desde este celular: avisale a quien administra el sistema.');
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   if (!sb) {
     boton('Sin conexión', true);
-    decir('err', 'No hay conexión con el sistema', 'Revisá la conexión e intenta de nuevo.');
+    decir('err', 'No hay conexión con el sistema', 'Revisá la conexión y probá de nuevo.');
     return;
   }
   repasar();

@@ -541,7 +541,7 @@ document.addEventListener('DOMContentLoaded', function () {
           if (!cargado) {
             elAprobar.innerHTML = elCurso.innerHTML =
               '<li class="vacio">No pudimos traer los pedidos. Revis\u00e1 la conexi\u00f3n, seguimos intentando.</li>';
-          } else if (!silencioso) LP.toast('No pudimos actualizar.', 'err');
+          } else if (!silencioso) LP.toast('No pudimos actualizar. Seguimos intentando.', 'err');
           reintentar(silencioso);
           return;
         }
@@ -745,9 +745,9 @@ document.addEventListener('DOMContentLoaded', function () {
           } else {
             pushOk = reg;
             pintar2(reg ? 'aviso-estado' : 'aviso-estado warn',
-                    reg ? 'Avisos activados y registrados.'
-                        : 'Diste permiso, pero este aparato no figura registrado.',
-                    reg ? 'Volver a registrar' : 'Registrar este dispositivo', false);
+                    reg ? 'Avisos activados en este celular.'
+                        : 'Diste el permiso, pero este celular no qued\u00f3 anotado.',
+                    reg ? 'Volver a anotar' : 'Anotar este celular', false);
           }
           return destinos();
         });
@@ -758,7 +758,7 @@ document.addEventListener('DOMContentLoaded', function () {
         txt = 'En iPhone hay que agregar la app a la pantalla de inicio primero.';
         label = 'Falta instalar la app'; }
       else if (st === 'denegado') { cls += ' err'; off = true;
-        txt = 'Bloqueaste los avisos en este dispositivo.'; label = 'Permiso bloqueado'; }
+        txt = 'Bloqueaste los avisos en este celular.'; label = 'Permiso bloqueado'; }
       else { cls += ' off'; txt = 'Los avisos al celular están apagados.';
         label = 'Activar avisos al celular'; }
       pushOk = false;
@@ -777,9 +777,9 @@ document.addEventListener('DOMContentLoaded', function () {
     return LP.contarSubs(sb, ROL).then(function (n) {
       if (n === null) { pushDestinos.textContent = ''; return; }
       pushDestinos.textContent = n === 0
-        ? 'Ningún dispositivo recibe los avisos del mozo: hoy no le llega a nadie.'
-        : (n === 1 ? '1 dispositivo recibe los avisos del mozo.'
-                   : n + ' dispositivos reciben los avisos del mozo.');
+        ? 'Ning\u00fan celular recibe los avisos del mozo: hoy no le llega a nadie.'
+        : (n === 1 ? '1 celular recibe los avisos del mozo.'
+                   : n + ' celulares reciben los avisos del mozo.');
       pushDestinos.className = 'aviso-estado' + (n === 0 ? ' err' : '');
     });
   }
@@ -806,7 +806,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     if (!sonidoOn && !pushOk) {
       mostrar('', 'Esta pantalla no te va a avisar',
-        'El sonido está apagado y este aparato no tiene avisos al celular. Un pedido puede quedar esperando.',
+        'El sonido está apagado y este celular no tiene los avisos activados. Un pedido puede entrar y quedar sin hacer.',
         'Activar avisos', function () { pintarSonido(); pintarPush(); LP.openDialog(sheet); });
       return;
     }

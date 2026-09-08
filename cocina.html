@@ -325,7 +325,7 @@
     <section class="aviso-bloque" aria-labelledby="h-push">
       <h3 id="h-push">Avisos al celular</h3>
       <p>Llegan aunque tengas el panel cerrado o la pantalla apagada.
-         Sirve para el encargado que anda por el salón.</p>
+         Sirven para quien est&aacute; en la cocina y sale un rato.</p>
       <p class="aviso-estado" id="pushEstado"></p>
       <button type="button" class="btn btn-primary btn-block" id="pushBtn" disabled>Comprobando...</button>
       <button type="button" class="btn btn-secondary btn-block" id="pushProbar" hidden>Probar el aviso al celular</button>
@@ -733,7 +733,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function showError(err, quiet) {
     LP.humanError(err);
     if (loaded) {
-      if (!quiet) LP.toast('No pudimos actualizar el tablero. Seguimos intentando.', 'err');
+      if (!quiet) LP.toast('No pudimos actualizar. Seguimos intentando.', 'err');
       return;
     }
     elCols.innerHTML = '';
@@ -749,7 +749,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function showFatal() {
     elState.innerHTML = '<div class="board-state"><h3>No hay conexión con el sistema</h3>' +
-      '<p>No se pudo cargar la libreria de datos.</p></div>';
+      '<p>Recarg\u00e1 la p\u00e1gina. Si sigue igual, avisale a quien administra el sistema.</p></div>';
   }
 
   /* ------------------------------------------- realtime + respaldo ----- */
@@ -1129,7 +1129,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!sonidoOn && !pushOk) {
       mostrarBarra('', 'Esta pantalla no va a avisar nada',
-        'El sonido está apagado y este dispositivo no tiene los avisos al celular activados. Un pedido puede entrar y quedar sin hacer.',
+        'El sonido está apagado y este celular no tiene los avisos activados. Un pedido puede entrar y quedar sin hacer.',
         'Activar avisos', function () {
           pintarSonido(); pintarPush(); LP.openDialog(avisosSheet);
         });
@@ -1185,31 +1185,31 @@ document.addEventListener('DOMContentLoaded', function () {
               'Abrí La Positiva desde el ícono nuevo y volvé acá.']);
       } else if (st === 'denegado') {
         cls += ' err'; disabled = true;
-        txt = 'Bloqueaste los avisos en este dispositivo.';
+        txt = 'Bloqueaste los avisos en este celular.';
         label = 'Permiso bloqueado';
         guia(['Tocá el candado al lado de la dirección web.',
-              'Entra en Permisos o Configuracion del sitio.',
-              'Cambia Notificaciones a "Permitir" y recarga.']);
+              'Entrá en Permisos o Configuración del sitio.',
+              'Cambiá Notificaciones a "Permitir" y recargá.']);
       } else if (st === 'activo') {
         // Un paso mas: confirmar contra la base antes de cantar victoria.
         return LP.pushRegistrado(sb, 'Cocina').then(function (reg) {
           if (reg === null) {
             // No es lo mismo "no esta registrado" que "no pudimos preguntar".
             pintarEstadoPush('aviso-estado warn',
-              'No pudimos comprobar si este dispositivo está registrado. Revisá la conexión.',
+              'No pudimos comprobar si este celular está anotado. Revisá la conexión.',
               'Volver a registrar', false, true);
             return pintarDestinos();
           }
           pushOk = reg;
           if (reg) {
             pintarEstadoPush('aviso-estado',
-              'Avisos activados en este dispositivo y registrados en el sistema.',
+              'Avisos activados en este celular.',
               'Volver a registrar', false, true);
           } else {
             pintarEstadoPush('aviso-estado warn',
-              'El permiso esta dado, pero este dispositivo no figura registrado en el sistema. ' +
+              'Diste el permiso, pero este celular no qued\u00f3 anotado en el sistema. ' +
               'No le van a llegar los avisos.',
-              'Registrar este dispositivo', false, false);
+              'Anotar este celular', false, false);
           }
           return pintarDestinos();
         });
@@ -1244,13 +1244,13 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
       if (n === 0) {
-        pushDestinos.textContent = 'Ningún dispositivo tiene los avisos de cocina activados: ' +
+        pushDestinos.textContent = 'Ning\u00fan celular tiene los avisos de cocina activados: ' +
                                    'hoy no le llega a nadie.';
         pushDestinos.className = 'aviso-estado err';
       } else {
         pushDestinos.textContent = n === 1
-          ? '1 dispositivo recibe los avisos de cocina.'
-          : n + ' dispositivos reciben los avisos de cocina.';
+          ? '1 celular recibe los avisos de cocina.'
+          : n + ' celulares reciben los avisos de cocina.';
         pushDestinos.className = 'aviso-estado';
       }
       /* La prueba manda a TODOS los aparatos registrados, no a este. Asi el
@@ -1276,7 +1276,7 @@ document.addEventListener('DOMContentLoaded', function () {
       else if (st === 'no-guardado') {
         // Antes esto culpaba a la conexion y mandaba a buscar el problema
         // al lugar equivocado: el permiso estaba dado, fallo el guardado.
-        LP.toast('El permiso quedó dado, pero el dispositivo no se registró en el sistema. Probá de nuevo.', 'err');
+        LP.toast('El permiso qued\u00f3 dado, pero el celular no qued\u00f3 anotado en el sistema. Prob\u00e1 de nuevo.', 'err');
       } else LP.toast('No se pudo activar. Revisá la conexión.', 'err');
       pintarPush();
     });
@@ -1295,12 +1295,12 @@ document.addEventListener('DOMContentLoaded', function () {
         pushProbar.disabled = false;
         pushProbar.textContent = 'Probar el aviso al celular';
         if (r.ok) {
-          LP.toast('Aviso de prueba enviado. Deberia llegarte en unos segundos.', 'ok');
+          LP.toast('Aviso de prueba enviado. Debería llegarte en unos segundos.', 'ok');
         } else if (r.config) {
           // Reintentar no lo arregla: falta configuracion del servidor.
           pushEstado.className = 'aviso-estado err';
           pushEstado.textContent = 'Los avisos al celular están sin configurar en el servidor. ' +
-            'Avisale a quien administra el sistema: no se arregla desde este dispositivo.';
+            'Avisale a quien administra el sistema: no se arregla desde este celular.';
           LP.toast('Falta configurar los avisos en el servidor.', 'err');
         } else {
           LP.toast(r.motivo || 'No salió la notificación de prueba.', 'err');

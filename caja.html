@@ -412,7 +412,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (pending[id]) return;                 // sin doble confirmacion
     var o = findOrder(id);
     if (!o || o.pagado) return;
-    if (!sb) { LP.toast('Sin conexión con el sistema.', 'err'); return; }
+    if (!sb) { LP.toast('No hay conexi\u00f3n con el sistema.', 'err'); return; }
 
     pending[id] = true;
     render();
@@ -556,7 +556,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function showError(err, quiet) {
     LP.humanError(err);
     if (loaded) {
-      if (!quiet) LP.toast('No pudimos actualizar la lista. Seguimos intentando.', 'err');
+      if (!quiet) LP.toast('No pudimos actualizar. Seguimos intentando.', 'err');
       return;
     }
     ocultarListas(true);   // sin datos no hay listas: si no, el error quedaba debajo de dos esqueletos
@@ -583,8 +583,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function showFatal() {
     ocultarListas(true);
-    elState.innerHTML = '<div class="state state-err"><h3>Sin conexión con el sistema</h3>' +
-      '<p>No se pudo cargar la libreria de datos.</p></div>';
+    elState.innerHTML = '<div class="state state-err"><h3>No hay conexi\u00f3n con el sistema</h3>' +
+      '<p>Recarg\u00e1 la p\u00e1gina. Si sigue igual, avisale a quien administra el sistema.</p></div>';
   }
 
   /* --------------------------------------------- realtime + respaldo --- */
