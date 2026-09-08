@@ -42,19 +42,22 @@
 
   .search{position:relative;margin-top:10px}
   .search input{
+    -webkit-appearance:none;appearance:none;   /* sin la "x" ni la sombra del sistema */
     width:100%;min-height:var(--tap);
     padding:10px 44px 10px 14px;
     border-radius:var(--r-pill);border:1px solid var(--border-strong);
     background:var(--card);color:var(--ink);
   }
   .search input::placeholder{color:var(--muted-soft)}
+  .search input::-webkit-search-decoration,
+  .search input::-webkit-search-cancel-button,
+  .search input::-webkit-search-results-button{-webkit-appearance:none;display:none}
   .search .clear{
     position:absolute;right:2px;top:50%;transform:translateY(-50%);
     width:var(--tap);height:var(--tap);border-radius:50%;
     display:inline-flex;align-items:center;justify-content:center;
     font-size:18px;color:var(--muted);
   }
-  .search .clear:hover{color:var(--ink)}
 
   /* Barra de categorias: pista visual de scroll con degradado en el borde. */
   .cats-shell{position:relative;margin-top:10px}
@@ -79,7 +82,6 @@
     font-size:15px;white-space:nowrap;
     transition:background-color .18s,color .18s,border-color .18s;
   }
-  .cat-btn:hover{background:#fff;border-color:var(--muted)}
   .cat-btn[aria-pressed="true"]{
     background:var(--accent);color:#fff;border-color:var(--accent);font-weight:500;
   }
@@ -193,7 +195,6 @@
     font-size:16px;font-weight:500;
     transition:background-color .18s;
   }
-  .btn-add:hover{background:var(--accent-dark)}
   .btn-add:active{transform:translateY(1px)}
 
   /* Cuando ya hay unidades, el boton se convierte en el contador. */
@@ -210,7 +211,6 @@
     background:#fff;border-color:var(--accent);color:var(--accent);
     font-size:24px;font-weight:600;
   }
-  .qty-row .icon-btn:hover{background:var(--accent);color:#fff}
   .qty-val{
     min-width:26px;text-align:center;font-weight:600;font-size:17px;
     color:var(--accent);font-variant-numeric:tabular-nums;
@@ -249,7 +249,6 @@
     box-shadow:var(--shadow-lg);pointer-events:auto;
     font-size:17px;transition:background-color .18s;
   }
-  .cartbar-btn:hover{background:#241c18}
   .cartbar-btn .total{color:var(--gold);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums}
   /* La barra dice la accion, no un sustantivo: "Ver mi pedido" con el
      contador al lado, como en las apps de delivery. */
@@ -317,7 +316,6 @@
     border-radius:var(--r-md);cursor:pointer;
     transition:border-color .18s,background-color .18s;
   }
-  .pay-opts label:hover{background:#fff}
   .pay-opts input{position:absolute;opacity:0;width:1px;height:1px}
   .pay-opts label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
   .pay-opts input:focus-visible ~ .pay-txt{outline:3px solid var(--accent);outline-offset:4px;border-radius:4px}
@@ -353,7 +351,24 @@
   .field-err:empty{display:none}
 
   /* -------------------------------------------------------- seguimiento -- */
+  /* Pantalla 100% tactil: los hover solo con puntero de verdad. */
+  @media (hover:hover){
+    .search .clear:hover{color:var(--ink)}
+    .cat-btn:hover{background:#fff;border-color:var(--muted)}
+    .btn-add:hover{background:var(--accent-dark)}
+    .qty-row .icon-btn:hover{background:var(--accent);color:#fff}
+    .cartbar-btn:hover{background:#241c18}
+    .pay-opts label:hover{background:#fff}
+  }
+
   .status-screen{text-align:center;padding:12px 4px}
+  .status-screen h3{margin:0;font-size:28px}
+  .status-screen .total{margin-top:-4px}
+  .status-screen .qr-aviso.arriba{margin-bottom:14px}
+  .status-screen .btn{margin-top:18px}
+  .btn-cta{min-height:56px;font-size:18px;margin-top:18px}
+  .btn-back{margin-top:8px}
+  .sheet-head .close-x{margin-left:auto}
   .check{
     width:76px;height:76px;border-radius:50%;background:var(--ok-bg);color:var(--ok);
     display:flex;align-items:center;justify-content:center;
@@ -441,7 +456,7 @@
     </div>
     <div id="cartLines"></div>
     <div class="totals"><span class="lbl">Total</span><span class="val" id="cartSheetTotal">$0</span></div>
-    <button type="button" class="btn btn-primary btn-block" id="goCheckoutBtn" style="margin-top:18px;min-height:56px;font-size:18px">
+    <button type="button" class="btn btn-primary btn-block btn-cta" id="goCheckoutBtn">
       Elegir como pagar
     </button>
   </div>
@@ -494,9 +509,9 @@
       </div>
 
       <p class="field-err" id="formErr" role="alert"></p>
-      <button type="submit" class="btn btn-primary btn-block" id="payBtn"
-              style="margin-top:18px;min-height:58px;font-size:18px">Enviar pedido</button>
-      <button type="button" class="btn btn-ghost btn-block" id="backToCart" style="margin-top:8px">Volver al pedido</button>
+      <button type="submit" class="btn btn-primary btn-block btn-cta" id="payBtn"
+              >Enviar pedido</button>
+      <button type="button" class="btn btn-ghost btn-block btn-back" id="backToCart">Volver al pedido</button>
     </form>
   </div>
 </div>
@@ -506,7 +521,6 @@
   <div class="sheet-panel">
     <div class="sheet-head">
       <h2 id="statusTitle" class="visually-hidden">Estado de tu pedido</h2>
-      <span aria-hidden="true"></span>
       <button type="button" class="close-x" data-close="statusSheet" aria-label="Cerrar">&#10005;</button>
     </div>
     <div class="status-screen" id="statusScreen"></div>
@@ -852,7 +866,7 @@ document.addEventListener('DOMContentLoaded', function () {
         '<div class="line-right">' +
           '<button type="button" class="icon-btn" data-act="dec" data-id="' + esc(l.item.id) + '" ' +
             'aria-label="Quitar uno de ' + esc(l.item.name) + '">&#8722;</button>' +
-          '<span class="qty-val" aria-hidden="true" style="min-width:26px;font-size:17px">' + l.qty + '</span>' +
+          '<span class="qty-val" aria-hidden="true">' + l.qty + '</span>' +
           '<button type="button" class="icon-btn" data-act="inc" data-id="' + esc(l.item.id) + '" ' +
             'aria-label="Agregar otro ' + esc(l.item.name) + '">&#43;</button>' +
           '<span class="line-total">' + money(l.item.price * l.qty) + '</span>' +
@@ -1286,7 +1300,7 @@ document.addEventListener('DOMContentLoaded', function () {
          que se lo devolvemos. */
       var devolverle = LP.pendienteDeDevolver(order);
       document.getElementById('statusScreen').innerHTML =
-        '<h3 class="serif" style="margin:0;font-size:28px">Sacamos este pedido de tu cuenta</h3>' +
+        '<h3>Sacamos este pedido de tu cuenta</h3>' +
         '<p class="order-no">Pedido #' + esc(order.id) + ' &middot; ' + esc(order.mesa) + '</p>' +
         '<div class="qr-aviso"><strong>No te lo vamos a cobrar</strong>' +
         (order.rechazado_motivo
@@ -1296,8 +1310,7 @@ document.addEventListener('DOMContentLoaded', function () {
           ? 'Ya lo habias pagado: te devolvemos ' + money(devolverle) + ' en la mesa.'
           : 'Si necesitas algo, avisale a un mozo.') +
         '</div>' +
-        '<button type="button" class="btn btn-secondary btn-block" id="keepBrowsing" ' +
-          'style="margin-top:18px">Volver a la carta</button>';
+        '<button type="button" class="btn btn-secondary btn-block" id="keepBrowsing">Volver a la carta</button>';
       document.getElementById('keepBrowsing').addEventListener('click', function () {
         LP.closeDialog(statusSheet);
         clearActiveOrder();
@@ -1313,7 +1326,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (LP.lineaSacada(l)) fuera.push(l.qty + '\u00d7 ' + l.name);
     });
     var avisoSacado = fuera.length
-      ? '<div class="qr-aviso" style="margin-bottom:14px"><strong>' +
+      ? '<div class="qr-aviso arriba"><strong>' +
         (fuera.length === 1 ? 'Sacamos un plato de tu pedido' : 'Sacamos platos de tu pedido') +
         '</strong>' + esc(fuera.join(', ')) + ' \u2014 no te lo cobramos. ' +
         'Ahora tu pedido queda en ' + money(LP.cobrable(order)) + '.</div>'
@@ -1341,18 +1354,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.getElementById('statusScreen').innerHTML =
       '<div class="check" aria-hidden="true">&#10003;</div>' +
-      '<h3 class="serif" style="margin:0;font-size:28px">Pedido enviado</h3>' +
+      '<h3>Pedido enviado</h3>' +
       '<p class="order-no">Pedido #' + esc(order.id) + ' &middot; ' + esc(order.mesa) +
         ' &middot; ' + esc(pago) + '</p>' +
       avisoSacado +
       avisoQR +
       /* Si el pedido lleva la linea de cubiertos, se dice de donde salio:
          nadie tiene que preguntarle al mozo que es ese renglon. */
-      '<p class="order-no" style="margin-top:-4px">Total ' + money(LP.cobrable(order)) +
+      '<p class="order-no total">Total ' + money(LP.cobrable(order)) +
         (LP.lineasDe(order).some(function (l) { return l.cubierto && !l.anulada; })
           ? ' (incluye cubiertos, una sola vez por mesa)' : '') + '</p>' +
       '<div class="track">' + steps + '</div>' +
-      '<button type="button" class="btn btn-secondary btn-block" id="keepBrowsing" style="margin-top:18px">' +
+      '<button type="button" class="btn btn-secondary btn-block" id="keepBrowsing">' +
         'Seguir mirando la carta</button>';
 
     document.getElementById('keepBrowsing').addEventListener('click', function () {

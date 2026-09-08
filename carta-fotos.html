@@ -15,9 +15,7 @@
 <link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 <style>
-  .wrap{max-width:900px;padding-top:calc(30px + var(--sa-t))}
-  .intro h1{font-size:30px;margin:0 0 6px}
-  .intro p{color:var(--muted);margin:0 0 20px;font-size:16px;line-height:1.55}
+  .wrap{max-width:900px;padding-top:calc(26px + var(--sa-t))}
 
   /* --------------------------------------------------------- filtros --- */
   .filtros{
@@ -72,17 +70,23 @@
     overflow:hidden;clip-path:inset(50%);white-space:nowrap;
   }
   .subir{position:relative;display:inline-flex}
-  .subir span,.quitar{
+  /* Una sola pildora para todo lo que se toca en la tarjeta: interruptor
+     Hay / Se termino (con estado .no), Cambiar precio, Cargar foto y Quitar
+     (.peligro). Antes eran cuatro estilos en la misma fila. */
+  .pill{
     display:inline-flex;align-items:center;justify-content:center;
     min-height:var(--tap);padding:0 15px;border-radius:var(--r-pill);
-    font-size:14px;cursor:pointer;border:1px solid transparent;
+    font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;
+    border:1px solid var(--border-strong);background:transparent;color:var(--muted-strong);
   }
-  .subir span{background:var(--ink);color:#fff}
-  .subir:hover span{background:var(--accent)}
+  .pill.no{background:var(--err-bg);border-color:var(--err-border);color:var(--err-ink)}
+  .pill.peligro{color:var(--err-ink)}
+  @media (hover:hover){
+    .pill:hover{border-color:var(--accent);color:var(--ink)}
+    .pill.peligro:hover{background:var(--err-bg);border-color:var(--err-border)}
+  }
   .subir input:disabled + span{opacity:.7;cursor:progress}
   .subir input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
-  .quitar{background:transparent;border-color:var(--border-strong);color:var(--err-ink)}
-  .quitar:hover{background:var(--err-bg);border-color:var(--err-border)}
 
   .estado{font-size:13px;margin-top:7px;line-height:1.45}
   .estado.err{color:var(--err-ink)}
@@ -120,14 +124,6 @@
     cursor:pointer;font-family:inherit;
   }
 
-  .stock{
-    display:inline-flex;align-items:center;justify-content:center;
-    min-height:var(--tap);padding:0 15px;border-radius:var(--r-pill);
-    font-size:14px;font-weight:500;cursor:pointer;
-    border:1px solid var(--border-strong);background:transparent;color:var(--muted-strong);
-  }
-  .stock.no{background:var(--err-bg);border-color:var(--err-border);color:var(--err-ink)}
-  .stock:hover{border-color:var(--accent)}
 
   .plato.agotado .miniatura{filter:grayscale(1);opacity:.6}
   .plato.agotado .datos b{color:var(--muted)}
@@ -138,11 +134,15 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="intro">
-    <h1>La carta</h1>
-    <p>Apag&aacute; lo que se termin&oacute; y saca las fotos. Los dos cambios se ven en la
-       mesa al instante, sin publicar nada.</p>
-  </div>
+  <header class="top">
+    <div>
+      <h1>La carta</h1>
+      <p class="sub">Marc&aacute; lo que se termin&oacute;, cambi&aacute; precios y sac&aacute; las fotos. Se ve en la mesa al instante.</p>
+    </div>
+    <div class="head-right">
+      <a class="soy" href="./" data-quien hidden></a>
+    </div>
+  </header>
 
   <div class="filtros">
     <input type="search" id="buscar" placeholder="Buscar un plato" aria-label="Buscar un plato">
@@ -261,14 +261,14 @@ document.addEventListener('DOMContentLoaded', function () {
           '<div class="cat">' + esc(p.cat) + (p.note ? ' · ' + esc(p.note) : '') + '</div>' +
           precioHTML(p) +
           '<div class="acciones">' +
-            '<button type="button" class="stock' + (noHay ? ' no' : '') + '" ' +
+            '<button type="button" class="pill' + (noHay ? ' no' : '') + '" ' +
               'aria-pressed="' + (noHay ? 'true' : 'false') + '" data-stock="' + esc(p.id) + '">' +
               (noHay ? 'Se termino' : 'Hay') + '</button>' +
             '<label class="subir">' +
               '<input type="file" accept="image/*" data-subir="' + esc(p.id) + '">' +
-              '<span>' + (propia ? 'Cambiar foto' : 'Cargar foto') + '</span>' +
+              '<span class="pill">' + (propia ? 'Cambiar foto' : 'Cargar foto') + '</span>' +
             '</label>' +
-            (propia ? '<button type="button" class="quitar" data-quitar="' + esc(p.id) + '">' +
+            (propia ? '<button type="button" class="pill peligro" data-quitar="' + esc(p.id) + '">' +
                       'Quitar</button>' : '') +
           '</div>' +
           '<p class="estado" role="status" aria-live="polite" data-estado="' + esc(p.id) + '"></p>' +
@@ -288,7 +288,7 @@ document.addEventListener('DOMContentLoaded', function () {
         (cambiado
           ? '<span class="precio-carta">antes <s>' + money(carta) + '</s></span>'
           : '') +
-        '<button type="button" class="stock" data-editar-precio="' + esc(p.id) + '">' +
+        '<button type="button" class="pill" data-editar-precio="' + esc(p.id) + '">' +
           'Cambiar precio</button>' +
       '</div>' +
       '<div class="precio-edit" data-edit="' + esc(p.id) + '" hidden>' +

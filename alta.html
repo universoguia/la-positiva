@@ -36,6 +36,10 @@
   .btn-grande{min-height:58px;font-size:18px}
   /* Apagado lleva el estado ("Permiso bloqueado"): sin opacidad, que se lea. */
   .btn-grande:disabled{opacity:1}
+  /* Exito: verde, no un boton apagado. */
+  .btn-grande.btn-listo:disabled{
+    background:var(--ok-soft);color:var(--ok);border:1px solid var(--ok-border);cursor:default;
+  }
 
   .estado{
     margin-top:18px;padding:14px 16px;border-radius:var(--r-md);
@@ -175,7 +179,10 @@ document.addEventListener('DOMContentLoaded', function () {
       : '';
   }
 
-  function boton(txt, apagado) { btn.textContent = txt; btn.disabled = !!apagado; }
+  function boton(txt, apagado) {
+    btn.textContent = txt; btn.disabled = !!apagado;
+    btn.classList.remove('btn-listo');   // el estado siempre lo maneja boton()
+  }
 
   /* Cuantos aparatos escuchan de verdad. Es el dato que evita el peor caso:
      que todos crean que la cocina esta cubierta y no lo este.            */
@@ -230,9 +237,8 @@ document.addEventListener('DOMContentLoaded', function () {
             decir('warn', 'No pudimos comprobarlo',
               'Revisa la conexion y proba de nuevo.');
           } else if (reg) {
-            boton('Listo, ya estan activados', true);
-            btn.classList.remove('btn-primary');
-            btn.classList.add('btn-secondary');
+            boton('Listo, ya est\u00e1n activados', true);
+            btn.classList.add('btn-listo');
             probar.hidden = false;
             decir('ok', 'Este celular ya recibe los avisos',
               CFG.listo);

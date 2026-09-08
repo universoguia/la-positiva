@@ -77,8 +77,10 @@
   .pdevolver .quep{font-size:13px;color:var(--muted-strong)}
   .plines .fuera{color:var(--muted);text-decoration:line-through}
 
-  [data-body="pend"]{min-height:249px}
-  [data-body="pend"] .state{align-self:center}
+  /* El vacio se lee como "vacio a proposito": tarjeta punteada, no un
+     hueco gris. La reserva de alto se mantiene (anti-salto). */
+  .cards .estado-vacio{grid-column:1/-1}
+  [data-body="pend"] .estado-vacio{min-height:249px;display:flex;align-items:center;justify-content:center}
 
   /* -------------------------------------------------- QR de cobro ----- */
   .qr-panel{max-width:620px}
@@ -361,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!list.length) {
       if (body.dataset.mode !== 'empty') {
         body.dataset.mode = 'empty';
-        body.innerHTML = '<p class="state" style="grid-column:1/-1">' + esc(emptyMsg) + '</p>';
+        body.innerHTML = '<div class="estado-vacio"><p>' + esc(emptyMsg) + '</p></div>';
       }
       return;
     }

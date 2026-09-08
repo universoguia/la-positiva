@@ -82,8 +82,10 @@
     .wrap{max-width:none;padding:0}
     .piezas{display:block}
     .sobre{max-width:none;margin:0}
+    /* Linea de corte punteada: la intro dice "recorta" y no habia por donde. */
     .pieza{
-      border:none;box-shadow:none;padding:0;max-width:none;
+      border:1px dashed var(--border-strong);border-radius:0;box-shadow:none;
+      padding:12mm 10mm;max-width:120mm;margin:0 auto;
       break-inside:avoid;page-break-inside:avoid;
     }
     /* Una mesa por hoja: se recorta y se deja sobre la mesa. La ultima no

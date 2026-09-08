@@ -83,6 +83,7 @@
   --dark-card:#221a16;
   --dark-card-hover:#2c221d;
   --dark-border:#3a2f28;
+  --dark-border-soft:#2a221d;
   --dark-panel:#1c1512;
 
   /* --- Medidas --- */
@@ -168,12 +169,11 @@ body.dark :focus-visible{outline-color:var(--gold)}
 }
 .btn-block{display:flex;width:100%}
 .btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover:not(:disabled){background:var(--accent-dark)}
 .btn-primary:active:not(:disabled){transform:translateY(1px)}
 .btn-secondary{background:var(--card);color:var(--muted-strong);border:1px solid var(--border-strong)}
-.btn-secondary:hover:not(:disabled){background:#fff;border-color:var(--muted)}
 .btn-ghost{background:transparent;color:var(--muted-strong);text-decoration:underline}
-.btn-ghost:hover:not(:disabled){color:var(--ink)}
+/* Confirmar plata: verde, el mismo del aviso de exito. */
+.btn-ok{background:var(--ok);color:#fff;border:1px solid var(--ok)}
 .btn:disabled,.btn[aria-disabled="true"]{
   opacity:.7;cursor:not-allowed;background:var(--done-bg);color:var(--muted-strong);
 }
@@ -186,7 +186,6 @@ body.dark :focus-visible{outline-color:var(--gold)}
   font-size:20px;line-height:1;color:var(--ink);flex:none;
   transition:background-color .18s,border-color .18s;
 }
-.icon-btn:hover:not(:disabled){background:#fff;border-color:var(--muted)}
 .icon-btn:active:not(:disabled){background:var(--border)}
 
 /* --------------------------------------------------------------- cards -- */
@@ -238,7 +237,6 @@ body.dark :focus-visible{outline-color:var(--gold)}
   border-radius:50%;background:var(--card);border:1px solid var(--border-strong);
   font-size:18px;line-height:1;color:var(--ink);
 }
-.close-x:hover{background:#fff;border-color:var(--muted)}
 body.sheet-open{overflow:hidden}
 
 /* ------------------------------------------- cabecera de cada pantalla --
@@ -261,7 +259,6 @@ header.top .sub{color:var(--muted);font-size:15px;margin:3px 0 0}
   display:inline-flex;align-items:center;min-height:var(--tap);margin-top:22px;
   color:var(--muted-strong);font-size:15px;text-decoration:underline;
 }
-.back-link:hover{color:var(--ink)}
 /* Cuando va en la cabecera, al lado de los chips, sin el margen de pie. */
 .head-right .back-link{margin-top:0;padding:0 4px}
 
@@ -278,7 +275,6 @@ header.top .sub{color:var(--muted);font-size:15px;margin:3px 0 0}
 .cifra span{display:block;font-size:12px;color:var(--muted);line-height:1.4}
 .cifra b{font-size:clamp(19px,6.4vw,24px);font-variant-numeric:tabular-nums;line-height:1.2;overflow-wrap:anywhere}
 .cifra.alerta b{color:var(--warn)}
-.cifra.mal b{color:var(--err-ink)}
 
 /* Fila de acciones al pie de una tarjeta o de una hoja. */
 .acciones{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
@@ -308,7 +304,6 @@ header.top .sub{color:var(--muted);font-size:15px;margin:3px 0 0}
   border-radius:var(--r-md);font-size:16px;font-family:inherit;
   color:var(--ink);text-align:left;cursor:pointer;
 }
-.opcion:hover{border-color:var(--accent);background:#fff}
 .opcion .plata{flex:none;color:var(--muted-strong);font-size:15px}
 .opcion.toda{border-style:dashed;margin-top:10px}
 
@@ -380,7 +375,6 @@ header.top .sub{color:var(--muted);font-size:15px;margin:3px 0 0}
   content:"";width:8px;height:8px;border-radius:50%;
   background:var(--accent);flex:none;
 }
-.soy:hover{border-color:var(--accent)}
 .soy[hidden]{display:none}
 
 .conn{
@@ -412,3 +406,17 @@ header.top .sub{color:var(--muted);font-size:15px;margin:3px 0 0}
 .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .muted{color:var(--muted)}
 .tnum{font-variant-numeric:tabular-nums}
+
+/* Los :hover solo con puntero de verdad. En el celular, un boton tocado
+   quedaba pintado como "trabado" hasta tocar otra cosa. */
+@media (hover:hover){
+  .btn-primary:hover:not(:disabled){background:var(--accent-dark)}
+  .btn-secondary:hover:not(:disabled){background:#fff;border-color:var(--muted)}
+  .btn-ghost:hover:not(:disabled){color:var(--ink)}
+  .btn-ok:hover:not(:disabled){background:#0f3f2a}
+  .icon-btn:hover:not(:disabled){background:#fff;border-color:var(--muted)}
+  .close-x:hover{background:#fff;border-color:var(--muted)}
+  .back-link:hover{color:var(--ink)}
+  .opcion:hover{border-color:var(--accent);background:#fff}
+  .soy:hover{border-color:var(--accent)}
+}

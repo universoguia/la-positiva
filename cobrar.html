@@ -83,8 +83,14 @@
 <body>
 <div class="wrap">
   <header class="top">
-    <h1>Cobrar</h1>
-    <a class="back-link" href="./">Volver al inicio</a>
+    <div>
+      <h1>Cobrar con QR</h1>
+      <p class="sub">Mostrale el QR al cliente y confirm&aacute; cuando pag&oacute;</p>
+    </div>
+    <div class="head-right">
+      <a class="soy" href="./" data-quien hidden></a>
+      <a class="back-link" href="./">Volver al inicio</a>
+    </div>
   </header>
 
   <div id="contenido">
@@ -197,21 +203,26 @@ document.addEventListener('DOMContentLoaded', function () {
         '</div>' +
       '</div>' +
 
+      /* En el orden del cobro: mostrar, confirmar, y recien despues las
+         otras maneras de mandar el mismo link. Antes la accion de plata
+         quedaba al fondo de la pila. */
       '<div class="acciones">' +
         '<button type="button" class="btn btn-primary btn-block" id="zoomBtn">' +
           'Agrandar para el cliente</button>' +
+        (elegido
+          ? '<button type="button" class="btn btn-ok btn-block" id="cobradoBtn">' +
+            'Ya pag\u00f3: confirmar ' + money(LP.cobrable(elegido)) + '</button>'
+          : '') +
         // El link solo existe si el QR lo traia o si caja lo cargo a mano.
         (qr.link_pago
           ? '<button type="button" class="btn btn-secondary btn-block" id="linkBtn">' +
-              'Mandar link de pago</button>' +
-            '<a class="btn btn-ghost btn-block" id="linkAbrir" href="' + esc(qr.link_pago) + '" ' +
-              'target="_blank" rel="noopener noreferrer">Abrir el link de pago</a>'
+              'Mandar link de pago</button>'
           : '') +
         '<button type="button" class="btn btn-secondary btn-block" id="shareBtn" hidden>' +
           'Compartir el QR</button>' +
-        (elegido
-          ? '<button type="button" class="btn btn-secondary btn-block" id="cobradoBtn">' +
-            'Ya pago: confirmar ' + money(LP.cobrable(elegido)) + '</button>'
+        (qr.link_pago
+          ? '<a class="btn btn-ghost btn-block" id="linkAbrir" href="' + esc(qr.link_pago) + '" ' +
+              'target="_blank" rel="noopener noreferrer">Abrir el link de pago</a>'
           : '') +
       '</div>' +
 

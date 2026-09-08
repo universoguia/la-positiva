@@ -54,11 +54,15 @@
   /* -------------------------------------------------------------- links -- */
   .atajos{display:grid;gap:9px}
   @media (min-width:560px){.atajos{grid-template-columns:repeat(3,1fr)}}
+  /* Un link se tiene que ver como link: flecha a la derecha y toque visible. */
   .atajo{
-    display:block;background:var(--card);border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    background:var(--card);border:1px solid var(--border);
     border-radius:var(--r-md);padding:14px 16px;text-decoration:none;color:inherit;
   }
-  .atajo:hover{border-color:var(--accent)}
+  .atajo::after{content:"\203A";font-size:26px;line-height:1;color:var(--muted);flex:none}
+  .atajo:active{background:var(--bg)}
+  @media (hover:hover){.atajo:hover{border-color:var(--accent)}}
   .atajo b{display:block;font-size:16px;font-weight:500;margin-bottom:3px}
   .atajo span{font-size:13px;color:var(--muted);line-height:1.45}
 
@@ -67,7 +71,7 @@
      atajos. */
   .ajuste{
     background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);
-    padding:14px 16px;margin-bottom:12px;
+    padding:14px 16px;
   }
   .ajuste b{display:block;font-size:16px;font-weight:500;margin-bottom:2px}
   .ajuste p{margin:0 0 10px;font-size:13px;color:var(--muted);line-height:1.45}
@@ -96,7 +100,7 @@
       <h1>Encargado</h1>
       <p class="sub">Cómo viene el salón y quién recibe los avisos</p>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <div class="head-right">
       <a class="soy" href="./" data-quien hidden></a>
       <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
         <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
@@ -131,13 +135,14 @@
     <p class="ajuste-msg" id="cubiertoMsg" role="status" aria-live="polite"></p>
   </div>
 
+  <h2>Otras pantallas</h2>
   <div class="atajos">
-    <a class="atajo" href="mesas.html"><b>Mesas abiertas</b>
-      <span>La cuenta de cada mesa, ronda por ronda.</span></a>
-    <a class="atajo" href="carta-fotos.html"><b>Fotos de la carta</b>
-      <span>Sacar la foto de un plato desde el celular.</span></a>
-    <a class="atajo" href="qr-mesa.html"><b>QR de las mesas</b>
-      <span>Generar e imprimir el código de cada mesa.</span></a>
+    <a class="atajo" href="mesas.html"><span><b>Mesas abiertas</b>
+      <span>La cuenta de cada mesa, ronda por ronda.</span></span></a>
+    <a class="atajo" href="carta-fotos.html"><span><b>Fotos de la carta</b>
+      <span>Sacar la foto de un plato desde el celular.</span></span></a>
+    <a class="atajo" href="qr-mesa.html"><span><b>QR de las mesas</b>
+      <span>Generar e imprimir el código de cada mesa.</span></span></a>
   </div>
 
   <a class="back-link" href="./">Volver al inicio</a>
@@ -191,7 +196,8 @@ document.addEventListener('DOMContentLoaded', function () {
     c[1].className = 'cifra' + (sinAprobar > 0 ? ' alerta' : '');
     c[2].querySelector('b').textContent = enCocina;
     c[3].querySelector('b').textContent = money(debe);
-    c[3].className = 'cifra' + (debe > 0 ? ' mal' : '');
+    // Ambar como en el plano: que falte cobrar es lo normal con mesas abiertas.
+    c[3].className = 'cifra' + (debe > 0 ? ' alerta' : '');
 
     /* Lo demorado va aparte y con nombre: una cifra sola no dice cual mesa
        hay que ir a mirar, que es lo unico accionable de esta pantalla.
