@@ -133,6 +133,7 @@
   .leyenda span{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted);white-space:nowrap}
   .leyenda i{width:13px;height:13px;border-radius:4px;border:1.5px solid;flex:none}
   .l-libre{background:var(--wood-pale);border-color:#c4b298;border-style:dashed}
+  .l-reservada{background:var(--wood-pale);border-color:var(--warn);border-style:dashed}
   .l-ocupada{background:var(--wood);border-color:var(--wood-dark)}
   .l-debe{background:var(--wood);border-color:var(--warn)}
   .l-limpieza{background:var(--wood);border-color:var(--ok)}
@@ -227,13 +228,16 @@
          aria-label="Plano del sal&oacute;n: cada mesa es un bot&oacute;n"></svg>
     <div class="leyenda">
       <span><i class="l-libre"></i>Libre</span>
+      <span><i class="l-reservada"></i>Reservada</span>
       <span><i class="l-ocupada"></i>Ocupada</span>
       <span><i class="l-debe"></i>Falta cobrar</span>
       <span><i class="l-limpieza"></i>Para limpiar</span>
     </div>
   </div>
 
-  <div id="estado"></div>
+  <div id="estado">
+    <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><p>Cargando el sal&oacute;n...</p></div>
+  </div>
 
   <a class="back-link" href="./">Volver al inicio</a>
 </div>
@@ -632,14 +636,17 @@ document.addEventListener('DOMContentLoaded', function () {
           money(debe ? m.debe : m.total) + '</span>' +
       '</div>';
 
+    /* Con saldo, lo que sigue casi siempre es cobrar: ese va lleno. Cerrar
+       con deuda es el camino raro (pide confirmar), va como secundario.
+       El QR solo donde hay algo que cobrar, y con la mesa puesta: sin el
+       parametro, la pantalla de cobro ofrecia los impagos de todo el local. */
+    var textoCerrar = limpiar ? 'Mesa limpia, liberar'
+                              : (sinPedir ? 'Se fueron, liberar' : 'Cerrar la mesa');
     var acciones = '<div class="acciones">' +
-        '<button type="button" class="btn btn-primary" data-cerrar="' + esc(m.sesion.id) + '">' +
-          (limpiar ? 'Mesa limpia, liberar'
-                   : (sinPedir ? 'Se fueron, liberar' : 'Cerrar la mesa')) + '</button>' +
-        /* El QR solo donde hay algo que cobrar, y con la mesa puesta: sin el
-           parametro, la pantalla de cobro ofrecia los impagos de todo el local. */
-        (debe ? '<a class="btn btn-secondary" href="cobrar.html?sesion=' + esc(m.sesion.id) +
+        (debe ? '<a class="btn btn-primary" href="cobrar.html?sesion=' + esc(m.sesion.id) +
                 '">Cobrar con QR</a>' : '') +
+        '<button type="button" class="btn ' + (debe ? 'btn-secondary' : 'btn-primary') +
+          '" data-cerrar="' + esc(m.sesion.id) + '">' + textoCerrar + '</button>' +
       '</div>';
 
     return cab + rondas + acciones;

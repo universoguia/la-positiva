@@ -35,6 +35,10 @@
   @media (max-width:559px){
     .tabs{display:grid;grid-template-columns:1fr 1fr;padding:8px 0}
     .tab{min-width:0;padding:8px 10px}
+    /* La cabecera media un tercio de la pantalla: el chip ocupa su fila
+       solo cuando hay pedidos sin ver, y "En vivo" + "Avisos" comparten. */
+    header.top{margin-bottom:10px}
+    #sinVerChip{width:100%;justify-content:center}
   }
   .tab{
     flex:1 0 auto;min-height:var(--tap);
@@ -75,7 +79,7 @@
   .col-body{display:flex;flex-direction:column;gap:12px}
 
   .kcard{
-    background:var(--card);border-radius:var(--r-md);padding:14px;
+    background:var(--card);border:1px solid transparent;border-radius:var(--r-md);padding:14px;
     box-shadow:0 6px 18px rgba(0,0,0,.22);
   }
   .kcard.is-new{animation:flash 1.6s ease}
@@ -113,6 +117,9 @@
   .kfuera span{display:block;font-weight:400;font-size:13px;margin-top:2px}
   .klines .fuera{color:var(--muted);text-decoration:line-through}
   .kcard.anulada{border-color:var(--err);background:var(--err-bg)}
+  /* El cartel, terracota con letra blanca: se distingue de la tarjeta rosada. */
+  .kcard.anulada .kfuera{background:var(--err);border-color:var(--err);color:#fff}
+  .kcard.anulada .kfuera span{color:#fff;opacity:.9}
 
   .klines{
     border-top:1px dashed var(--border);border-bottom:1px dashed var(--border);
@@ -236,19 +243,20 @@
       <p class="sub">Panel de cocina y equipo</p>
     </div>
     <div class="head-right">
+      <!-- El chip primero porque es un aviso; despues el mismo orden que mozo.
+           Sobrevive a que la tablet se bloquee: no se limpia solo al volver. -->
+      <button type="button" id="sinVerChip" hidden>
+        <span class="punto" aria-hidden="true"></span><span id="sinVerTxt"></span>
+      </button>
+      <a class="soy" href="./" data-quien hidden></a>
       <!-- Nace con su contenido puesto: si lo llenara solo el JS, el badge
            creceria despues del primer pintado y empujaria el tablero. -->
       <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
         <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
       </span>
-      <!-- Sobrevive a que la tablet se bloquee: no se limpia solo al volver. -->
-      <button type="button" id="sinVerChip" hidden>
-        <span class="punto" aria-hidden="true"></span><span id="sinVerTxt"></span>
-      </button>
       <button type="button" class="btn btn-secondary btn-head" id="avisosBtn">Avisos</button>
       <!-- Se saco "Cobrar con QR": la cocina no toca plata. Quien cobra llega
            al QR desde su propia puerta, con la mesa puesta. -->
-      <a class="soy" href="./" data-quien hidden></a>
       <a class="back-link" href="./">Volver al inicio</a>
     </div>
   </header>
