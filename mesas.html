@@ -140,14 +140,6 @@
   /* ----------------------------------------------------------- la hoja -- */
   .hoja-sub{font-size:14px;color:var(--muted);margin:-6px 0 14px}
   .hoja-et{font-size:14px;color:var(--muted-strong);margin:0 0 8px;font-weight:500}
-  .volver-x{
-    display:inline-flex;align-items:center;justify-content:center;
-    width:var(--tap);height:var(--tap);min-width:var(--tap);flex:none;
-    border-radius:50%;background:var(--card);border:1px solid var(--border-strong);
-    font-size:19px;line-height:1;color:var(--ink);cursor:pointer;
-  }
-  .volver-x:hover{background:#fff}
-  .volver-x[hidden]{display:none}
 
 
 
@@ -251,7 +243,7 @@
 <div class="sheet" id="hoja" hidden role="dialog" aria-modal="true" aria-labelledby="hojaTit">
   <div class="sheet-panel">
     <div class="sheet-head">
-      <button type="button" class="volver-x" id="hojaBack" aria-label="Volver" hidden>&#8592;</button>
+      <button type="button" class="close-x" id="hojaBack" aria-label="Volver" hidden>&#8592;</button>
       <h2 id="hojaTit">Mesa</h2>
       <button type="button" class="close-x" id="hojaX" aria-label="Cerrar">&#10005;</button>
     </div>
@@ -807,6 +799,13 @@ document.addEventListener('DOMContentLoaded', function () {
     b.disabled = false;
     if (b.dataset.antes) b.textContent = b.dataset.antes;
   }
+  /* Recarga y, si la hoja no se rehizo (recarga fallida o descartada), el
+     boton vuelve a su texto en vez de quedar en "Abriendo..." para siempre. */
+  function recargarYSoltar(b) {
+    return cargar(true).then(function () {
+      if (b && document.body.contains(b) && b.disabled) soltar(b);
+    });
+  }
 
   function ejecutarSacar(b, motivo, crudo) {
     if (enVuelo.sacar) return;
@@ -819,7 +818,8 @@ document.addEventListener('DOMContentLoaded', function () {
                       : LP.sacarPlato(sb, pedido, Number(crudo), motivo, YO);
     accion.then(function (r) {
       delete enVuelo.sacar;
-      if (!r.ok) { cerrarHoja(); LP.toast(r.motivo, 'err'); cargar(true); return; }
+      // Con error se vuelve a la cuenta de la mesa, no se cierra la hoja.
+      if (!r.ok) { LP.toast(r.motivo, 'err'); vista = 'mesa'; cargar(true); return; }
       LP.toast(r.devolver > 0
         ? 'Listo. Hay que devolverle ' + money(r.devolver) + ' a ' + pedido.mesa +
           ' — lo hace la caja.'
@@ -836,8 +836,8 @@ document.addEventListener('DOMContentLoaded', function () {
     bloquear(b, 'Poniendo...');
     LP.volverAPoner(sb, p, Number(partes[1]), YO).then(function (r) {
       if (!r.ok) LP.toast(r.motivo, 'err');
-      else LP.toast('Volvio a la cuenta.', 'ok');
-      cargar(true);
+      else LP.toast('Volvi\u00f3 a la cuenta.', 'ok');
+      recargarYSoltar(b);
     });
   }
 
@@ -860,7 +860,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       LP.toast(reservar ? etiqueta + ' queda apartada.'
                         : etiqueta + ' abierta. Ya puede pedir.', 'ok');
-      cargar(true);
+      recargarYSoltar(b);
     });
   }
 
@@ -870,8 +870,8 @@ document.addEventListener('DOMContentLoaded', function () {
     bloquear(b, 'Sentando...');
     LP.estadoDeMesa(sb, sesionId, 'Ocupada').then(function (ok) {
       delete enVuelo[sesionId];
-      if (!ok) { soltar(b); LP.toast('No pudimos sentarlos. Proba de nuevo.', 'err'); return; }
-      cargar(true);
+      if (!ok) { soltar(b); LP.toast('No pudimos sentarlos. Prob\u00e1 de nuevo.', 'err'); return; }
+      recargarYSoltar(b);
     });
   }
 
@@ -929,9 +929,12 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   /* ------------------------------------------------------------ carga -- */
-  var cargando = false;
+  /* Si llega un pedido de recarga mientras otra esta en vuelo, no se descarta:
+     se anota y se hace UNA vuelta mas al terminar. Si no, el plano quedaba con
+     datos de antes de la escritura propia hasta el proximo evento. */
+  var cargando = false, pendiente = false;
   function cargar(silencioso) {
-    if (cargando) return Promise.resolve();
+    if (cargando) { pendiente = true; return Promise.resolve(); }
     if (!sb) {
       estado.innerHTML = '<div class="estado-vacio"><h3>No hay conexion con el sistema</h3></div>';
       return Promise.resolve();
@@ -957,6 +960,8 @@ document.addEventListener('DOMContentLoaded', function () {
       plano = datos;
       cargado = true;
       pintar();
+    }).then(function () {
+      if (pendiente) { pendiente = false; return cargar(true); }
     });
   }
 
@@ -987,7 +992,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   cargar().then(suscribir);
   // Refresca los "hace X min" sin volver a consultar.
-  setInterval(function () { if (cargado && !document.hidden) pintar(); }, 30000);
+  // Solo la hoja tiene "hace X min": el plano no se rehace cada 30 s (perdia
+  // el foco y las transiciones nunca corrian porque los nodos eran nuevos).
+  setInterval(function () {
+    if (cargado && !document.hidden && mesaAbierta && vista === 'mesa') verMesa(mesaAbierta);
+  }, 30000);
 });
 </script>
 </body>

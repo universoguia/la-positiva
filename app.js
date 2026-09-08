@@ -744,9 +744,13 @@
       { url: 'carta-fotos.html', texto: 'La carta y lo que se termin\u00f3' },
       { url: 'qr-mesa.html',     texto: 'Los QR de las mesas' }
     ],
+    /* El mozo tiene tres caminos, en el orden del servicio: tomar la comanda,
+       gestionar las mesas, cobrar. Desde ahi ve todo lo que ya existe:
+       aprobado, cocinando, entregado, cobrado. */
     Mozo: [
-      { url: 'mozo.html',  texto: 'Los pedidos de las mesas' },
-      { url: 'mesas.html', texto: 'El sal\u00f3n y las cuentas' }
+      { url: 'mozo.html',   texto: 'Tomar comanda' },
+      { url: 'mesas.html',  texto: 'Gestionar mesas' },
+      { url: 'cobrar.html', texto: 'Cobrar con QR' }
     ],
     Caja: [
       { url: 'caja.html',   texto: 'Los pagos' },

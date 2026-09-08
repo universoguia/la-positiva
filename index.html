@@ -100,6 +100,7 @@
                box-shadow:0 10px 24px rgba(0,0,0,.35)}
   .quien:active{transform:translateY(0) scale(.98)}
   .quien:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .quien:disabled{opacity:.55;transform:none;pointer-events:none}
 
   .inicial{
     width:48px;height:48px;border-radius:50%;flex:none;
@@ -348,6 +349,13 @@ document.addEventListener('DOMContentLoaded', function () {
   /* Se dibuja con lo guardado en el telefono y NO espera a la base: si
      Supabase esta lento, el que ya entro antes igual ve sus botones. */
   pintarPuerta();
+
+  /* Al volver con "atras", el celular restaura la pagina desde su cache: se
+     redibuja la puerta para que no reaparezcan las caras con un boton
+     apretado y sin el "Sos X". */
+  window.addEventListener('pageshow', function (ev) {
+    if (ev.persisted) { pintarPuerta(); if (equipo.length) pintar(equipo); }
+  });
 
   if (!sb) {
     cont.innerHTML = '<li class="cargando" role="status">No hay conexi&oacute;n con el sistema.' +

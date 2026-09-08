@@ -207,6 +207,7 @@ body.dark :focus-visible{outline-color:var(--gold)}
 .b-entregado{background:var(--done-bg);color:var(--done)}
 .b-ok{background:var(--ok-bg);color:var(--ok)}
 .b-pend{background:var(--warn-bg);color:var(--warn)}
+.b-anulada{background:var(--err);color:#fff}
 
 /* --------------------------------------------------- dialogos / sheets -- */
 .sheet[hidden]{display:none!important}
@@ -230,7 +231,7 @@ body.dark :focus-visible{outline-color:var(--gold)}
   display:flex;justify-content:space-between;align-items:center;
   gap:12px;margin-bottom:14px;
 }
-.sheet-head h2{margin:0;font-size:24px}
+.sheet-head h2{margin:0;font-size:24px;flex:1;min-width:0}
 .close-x{
   display:inline-flex;align-items:center;justify-content:center;
   width:var(--tap);height:var(--tap);min-width:var(--tap);flex:none;

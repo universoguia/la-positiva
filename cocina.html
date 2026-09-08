@@ -353,7 +353,9 @@ document.addEventListener('DOMContentLoaded', function () {
   var NEXT_LABEL = { 'En cocina': 'Recibido y cocinando', Cocinando: 'Marcar listo',
                      Listo: 'Marcar entregado' };
   var BADGE = { 'En cocina': 'b-nuevo', Cocinando: 'b-cocinando',
-                Listo: 'b-listo', Entregado: 'b-entregado' };
+                Listo: 'b-listo', Entregado: 'b-entregado', Rechazado: 'b-anulada' };
+  // La comanda anulada dice lo mismo en el badge y en el cartel.
+  var BADGE_LABEL = { Rechazado: 'Anulada' };
   var ENTREGADOS_VISIBLES = 6;   // el resto queda detras de "ver mas"
 
   var elCols = document.getElementById('cols');
@@ -436,8 +438,9 @@ document.addEventListener('DOMContentLoaded', function () {
         '</span></p>';
     } else if (sacadas.length) {
       aviso = '<p class="kfuera">' +
-        (sacadas.length === 1 ? 'SACARON UN PLATO' : 'SACARON ' + sacadas.length + ' PLATOS') +
-        ' &mdash; no lo hagas<span>' +
+        (sacadas.length === 1 ? 'SACARON UN PLATO &mdash; no lo hagas'
+                              : 'SACARON ' + sacadas.length + ' PLATOS &mdash; no los hagas') +
+        '<span>' +
         esc(sacadas.map(function (l) { return l.qty + '\u00d7 ' + l.name; }).join(', ')) +
         '</span></p>';
     }
@@ -451,7 +454,7 @@ document.addEventListener('DOMContentLoaded', function () {
             (o.cliente ? ' &middot; ' + esc(o.cliente) : '') +
           '</div>' +
         '</div>' +
-        '<span class="badge ' + (BADGE[o.estado] || '') + '">' + esc(o.estado) + '</span>' +
+        '<span class="badge ' + (BADGE[o.estado] || '') + '">' + esc(BADGE_LABEL[o.estado] || o.estado) + '</span>' +
       '</div>' +
       aviso +
       (o.detalle_comensal
