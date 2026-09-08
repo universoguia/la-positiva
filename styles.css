@@ -261,6 +261,8 @@ header.top .sub{color:var(--muted);font-size:15px;margin:3px 0 0}
   color:var(--muted-strong);font-size:15px;text-decoration:underline;
 }
 .back-link:hover{color:var(--ink)}
+/* Cuando va en la cabecera, al lado de los chips, sin el margen de pie. */
+.head-right .back-link{margin-top:0}
 
 /* Fila de acciones al pie de una tarjeta o de una hoja. */
 .acciones{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
