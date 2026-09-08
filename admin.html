@@ -20,12 +20,6 @@
      servir para lo que existe: mirarla de reojo entre mesa y mesa. */
   .wrap{max-width:760px;padding-top:calc(26px + var(--sa-t))}
 
-  header.top{
-    display:flex;justify-content:space-between;align-items:flex-start;
-    gap:12px;flex-wrap:wrap;margin-bottom:18px;
-  }
-  header.top h1{margin:0;font-size:28px}
-  header.top .sub{color:var(--muted);font-size:15px;margin:2px 0 0}
 
   h2{
     font-family:'Jost',sans-serif;font-style:normal;
@@ -48,7 +42,7 @@
 
   .demorados{
     margin-top:12px;padding:13px 16px;border-radius:var(--r-md);
-    background:var(--warn-soft);border:1px solid #e8d3a8;color:var(--warn);
+    background:var(--warn-soft);border:1px solid var(--warn-border);color:var(--warn);
     font-size:15px;line-height:1.5;
   }
   .demorados b{display:block;color:var(--ink);margin-bottom:3px}
@@ -61,14 +55,14 @@
     background:var(--card);border:1px solid var(--border);
     border-radius:var(--r-md);padding:12px 14px;
   }
-  .rol-fila.sin{border-color:#f0cfc9;background:var(--err-bg)}
+  .rol-fila.sin{border-color:var(--err-border);background:var(--err-bg)}
   .rol-quien{flex:1;min-width:150px}
   .rol-quien b{display:block;font-size:16px;font-weight:500}
   .rol-quien span{font-size:13px;color:var(--muted)}
   .rol-fila.sin .rol-quien span{color:var(--err-ink)}
   .rol-acc{display:flex;gap:7px;flex-wrap:wrap}
   .rol-acc a,.rol-acc button{
-    min-height:38px;padding:0 14px;border-radius:var(--r-pill);
+    min-height:var(--tap);padding:0 14px;border-radius:var(--r-pill);
     font-size:14px;font-family:inherit;display:inline-flex;align-items:center;
     border:1px solid var(--border-strong);background:transparent;color:var(--muted-strong);
     text-decoration:none;cursor:pointer;
@@ -110,11 +104,6 @@
 
   .cargando{color:var(--muted);padding:16px 0;font-size:15px}
 
-  .back-link{
-    display:inline-flex;align-items:center;min-height:var(--tap);margin-top:26px;
-    color:var(--muted-strong);font-size:15px;text-decoration:underline;
-  }
-  .back-link:hover{color:var(--ink)}
 </style>
 </head>
 <body>

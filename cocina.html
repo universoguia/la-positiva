@@ -18,18 +18,6 @@
   body{background:var(--ink)}
   .wrap{max-width:1400px;padding-top:calc(18px + var(--sa-t))}
 
-  header.top{
-    display:flex;justify-content:space-between;align-items:flex-start;
-    gap:12px;flex-wrap:wrap;margin-bottom:16px;
-  }
-  header.top h1{color:#fff;margin:0;font-size:28px}
-  header.top .sub{color:var(--dark-muted);font-size:15px;margin-top:2px}
-  .head-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .back-link{
-    color:var(--dark-muted);font-size:15px;min-height:var(--tap);
-    display:inline-flex;align-items:center;padding:0 4px;
-  }
-  .back-link:hover{color:#fff;text-decoration:underline}
 
   /* ---------------------------------------------------- tabs (celular) -- */
   .tabs{
@@ -44,11 +32,11 @@
     flex:1 0 auto;min-height:var(--tap);
     display:inline-flex;align-items:center;justify-content:center;gap:7px;
     padding:8px 14px;border-radius:var(--r-pill);
-    border:1px solid #3a2f28;background:#221a16;color:var(--dark-ink);
+    border:1px solid var(--dark-border);background:var(--dark-card);color:var(--dark-ink);
     font-size:15px;white-space:nowrap;
     transition:background-color .18s,color .18s,border-color .18s;
   }
-  .tab:hover{background:#2c221d;color:#fff}
+  .tab:hover{background:var(--dark-card-hover);color:#fff}
   .tab[aria-pressed="true"]{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:600}
   .tab .n{
     display:inline-flex;align-items:center;justify-content:center;
@@ -111,7 +99,7 @@
      medio metro de una plancha. */
   .kfuera{
     margin:0 0 10px;padding:10px 12px;border-radius:var(--r-md);
-    background:var(--err-bg);border:1px solid #f0cfc9;color:var(--err-ink);
+    background:var(--err-bg);border:1px solid var(--err-border);color:var(--err-ink);
     font-size:15px;font-weight:600;line-height:1.45;
   }
   .kfuera span{display:block;font-weight:400;font-size:13px;margin-top:2px}
@@ -130,18 +118,18 @@
 
   .empty-col{
     color:var(--dark-muted);font-size:15px;padding:16px 4px;
-    border:1px dashed #3a2f28;border-radius:var(--r-md);text-align:center;
+    border:1px dashed var(--dark-border);border-radius:var(--r-md);text-align:center;
   }
   .more-btn{
     width:100%;min-height:var(--tap);color:var(--dark-ink);
-    border:1px solid #3a2f28;border-radius:var(--r-sm);font-size:15px;background:#221a16;
+    border:1px solid var(--dark-border);border-radius:var(--r-sm);font-size:15px;background:var(--dark-card);
   }
-  .more-btn:hover{background:#2c221d;color:#fff}
+  .more-btn:hover{background:var(--dark-card-hover);color:#fff}
 
   /* Esqueleto de carga: el tablero ocupa su sitio desde el primer pintado,
      asi la llegada de los datos no empuja el layout (CLS). */
   .skel{
-    background:#241c18;border:1px solid #3a2f28;
+    background:#241c18;border:1px solid var(--dark-border);
     border-radius:var(--r-md);margin-bottom:12px;
     /* Medido sobre tarjetas reales (224-244px): si el marcador es mas bajo,
        el tablero crece al llegar los datos y eso cuenta como CLS. */
@@ -159,11 +147,11 @@
   .aviso-bloque p{margin:0 0 12px;color:var(--muted);font-size:15px;line-height:1.5}
   .aviso-estado{
     padding:10px 12px;border-radius:var(--r-sm);font-size:15px;line-height:1.45;
-    background:var(--ok-soft);color:var(--ok);border:1px solid #bfe0ce;
+    background:var(--ok-soft);color:var(--ok);border:1px solid var(--ok-border);
   }
   .aviso-estado.off{background:var(--bg);color:var(--muted-strong);border-color:var(--border-strong)}
-  .aviso-estado.warn{background:var(--warn-soft);color:var(--warn);border-color:#e8d3a8}
-  .aviso-estado.err{background:var(--err-bg);color:var(--err-ink);border-color:#f0cfc9}
+  .aviso-estado.warn{background:var(--warn-soft);color:var(--warn);border-color:var(--warn-border)}
+  .aviso-estado.err{background:var(--err-bg);color:var(--err-ink);border-color:var(--err-border)}
   .aviso-guia{
     margin-top:12px;background:var(--card);border:1px solid var(--border);
     border-radius:var(--r-md);padding:12px 14px;
@@ -172,7 +160,7 @@
   .aviso-guia li{font-size:15px;line-height:1.5;margin-bottom:6px;color:var(--muted-strong)}
   .aviso-guia li:last-child{margin-bottom:0}
   /* El boton de la cabecera avisa si el sonido esta puesto. */
-  #avisosBtn.on{border-color:var(--gold);color:var(--gold);background:#2c221d}
+  #avisosBtn.on{border-color:var(--gold);color:var(--gold);background:var(--dark-card-hover)}
   /* Y grita si esta apagado: un panel mudo no puede parecer normal. */
   #avisosBtn.off{border-color:#e0855f;color:#ffc9b3;background:#3a221a}
 
@@ -250,8 +238,7 @@
       <button type="button" id="sinVerChip" hidden>
         <span class="punto" aria-hidden="true"></span><span id="sinVerTxt"></span>
       </button>
-      <button type="button" class="btn btn-secondary" id="avisosBtn"
-              style="padding:8px 16px;font-size:15px">Avisos</button>
+      <button type="button" class="btn btn-secondary btn-head" id="avisosBtn">Avisos</button>
       <!-- Se saco "Cobrar con QR": la cocina no toca plata. Quien cobra llega
            al QR desde su propia puerta, con la mesa puesta. -->
       <a class="soy" href="./" data-quien hidden></a>

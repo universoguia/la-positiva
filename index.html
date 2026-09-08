@@ -34,7 +34,7 @@
   .cabecera{text-align:center;margin-bottom:16px;flex:none}
   .marca{
     width:58px;height:58px;border-radius:14px;margin:0 auto 12px;display:block;
-    box-shadow:0 0 0 1px #3a2f28, 0 10px 30px rgba(0,0,0,.45);
+    box-shadow:0 0 0 1px var(--dark-border), 0 10px 30px rgba(0,0,0,.45);
   }
   .cabecera h1{color:#fff;margin:0;font-size:29px;line-height:1.1}
   .cabecera p{color:var(--dark-muted);margin:5px 0 0;font-size:15px}
@@ -57,10 +57,10 @@
     display:flex;align-items:center;justify-content:center;
     min-height:52px;padding:0 18px;border-radius:var(--r-lg);
     font-size:17px;text-decoration:none;text-align:center;
-    border:1px solid #3a2f28;background:#221a16;color:#fff;
+    border:1px solid var(--dark-border);background:var(--dark-card);color:#fff;
     transition:border-color .16s,background-color .16s,transform .08s;
   }
-  .mis-cosas a:hover{background:#2c221d;border-color:var(--gold);transform:translateY(-1px)}
+  .mis-cosas a:hover{background:var(--dark-card-hover);border-color:var(--gold);transform:translateY(-1px)}
   .mis-cosas a:active{transform:none}
   /* La primera es la que abre el 90% de las veces: va llena. */
   .mis-cosas a.principal{
@@ -92,11 +92,11 @@
     width:100%;height:100%;min-height:108px;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     gap:8px;padding:15px 10px;
-    background:#221a16;border:1px solid #3a2f28;border-radius:var(--r-lg);
+    background:var(--dark-card);border:1px solid var(--dark-border);border-radius:var(--r-lg);
     color:#fff;text-align:center;
     transition:border-color .16s,background-color .16s,transform .08s,box-shadow .16s;
   }
-  .quien:hover{background:#2c221d;border-color:var(--gold);transform:translateY(-2px);
+  .quien:hover{background:var(--dark-card-hover);border-color:var(--gold);transform:translateY(-2px);
                box-shadow:0 10px 24px rgba(0,0,0,.35)}
   .quien:active{transform:translateY(0) scale(.98)}
   .quien:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
@@ -109,7 +109,7 @@
     box-shadow:0 0 0 3px rgba(255,255,255,.06);
   }
   .quien.duenio .inicial{background:var(--gold);color:var(--ink)}
-  .quien.cocina .inicial{background:#3a2f28;color:var(--gold)}
+  .quien.cocina .inicial{background:var(--dark-border);color:var(--gold)}
 
   .nombre{font-size:18px;font-weight:500;line-height:1.2}
   .rol{
@@ -134,15 +134,15 @@
   .mesa-demo{
     display:inline-flex;align-items:center;gap:8px;min-height:var(--tap);
     padding:0 17px;border-radius:var(--r-pill);
-    background:transparent;border:1px solid #3a2f28;color:var(--dark-muted);
+    background:transparent;border:1px solid var(--dark-border);color:var(--dark-muted);
     font-size:15px;text-decoration:none;transition:border-color .16s,color .16s;
   }
   .mesa-demo:hover{border-color:var(--gold);color:#fff}
 
   /* -------------------------------------------------- todas las vistas -- */
   .todas{
-    flex:none;margin-top:20px;background:#1c1512;
-    border:1px solid #3a2f28;border-radius:var(--r-lg);
+    flex:none;margin-top:20px;background:var(--dark-panel);
+    border:1px solid var(--dark-border);border-radius:var(--r-lg);
   }
   .todas summary{
     list-style:none;cursor:pointer;padding:15px 18px;min-height:var(--tap);
@@ -151,7 +151,7 @@
   }
   .todas summary::-webkit-details-marker{display:none}
   .todas summary .mas{color:var(--gold);font-size:13px;flex:none}
-  .todas[open] summary{border-bottom:1px solid #3a2f28}
+  .todas[open] summary{border-bottom:1px solid var(--dark-border)}
   .todas .cuerpo{padding:6px 18px 16px}
   .todas ul{list-style:none;margin:0;padding:0;display:grid;gap:2px}
   @media (min-width:620px){.todas ul{grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 18px}}

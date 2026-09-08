@@ -16,18 +16,6 @@
 <link rel="stylesheet" href="styles.css">
 <style>
   .wrap{max-width:1180px;padding-top:calc(20px + var(--sa-t));padding-bottom:120px}
-  header.top{
-    display:flex;justify-content:space-between;align-items:flex-start;
-    gap:12px;flex-wrap:wrap;margin-bottom:18px;
-  }
-  header.top h1{margin:0;font-size:30px}
-  header.top .sub{color:var(--muted);font-size:15px;margin-top:2px;max-width:52ch}
-  .head-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .back-link{
-    color:var(--muted-strong);font-size:15px;min-height:var(--tap);
-    display:inline-flex;align-items:center;padding:0 4px;text-decoration:underline;
-  }
-  .back-link:hover{color:var(--ink)}
 
   .section{margin-bottom:28px}
   .section-head{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:0 2px}
@@ -50,7 +38,7 @@
     background:var(--card);border:1px solid var(--border);
     border-radius:var(--r-md);padding:16px;display:flex;flex-direction:column;
   }
-  .pcard.is-paid{border-color:#bfe0ce;background:#fbfdfc}
+  .pcard.is-paid{border-color:var(--ok-border);background:#fbfdfc}
   /* Cabecera flexible: mesa, badge y metodo nunca se pisan en celular. */
   .pcard-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
   .pmesa{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:23px;line-height:1.15}
@@ -82,7 +70,7 @@
   #devoluciones .pcard{border-color:var(--err);background:var(--err-bg)}
   .pdevolver{
     margin:10px 0 0;padding:11px 13px;border-radius:var(--r-md);
-    background:#fff;border:1px solid #f0cfc9;
+    background:#fff;border:1px solid var(--err-border);
     font-size:15px;line-height:1.5;color:var(--err-ink);
   }
   .pdevolver b{display:block;font-size:19px;margin-bottom:2px}
@@ -108,7 +96,7 @@
   .qr-actual .meta strong{display:block;font-size:16px}
   .qr-actual .meta span{display:block;color:var(--muted);font-size:14px;margin-top:2px}
   .qr-vacio{
-    background:var(--warn-soft);border:1px solid #e8d3a8;color:var(--warn);
+    background:var(--warn-soft);border:1px solid var(--warn-border);color:var(--warn);
     border-radius:var(--r-md);padding:14px;margin:0 0 14px;font-size:15px;line-height:1.5;
   }
   /* Alto reservado: el aviso vacio y la ficha del QR cargado ocupan casi lo

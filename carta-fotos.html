@@ -65,8 +65,7 @@
   .datos{flex:1;min-width:0}
   .datos b{display:block;font-size:16px;color:var(--ink);line-height:1.3}
   .datos .cat{font-size:13px;color:var(--muted);margin-top:2px}
-  .datos .acciones{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
-
+  .datos
   /* El input file real se oculta pero sigue siendo enfocable con teclado. */
   .subir input[type=file]{
     position:absolute;width:1px;height:1px;padding:0;margin:-1px;
@@ -75,14 +74,14 @@
   .subir{position:relative;display:inline-flex}
   .subir span,.quitar{
     display:inline-flex;align-items:center;justify-content:center;
-    min-height:40px;padding:0 15px;border-radius:var(--r-pill);
+    min-height:var(--tap);padding:0 15px;border-radius:var(--r-pill);
     font-size:14px;cursor:pointer;border:1px solid transparent;
   }
   .subir span{background:var(--ink);color:#fff}
   .subir:hover span{background:var(--accent)}
   .subir input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
   .quitar{background:transparent;border-color:var(--border-strong);color:var(--err-ink)}
-  .quitar:hover{background:var(--err-bg);border-color:#f0cfc9}
+  .quitar:hover{background:var(--err-bg);border-color:var(--err-border)}
 
   .estado{font-size:13px;margin-top:7px;line-height:1.45}
   .estado.err{color:var(--err-ink)}
@@ -121,11 +120,11 @@
 
   .stock{
     display:inline-flex;align-items:center;justify-content:center;
-    min-height:40px;padding:0 15px;border-radius:var(--r-pill);
+    min-height:var(--tap);padding:0 15px;border-radius:var(--r-pill);
     font-size:14px;font-weight:500;cursor:pointer;
     border:1px solid var(--border-strong);background:transparent;color:var(--muted-strong);
   }
-  .stock.no{background:var(--err-bg);border-color:#f0cfc9;color:var(--err-ink)}
+  .stock.no{background:var(--err-bg);border-color:var(--err-border);color:var(--err-ink)}
   .stock:hover{border-color:var(--accent)}
 
   .plato.agotado .miniatura{filter:grayscale(1);opacity:.6}
@@ -133,11 +132,6 @@
 
   .vacio{padding:30px 10px;text-align:center;color:var(--muted)}
 
-  .back-link{
-    display:inline-flex;align-items:center;min-height:var(--tap);margin-top:24px;
-    color:var(--muted-strong);font-size:15px;text-decoration:underline;
-  }
-  .back-link:hover{color:var(--ink)}
 </style>
 </head>
 <body>

@@ -17,13 +17,6 @@
 <style>
   .wrap{max-width:560px;padding-top:calc(16px + var(--sa-t));padding-bottom:40px}
 
-  header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
-  header.top h1{margin:0;font-size:26px}
-  .back-link{
-    color:var(--muted-strong);font-size:15px;min-height:var(--tap);
-    display:inline-flex;align-items:center;padding:0 4px;text-decoration:underline;
-  }
-  .back-link:hover{color:var(--ink)}
 
   /* --------------------------------------------------------- el QR ----- */
   /* Fondo blanco y margen propio: un QR sin zona de silencio no escanea. */
@@ -61,11 +54,10 @@
     background:#fff;color:var(--ink);
   }
 
-  .acciones{display:grid;gap:10px;margin-top:16px}
 
   .tip{
     margin-top:16px;padding:12px 14px;border-radius:var(--r-sm);
-    background:var(--warn-soft);border:1px solid #e8d3a8;
+    background:var(--warn-soft);border:1px solid var(--warn-border);
     color:var(--warn);font-size:14px;line-height:1.5;
   }
   .tip strong{display:block;margin-bottom:2px}

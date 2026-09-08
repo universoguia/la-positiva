@@ -18,6 +18,7 @@
 
   /* --------------------------------------------------------- cabecera -- */
   header.top{
+    display:block;margin-bottom:0;
     position:sticky;top:0;z-index:30;
     background:rgba(243,236,226,.96);
     backdrop-filter:blur(8px);
@@ -319,7 +320,7 @@
 
   .demo-note{
     margin-top:14px;padding:12px 14px;border-radius:var(--r-sm);
-    background:var(--warn-soft);border:1px solid #e8d3a8;
+    background:var(--warn-soft);border:1px solid var(--warn-border);
     color:var(--warn);font-size:14px;line-height:1.45;
   }
   .field{margin-top:14px}

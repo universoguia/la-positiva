@@ -18,19 +18,7 @@
   body{background:var(--ink)}
   .wrap{max-width:820px;padding-top:calc(16px + var(--sa-t))}
 
-  header.top{
-    display:flex;justify-content:space-between;align-items:flex-start;
-    gap:12px;flex-wrap:wrap;margin-bottom:14px;
-  }
-  header.top h1{color:#fff;margin:0;font-size:26px}
-  header.top .sub{color:var(--dark-muted);font-size:14px;margin-top:2px}
-  .head-right{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-  .back-link{
-    color:var(--dark-muted);font-size:15px;min-height:var(--tap);
-    display:inline-flex;align-items:center;padding:0 4px;
-  }
-  .back-link:hover{color:#fff;text-decoration:underline}
-  #avisosBtn.on{border-color:var(--gold);color:var(--gold);background:#2c221d}
+  #avisosBtn.on{border-color:var(--gold);color:var(--gold);background:var(--dark-card-hover)}
   #avisosBtn.off{border-color:#e0855f;color:#ffc9b3;background:#3a221a}
 
   .alerta-barra{
@@ -77,31 +65,14 @@
   }
   .campo textarea:focus,.campo input:focus{outline:2px solid var(--accent);outline-offset:1px}
 
-  .acciones{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-  .acciones .btn{flex:1 1 auto;min-height:var(--tap);padding:0 18px;font-size:15px}
-  .opcion{
-    display:flex;justify-content:space-between;align-items:center;gap:12px;
-    width:100%;min-height:var(--tap);padding:12px 15px;margin-bottom:8px;
-    background:var(--card);border:1px solid var(--border-strong);
-    border-radius:var(--r-md);font-size:16px;font-family:inherit;
-    color:var(--ink);text-align:left;cursor:pointer;
-  }
-  .opcion:hover{border-color:var(--accent);background:#fff}
-  .opcion .plata{flex:none;color:var(--muted-strong);font-size:15px}
-  .opcion.toda{border-style:dashed;margin-top:10px}
   .hs-sub{font-size:14px;color:var(--muted);margin:-6px 0 14px}
   .hs-et{font-size:14px;color:var(--muted-strong);margin:0 0 8px;font-weight:500}
-  .banda-pago{
-    margin:0 0 14px;padding:12px 14px;border-radius:var(--r-md);
-    background:var(--warn-soft);color:var(--warn);border:1px solid #e8d3a8;
-    font-size:14px;line-height:1.5;
-  }
 
   .btn-rechazar{
     flex:0 0 auto;min-height:var(--tap);padding:0 16px;border-radius:var(--r-pill);
     border:1px solid var(--border-strong);background:transparent;color:var(--err-ink);font-size:15px;
   }
-  .btn-rechazar:hover{background:var(--err-bg);border-color:#f0cfc9}
+  .btn-rechazar:hover{background:var(--err-bg);border-color:var(--err-border)}
 
   /* ------------------------------------------------------------- notas -- */
   .notas{margin-top:12px;border-top:1px dashed var(--border);padding-top:10px}
@@ -114,7 +85,7 @@
     font-size:14px;line-height:1.5;padding:7px 11px;border-radius:var(--r-md);
     margin-bottom:6px;background:var(--bg);border:1px solid var(--border);
   }
-  .nota.cocina{background:var(--warn-soft);border-color:#e8d3a8}
+  .nota.cocina{background:var(--warn-soft);border-color:var(--warn-border)}
   .nota b{display:block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
           color:var(--muted-strong);margin-bottom:2px}
   .nota-alta{display:flex;gap:7px;margin-top:8px}
@@ -123,7 +94,7 @@
 
   .detalle-fijo{
     margin-top:10px;padding:9px 12px;border-radius:var(--r-md);
-    background:var(--warn-soft);border:1px solid #e8d3a8;
+    background:var(--warn-soft);border:1px solid var(--warn-border);
     font-size:14px;line-height:1.5;color:var(--warn);
   }
   .detalle-fijo b{display:block;font-size:11px;letter-spacing:.05em;
@@ -131,7 +102,7 @@
 
   .vacio{
     color:var(--dark-muted);text-align:center;padding:26px 16px;font-size:15px;
-    border:1px dashed #3a2f28;border-radius:var(--r-md);
+    border:1px dashed var(--dark-border);border-radius:var(--r-md);
   }
 
   /* Dialogo de avisos, igual que en cocina. */
@@ -141,11 +112,11 @@
   .aviso-bloque p{margin:0 0 10px;color:var(--muted);font-size:15px;line-height:1.5}
   .aviso-estado{
     padding:10px 13px;border-radius:var(--r-md);font-size:14px;line-height:1.5;
-    background:var(--ok-soft);color:var(--ok);border:1px solid #bfe0ce;margin:0 0 10px;
+    background:var(--ok-soft);color:var(--ok);border:1px solid var(--ok-border);margin:0 0 10px;
   }
   .aviso-estado.off{background:var(--bg);color:var(--muted-strong);border-color:var(--border-strong)}
-  .aviso-estado.warn{background:var(--warn-soft);color:var(--warn);border-color:#e8d3a8}
-  .aviso-estado.err{background:var(--err-bg);color:var(--err-ink);border-color:#f0cfc9}
+  .aviso-estado.warn{background:var(--warn-soft);color:var(--warn);border-color:var(--warn-border)}
+  .aviso-estado.err{background:var(--err-bg);color:var(--err-ink);border-color:var(--err-border)}
 </style>
 </head>
 <body class="dark">

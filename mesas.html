@@ -16,13 +16,6 @@
 <link rel="stylesheet" href="styles.css">
 <style>
   .wrap{max-width:760px;padding-top:calc(18px + var(--sa-t));padding-bottom:40px}
-  header.top{
-    display:flex;justify-content:space-between;align-items:flex-start;
-    gap:12px;flex-wrap:wrap;margin-bottom:14px;
-  }
-  header.top h1{margin:0;font-size:30px}
-  header.top .sub{color:var(--muted);font-size:15px;margin:2px 0 0}
-  .head-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 
   .resumen{
     display:flex;gap:22px;flex-wrap:wrap;margin:0 0 16px;
@@ -110,25 +103,25 @@
   /* La madera dice "aca hay una mesa"; el borde dice como esta.
      Se separan a proposito: si el estado fuera el color de la tapa, el plano
      se volveria un semaforo y dejaria de parecer el salon. */
-  .e-libre .mesa-f{fill:#efe4d2;stroke:#c4b298;stroke-dasharray:2.2 1.8;stroke-width:.8}
+  .e-libre .mesa-f{fill:var(--wood-pale);stroke:#c4b298;stroke-dasharray:2.2 1.8;stroke-width:.8}
   .e-libre .mesa-n{fill:#a8967d}
   .e-libre .mesa-i{fill:#bcac93}
 
-  .e-ocupada .mesa-f{fill:#8a5c3c;stroke:#6b4529;stroke-width:.9}
+  .e-ocupada .mesa-f{fill:var(--wood);stroke:var(--wood-dark);stroke-width:.9}
   .e-ocupada .mesa-n{fill:#fdf6ea}
   .e-ocupada .mesa-i{fill:#e6cfb4}
 
-  .e-debe .mesa-f{fill:#8a5c3c;stroke:var(--warn);stroke-width:1.7}
+  .e-debe .mesa-f{fill:var(--wood);stroke:var(--warn);stroke-width:1.7}
   .e-debe .mesa-n{fill:#fdf6ea}
   .e-debe .mesa-i{fill:#f2d9a8}
 
-  .e-reservada .mesa-f{fill:#efe4d2;stroke:var(--warn);stroke-dasharray:2.6 1.8;stroke-width:1.2}
+  .e-reservada .mesa-f{fill:var(--wood-pale);stroke:var(--warn);stroke-dasharray:2.6 1.8;stroke-width:1.2}
   .e-reservada .mesa-n{fill:var(--warn)}
   .e-reservada .mesa-i{fill:var(--warn)}
 
-  .e-limpieza .mesa-f{fill:#8a5c3c;stroke:var(--ok);stroke-width:1.7}
+  .e-limpieza .mesa-f{fill:var(--wood);stroke:var(--ok);stroke-width:1.7}
   .e-limpieza .mesa-n{fill:#fdf6ea}
-  .e-limpieza .mesa-i{fill:#bfe0ce}
+  .e-limpieza .mesa-i{fill:var(--ok-border)}
 
   .mesa-g:hover .mesa-f{stroke-width:2.2}
   .mesa-g:focus-visible{outline:none}
@@ -146,10 +139,10 @@
   }
   .leyenda span{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
   .leyenda i{width:13px;height:13px;border-radius:4px;border:1.5px solid;flex:none}
-  .l-libre{background:#efe4d2;border-color:#c4b298;border-style:dashed}
-  .l-ocupada{background:#8a5c3c;border-color:#6b4529}
-  .l-debe{background:#8a5c3c;border-color:var(--warn)}
-  .l-limpieza{background:#8a5c3c;border-color:var(--ok)}
+  .l-libre{background:var(--wood-pale);border-color:#c4b298;border-style:dashed}
+  .l-ocupada{background:var(--wood);border-color:var(--wood-dark)}
+  .l-debe{background:var(--wood);border-color:var(--warn)}
+  .l-limpieza{background:var(--wood);border-color:var(--ok)}
 
   /* ----------------------------------------------------------- la hoja -- */
   .hoja-sub{font-size:14px;color:var(--muted);margin:-6px 0 14px}
@@ -163,32 +156,7 @@
   .volver-x:hover{background:#fff}
   .volver-x[hidden]{display:none}
 
-  .opcion{
-    display:flex;justify-content:space-between;align-items:center;gap:12px;
-    width:100%;min-height:var(--tap);padding:12px 15px;margin-bottom:8px;
-    background:var(--card);border:1px solid var(--border-strong);
-    border-radius:var(--r-md);font-size:16px;font-family:inherit;
-    color:var(--ink);text-align:left;cursor:pointer;
-  }
-  .opcion:hover{border-color:var(--accent);background:#fff}
-  .opcion .plata{flex:none;color:var(--muted-strong);font-size:15px}
-  .opcion.toda{border-style:dashed;margin-top:10px}
-  .banda-pago{
-    margin:0 0 14px;padding:12px 14px;border-radius:var(--r-md);
-    background:var(--warn-soft);color:var(--warn);border:1px solid #e8d3a8;
-    font-size:14px;line-height:1.5;
-  }
 
-  .chip{
-    display:inline-flex;align-items:center;flex:none;
-    font-size:12px;font-weight:600;letter-spacing:.05em;
-    text-transform:uppercase;border-radius:var(--r-pill);padding:4px 11px;
-  }
-  .chip.ok{background:var(--ok-soft);color:var(--ok);border:1px solid #bfe0ce}
-  .chip.debe{background:var(--warn-soft);color:var(--warn);border:1px solid #e8d3a8}
-  .chip.espera{background:var(--border);color:var(--muted-strong)}
-  .chip.limpiar{background:var(--ok-bg);color:var(--ok);border:1px solid #bfe0ce}
-  .chip.reservada{background:var(--warn-soft);color:var(--warn);border:1px solid #e8d3a8}
 
   .abrio{font-size:12px;color:var(--muted);margin:3px 0 0}
 
@@ -235,28 +203,11 @@
   .totales .num{font-size:25px;font-weight:600}
   .totales .num.debe{color:var(--warn)}
 
-  .acciones{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
-  .acciones .btn{
-    flex:1 1 auto;min-height:var(--tap);padding:0 18px;font-size:15px;
-    display:inline-flex;align-items:center;justify-content:center;
-  }
 
   .cab-cuenta{display:flex;justify-content:space-between;align-items:center;gap:10px}
   .cab-cuenta .desde{font-size:14px;color:var(--muted)}
 
-  .estado-vacio{
-    text-align:center;color:var(--muted);padding:44px 20px;
-    background:var(--card);border:1px dashed var(--border-strong);
-    border-radius:var(--r-lg);
-  }
-  .estado-vacio h3{color:var(--ink);font-size:20px;margin:0 0 6px}
-  .estado-vacio p{margin:0;line-height:1.55}
 
-  .back-link{
-    display:inline-flex;align-items:center;min-height:var(--tap);margin-top:20px;
-    color:var(--muted-strong);font-size:15px;text-decoration:underline;
-  }
-  .back-link:hover{color:var(--ink)}
 </style>
 </head>
 <body>
