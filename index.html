@@ -67,9 +67,12 @@
     background:var(--accent);border-color:var(--accent);font-weight:500;
   }
   .mis-cosas a.principal:hover{background:#a33b32;border-color:#a33b32}
-  /* El duenio ve muchas: en dos columnas no se vuelve una escalera. */
-  @media (min-width:520px){
-    .mis-cosas.muchas{grid-template-columns:repeat(2,minmax(0,1fr))}
+  /* El duenio ve muchas: en dos columnas no se vuelve una escalera. Desde
+     360px, que es donde ocho apiladas ya dejaban "Terminar mi turno" abajo
+     del pliegue. */
+  @media (min-width:360px){
+    .mis-cosas.muchas{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .mis-cosas.muchas a{font-size:16px;line-height:1.25;padding:8px 12px;min-height:var(--tap)}
     .mis-cosas.muchas a.principal{grid-column:1/-1}
   }
   .terminar{
@@ -179,11 +182,17 @@
     .cabecera{margin-bottom:10px}
     .cabecera h1{font-size:25px}
     .cabecera p{font-size:14px}
-    .quien{min-height:86px;gap:5px;padding:10px 8px}
-    .inicial{width:38px;height:38px;font-size:20px}
+    .gente{gap:8px}
+    .quien{padding:8px 6px;gap:3px;min-height:0}
+    .inicial{width:34px;height:34px;font-size:18px}
     .nombre{font-size:16px}
+    .rol{font-size:12px;line-height:1.2}
     .cliente{margin-top:12px}
     .todas{margin-top:12px}
+  }
+  /* Celulares muy bajos (320x568): tres por fila para que entren las seis. */
+  @media (max-height:600px){
+    .gente{grid-template-columns:repeat(3,minmax(0,1fr))}
   }
 
   .cargando{color:var(--dark-muted);text-align:center;padding:40px 0;grid-column:1/-1}

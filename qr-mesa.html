@@ -50,11 +50,9 @@
     font-size:15px;letter-spacing:.16em;text-transform:uppercase;
     font-weight:600;color:var(--accent);margin:0 0 22px;
   }
-  .pieza .codigo{
-    width:236px;height:236px;margin:0 auto 20px;
-    display:flex;align-items:center;justify-content:center;
-  }
-  .pieza .codigo svg{width:100%;height:100%;display:block}
+  .pieza .codigo{width:100%;max-width:236px;margin:0 auto 20px}
+  .pieza .codigo svg{width:100%;height:auto;display:block}
+  @media (max-width:359px){.pieza{padding:30px 22px 26px}}
   /* El negro de la marca: la regla le gana al fill="black" de la libreria. */
   .pieza .codigo svg path{fill:var(--ink)}
   .pieza .pedi{font-size:17px;color:var(--ink);margin:0 0 6px;line-height:1.45}
@@ -92,7 +90,7 @@
        lleva salto, si no sale una hoja en blanco al final. */
     .sobre{break-after:page;page-break-after:always}
     .sobre:last-child{break-after:auto;page-break-after:auto}
-    .pieza .codigo{width:62mm;height:62mm}
+    .pieza .codigo{max-width:62mm}
 
     /* Reimprimir una sola: se esconden las demas mientras dura la impresion. */
     .una-sola .sobre{display:none}

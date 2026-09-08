@@ -70,7 +70,10 @@
   body.zoom #contenido > :not(#zonaQR){display:none}
   body.zoom{background:#fff}
   body.zoom .qr-card{border:none;box-shadow:none;padding:8px}
-  body.zoom .qr-card img{max-width:min(92vw,92vh)}
+  /* Acotado por el alto real: monto + "Listo, volver" + margenes (~230px)
+     tienen que quedar en pantalla sin scrollear. */
+  body.zoom .qr-card img{max-width:min(92vw,calc(100svh - 230px))}
+  body.zoom #salirZoom{margin-top:14px}
   body.zoom .monto-box{background:#fff;color:var(--ink);padding:6px}
   body.zoom .monto-box .cifra{color:var(--accent)}
   body.zoom .monto-box .quien{color:var(--muted)}
@@ -252,7 +255,6 @@ document.addEventListener('DOMContentLoaded', function () {
     salir.className = 'btn btn-secondary btn-block';
     salir.id = 'salirZoom';
     salir.textContent = 'Listo, volver';
-    salir.style.marginTop = '14px';
     document.getElementById('zonaQR').appendChild(salir);
     salir.addEventListener('click', salirZoom);
     document.addEventListener('keydown', escSalir);

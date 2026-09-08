@@ -22,7 +22,7 @@
   /* --------------------------------------------------------- filtros --- */
   .filtros{
     position:sticky;top:0;z-index:20;background:var(--bg);
-    padding:12px 0;margin-bottom:14px;
+    padding:calc(12px + var(--sa-t)) 0 12px;margin-bottom:14px;   /* cubre el notch al pegarse */
     display:flex;gap:8px;flex-wrap:wrap;align-items:center;
     border-bottom:1px solid var(--border);
   }
@@ -106,13 +106,14 @@
   .precio-edit[hidden]{display:none}
   .precio-edit .pesos{font-size:16px;color:var(--muted-strong)}
   .precio-edit input{
-    width:120px;min-height:var(--tap);padding:0 12px;font-size:18px;
+    width:auto;flex:1 1 90px;min-width:0;max-width:140px;
+    min-height:var(--tap);padding:0 12px;font-size:18px;
     border:1px solid var(--border-strong);border-radius:var(--r-md);
     background:#fff;color:var(--ink);font-family:inherit;
     font-variant-numeric:tabular-nums;
   }
   .precio-edit input:focus{outline:2px solid var(--accent);outline-offset:1px}
-  .precio-edit .btn{min-height:var(--tap);padding:0 16px;font-size:15px}
+  .precio-edit .btn{flex:none;min-height:var(--tap);padding:0 16px;font-size:15px}
   .volver-carta{
     background:none;border:0;padding:0;min-height:var(--tap);
     color:var(--muted-strong);text-decoration:underline;font-size:13px;

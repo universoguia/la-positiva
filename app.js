@@ -2092,7 +2092,9 @@
     if (!sb || !id) return Promise.reject(new Error('faltan datos'));
     var limpio = link ? comoLink(link) : null;
     if (link && link.trim() && !limpio) {
-      return Promise.reject(new Error('Eso no parece un link. Tiene que empezar con https://'));
+      var err = new Error('Eso no parece un link. Tiene que empezar con https://');
+      err.humano = true;   // este texto si se puede mostrar tal cual
+      return Promise.reject(err);
     }
     return sb.from(COBROS_TABLE)
       .update({ link_pago: limpio })
