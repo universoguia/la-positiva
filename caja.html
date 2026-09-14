@@ -39,6 +39,9 @@
     border-radius:var(--r-md);padding:16px;display:flex;flex-direction:column;
   }
   .pcard.is-paid{border-color:var(--ok-border);background:#fbfdfc}
+  /* Pago pendiente hace 15+ min: mismo rojo de "urgente" que cocina y mozo. */
+  .pcard.pcard-urgente{border-color:var(--err);background:var(--err-bg)}
+  .pcard.pcard-urgente .pmeta{color:var(--err-ink);font-weight:600}
   /* Cabecera flexible: mesa, badge y metodo nunca se pisan en celular. */
   .pcard-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
   .pmesa{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:23px;line-height:1.15}
@@ -269,6 +272,18 @@ document.addEventListener('DOMContentLoaded', function () {
   var notifyState = Object.create(null);  // id -> 'ok' | 'fail'
   var notifying = Object.create(null);
 
+  /* Mismo criterio de "urgente" que cocina.html (15 min): un pago pendiente
+     que lleva ese tiempo sin cobrarse se marca con el mismo rojo de alerta
+     que el resto de los paneles, en vez de quedar igual que uno recien
+     llegado. */
+  var ESPERA_URGENTE_MIN = 15;
+  function minutesOld(o) {
+    return Math.max(0, Math.round((Date.now() - new Date(o.created_at).getTime()) / 60000));
+  }
+  function esUrgente(o, modo) {
+    return modo !== 'dev' && !o.pagado && minutesOld(o) >= ESPERA_URGENTE_MIN;
+  }
+
   /* -------------------------------------------------------- tarjetas -- */
   function signature(o) {
     return [o.id, o.pagado, o.updated_at, LP.timeAgo(o.created_at), pending[o.id] ? 1 : 0,
@@ -335,7 +350,8 @@ document.addEventListener('DOMContentLoaded', function () {
           '<div class="pmesa">' + esc(o.mesa) + '</div>' +
           '<div class="pmeta">Pedido #' + esc(o.id) +
             (o.cliente ? ' &middot; ' + esc(o.cliente) : '') +
-            ' &middot; ' + esc(LP.timeAgo(o.created_at)) + '</div>' +
+            ' &middot; ' + esc(LP.timeAgo(o.created_at)) +
+            (esUrgente(o, modo) ? ' &middot; demorado' : '') + '</div>' +
           '<div class="pmetodo">' + esc(metodo) + '</div>' +
         '</div>' +
       '</div>' +
@@ -380,12 +396,12 @@ document.addEventListener('DOMContentLoaded', function () {
         el = document.createElement('article');
         el.dataset.card = o.id;
         el.dataset.sig = sig;
-        el.className = 'pcard' + (o.pagado ? ' is-paid' : '');
+        el.className = 'pcard' + (o.pagado ? ' is-paid' : '') + (esUrgente(o, modo) ? ' pcard-urgente' : '');
         el.innerHTML = cardHTML(o, modo);
       } else if (el.dataset.sig !== sig) {
         // Solo se repinta la ficha que cambio, nunca la lista entera.
         el.dataset.sig = sig;
-        el.className = 'pcard' + (o.pagado ? ' is-paid' : '');
+        el.className = 'pcard' + (o.pagado ? ' is-paid' : '') + (esUrgente(o, modo) ? ' pcard-urgente' : '');
         el.innerHTML = cardHTML(o, modo);
       }
       if (body.children[i] !== el) body.insertBefore(el, body.children[i] || null);

@@ -49,7 +49,10 @@
     background:var(--card);border:1px solid var(--border);
     border-radius:var(--r-md);padding:14px 15px;
   }
-  .ped.urge{border-color:var(--gold);box-shadow:0 0 0 2px rgba(200,150,62,.28)}
+  /* Urgente por tiempo de espera: mismo criterio y color que cocina.html
+     y caja.html (var(--err)). Antes era dorado, que es el color de marca
+     y no debe leerse como alerta. */
+  .ped.urge{border-color:var(--err);box-shadow:0 0 0 2px rgba(154,47,28,.28)}
   .ped-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
   .ped-top .mesa{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:24px;color:var(--ink)}
   .ped-top .meta{font-size:13px;color:var(--muted);margin-top:1px}
@@ -100,6 +103,18 @@
   }
   .detalle-fijo b{display:block;font-size:11px;letter-spacing:.05em;
                   text-transform:uppercase;margin-bottom:2px}
+  /* Nota larga del comensal: colapsada por defecto para que el boton de
+     "Lo llevé a la mesa" no quede empujado fuera de la pantalla en el
+     celular. Mismo look que .detalle-fijo, solo que arranca cerrada. */
+  details.detalle-fijo{padding:0}
+  details.detalle-fijo summary{
+    cursor:pointer;padding:9px 12px;font-size:11px;letter-spacing:.05em;
+    text-transform:uppercase;font-weight:600;list-style:none;
+  }
+  details.detalle-fijo summary::-webkit-details-marker{display:none}
+  details.detalle-fijo summary::after{content:' \25be';font-size:12px}
+  details.detalle-fijo[open] summary::after{content:' \25b4'}
+  details.detalle-fijo p{margin:0;padding:0 12px 9px}
 
   .vacio{
     color:var(--dark-muted);text-align:center;padding:26px 16px;font-size:15px;
@@ -317,8 +332,14 @@ document.addEventListener('DOMContentLoaded', function () {
         '<div class="items">' + itemsHTML(p) + '</div>' +
         '<div class="total">' + money(p.total) + '</div>' +
         (p.detalle_comensal
-          ? '<div class="detalle-fijo"><b>Detalle del comensal</b>' +
-            esc(p.detalle_comensal) + '</div>' : '') +
+          ? (p.detalle_comensal.length < 40
+              ? '<div class="detalle-fijo"><b>Detalle del comensal</b>' +
+                esc(p.detalle_comensal) + '</div>'
+              /* Larga: colapsada por defecto, sin robarle altura a la
+                 tarjeta antes de que el mozo decida verla. */
+              : '<details class="detalle-fijo"><summary>Ver nota del comensal</summary>' +
+                '<p>' + esc(p.detalle_comensal) + '</p></details>')
+          : '') +
         (listo ? '<div class="acciones"><button type="button" class="btn btn-primary" ' +
                  'data-entregar="' + p.id + '">Lo llevé a la mesa</button></div>' : '') +
         notasHTML(p) +

@@ -103,6 +103,9 @@
     font-weight:700;margin-bottom:2px;
   }
   .kmeta.urgent{color:var(--err-ink);font-weight:600}
+  /* Mismo criterio de "urgente" que el texto, pero en el badge: se nota
+     aunque no se lea el detalle. */
+  .badge.badge-urgente{background:var(--err-bg);color:var(--err-ink)}
   .kpay{font-size:13px;color:var(--muted-strong);margin-top:5px;text-align:right}
   /* Lo que se saco: tachado Y con cartel. El tachado solo no alcanza a
      medio metro de una plancha. */
@@ -229,7 +232,15 @@
     .cols{grid-template-columns:repeat(2,minmax(0,1fr))}
   }
   @media (min-width:1024px){
-    .cols{grid-template-columns:repeat(4,minmax(0,1fr))}
+    /* De grid a flex: asi una columna vacia puede pedir menos ancho que
+       una con comandas de verdad, en vez de repartirse el espacio en
+       partes iguales sin importar cuanto contenido tenga cada una. */
+    .cols{display:flex;gap:14px}
+    .col{flex:1 1 0;min-width:0}
+    /* :has() esta soportado en Chrome/Safari mobile modernos (el publico de
+       este panel). Si el navegador no lo soporta, cae al flex:1 parejo de
+       arriba: no rompe nada, solo pierde el achique. */
+    .col:has(.col-body[data-mode="empty"]){flex:0 1 190px}
   }
 </style>
 </head>
@@ -459,7 +470,7 @@ document.addEventListener('DOMContentLoaded', function () {
             (o.cliente ? ' &middot; ' + esc(o.cliente) : '') +
           '</div>' +
         '</div>' +
-        '<span class="badge ' + (BADGE[o.estado] || '') + '">' + esc(BADGE_LABEL[o.estado] || o.estado) + '</span>' +
+        '<span class="badge ' + (BADGE[o.estado] || '') + (urgent ? ' badge-urgente' : '') + '">' + esc(BADGE_LABEL[o.estado] || o.estado) + '</span>' +
       '</div>' +
       aviso +
       (o.detalle_comensal

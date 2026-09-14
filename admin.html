@@ -91,6 +91,24 @@
 
   .cargando{color:var(--muted);padding:16px 0;font-size:15px}
 
+  /* Lo financiero fino (hoy: el importe de los cubiertos) no compite con el
+     pulso operativo de arriba. Un clic de distancia, no en la cara: Nelly no
+     es de numeros, eso lo maneja alguien de confianza cuando hace falta. */
+  .finanzas{margin:30px 0 12px}
+  .finanzas summary{
+    cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;
+    font-family:'Jost',sans-serif;font-style:normal;
+    font-size:13px;letter-spacing:.11em;text-transform:uppercase;font-weight:600;
+    color:var(--muted-strong);padding:6px 0;min-height:var(--tap);
+  }
+  .finanzas summary::-webkit-details-marker{display:none}
+  .finanzas summary::before{
+    content:'\203A';display:inline-block;font-size:16px;color:var(--muted);
+    transition:transform .15s;
+  }
+  .finanzas[open] summary::before{transform:rotate(90deg)}
+  .finanzas .ajuste{margin-top:12px}
+
 </style>
 </head>
 <body>
@@ -120,20 +138,21 @@
   <h2>Quién recibe los avisos</h2>
   <div class="roles" id="roles"><p class="cargando">Cargando...</p></div>
 
-  <h2>Ajustes del local</h2>
-
-  <div class="ajuste">
-    <b>Cubiertos por mesa</b>
-    <p>Se cobran una sola vez por mesa, en el primer pedido. Pon&eacute; 0 para no cobrarlos.
-       Las mesas que ya est&aacute;n abiertas no cambian.</p>
-    <div class="ajuste-fila">
-      <span class="pesos">$</span>
-      <input type="text" inputmode="numeric" pattern="[0-9]*" id="cubierto"
-             aria-label="Importe de los cubiertos por mesa" value="" placeholder="0">
-      <button type="button" class="btn btn-primary" id="cubiertoGuardar">Guardar</button>
+  <details class="finanzas">
+    <summary>Números y finanzas</summary>
+    <div class="ajuste">
+      <b>Cubiertos por mesa</b>
+      <p>Se cobran una sola vez por mesa, en el primer pedido. Pon&eacute; 0 para no cobrarlos.
+         Las mesas que ya est&aacute;n abiertas no cambian.</p>
+      <div class="ajuste-fila">
+        <span class="pesos">$</span>
+        <input type="text" inputmode="numeric" pattern="[0-9]*" id="cubierto"
+               aria-label="Importe de los cubiertos por mesa" value="" placeholder="0">
+        <button type="button" class="btn btn-primary" id="cubiertoGuardar">Guardar</button>
+      </div>
+      <p class="ajuste-msg" id="cubiertoMsg" role="status" aria-live="polite"></p>
     </div>
-    <p class="ajuste-msg" id="cubiertoMsg" role="status" aria-live="polite"></p>
-  </div>
+  </details>
 
   <h2>Otras pantallas</h2>
   <div class="atajos">

@@ -108,6 +108,13 @@
   .e-debe .mesa-n{fill:#fdf6ea}
   .e-debe .mesa-i{fill:#fdf6ea}
 
+  /* Debe plata Y la ronda mas vieja sin pagar lleva 15+ min (mismo umbral
+     que "urgente" en cocina.html): mismo color de alerta que el resto de
+     los paneles, en vez del ambar generico de "falta cobrar". */
+  .e-debe-urgente .mesa-f{fill:var(--wood);stroke:var(--err);stroke-width:1.7}
+  .e-debe-urgente .mesa-n{fill:#fdf6ea}
+  .e-debe-urgente .mesa-i{fill:#fdf6ea}
+
   .e-reservada .mesa-f{fill:var(--wood-pale);stroke:var(--warn);stroke-dasharray:2.6 1.8;stroke-width:1.2}
   .e-reservada .mesa-n{fill:var(--warn)}
   .e-reservada .mesa-i{fill:var(--warn)}
@@ -417,11 +424,31 @@ document.addEventListener('DOMContentLoaded', function () {
     return !!(t.cuenta && t.cuenta.debe > 0);
   }
 
+  /* Mismo umbral de "urgente" que cocina.html (15 min), aplicado a la ronda
+     mas vieja sin pagar. Usa t.cuenta.pedidos[].created_at, el mismo dato
+     que ya se muestra en cada ronda de la hoja (rondaHTML). Sin pedidos
+     cargados en cuenta, no hay de donde sacar la antiguedad y no se marca. */
+  var ESPERA_URGENTE_MIN = 15;
+  function mesaEsperaLarga(t) {
+    if (!t.cuenta || !(t.cuenta.debe > 0)) return false;
+    var pedidos = t.cuenta.pedidos;
+    if (!pedidos || !pedidos.length) return false;
+    var masVieja = null;
+    pedidos.forEach(function (p) {
+      if (!p.created_at) return;
+      var ts = new Date(p.created_at).getTime();
+      if (masVieja === null || ts < masVieja) masVieja = ts;
+    });
+    if (masVieja === null) return false;
+    return Math.round((Date.now() - masVieja) / 60000) >= ESPERA_URGENTE_MIN;
+  }
+
   function claseDe(t) {
     if (t.estado === 'Libre') return 'e-libre';
     if (t.estado === 'Reservada') return 'e-reservada';
     if (t.estado === 'Limpieza') return 'e-limpieza';
-    return (t.cuenta && t.cuenta.debe > 0) ? 'e-debe' : 'e-ocupada';
+    if (!(t.cuenta && t.cuenta.debe > 0)) return 'e-ocupada';
+    return mesaEsperaLarga(t) ? 'e-debe-urgente' : 'e-debe';
   }
 
   function textoEstado(t) {
@@ -615,7 +642,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var sinPedir = m.rondas === 0;
 
     var chip = limpiar ? '<span class="chip limpiar">Para limpiar</span>'
-             : debe ? '<span class="chip debe">Falta cobrar</span>'
+             : debe ? '<span class="chip debe' + (mesaEsperaLarga(t) ? ' urgente' : '') + '">Falta cobrar</span>'
              : sinPedir ? '<span class="chip espera">Sin pedir</span>'
              : '<span class="chip ok">Todo pago</span>';
 

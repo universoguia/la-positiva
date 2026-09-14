@@ -302,6 +302,9 @@ header.top .sub{color:var(--muted);font-size:15px;margin:3px 0 0}
 }
 .chip.ok{background:var(--ok-soft);color:var(--ok);border:1px solid var(--ok-border)}
 .chip.debe{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn-border)}
+/* Debe plata y ya lleva rato esperando: mismo rojo de "urgente" que cocina,
+   mozo y mesas usan para tiempo de espera largo. */
+.chip.debe.urgente{background:var(--err-bg);color:var(--err-ink);border:1px solid var(--err-border)}
 .chip.espera{background:var(--border);color:var(--muted-strong)}
 .chip.limpiar{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-border)}
 .chip.reservada{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn-border)}
