@@ -109,6 +109,25 @@
   .finanzas[open] summary::before{transform:rotate(90deg)}
   .finanzas .ajuste{margin-top:12px}
 
+  /* ------------------------------------------------------------ alias -- */
+  .mozos{display:grid;gap:10px}
+  .mozo-fila{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--r-md);padding:12px 14px;
+  }
+  .mozo-fila b{display:block;font-size:16px;font-weight:500;margin-bottom:8px}
+  .mozo-fila .fila-alias{display:flex;gap:8px;flex-wrap:wrap}
+  .mozo-fila input{
+    flex:1 1 160px;min-width:0;min-height:var(--tap);padding:0 12px;
+    border:1px solid var(--border-strong);border-radius:var(--r-md);
+    background:#fff;color:var(--ink);font-family:inherit;font-size:15px;
+  }
+  .mozo-fila input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .mozo-fila .btn{flex:none;min-height:var(--tap);padding:0 16px;font-size:15px}
+  .mozo-msg{font-size:13px;margin:6px 0 0;min-height:1.2em}
+  .mozo-msg.ok{color:var(--ok)}
+  .mozo-msg.err{color:var(--err-ink)}
+
 </style>
 </head>
 <body>
@@ -154,6 +173,15 @@
     </div>
   </details>
 
+  <details class="finanzas">
+    <summary>Alias de propinas de los mozos</summary>
+    <p style="margin:12px 0 12px;font-size:13px;color:var(--muted);line-height:1.45">
+      Es el alias al que el comensal transfiere la propina, directo al mozo. No pasa
+      por el local.
+    </p>
+    <div class="mozos" id="mozosAlias"><p class="cargando">Cargando...</p></div>
+  </details>
+
   <h2>Otras pantallas</h2>
   <div class="atajos">
     <a class="atajo" href="mesas.html"><span><b>El salón y las cuentas</b>
@@ -162,6 +190,8 @@
       <span>Fotos, precios y marcar lo que ya no hay.</span></span></a>
     <a class="atajo" href="qr-mesa.html"><span><b>Los QR de las mesas</b>
       <span>Generar e imprimir el código de cada mesa.</span></span></a>
+    <a class="atajo" href="propinas.html"><span><b>Las propinas de los mozos</b>
+      <span>Lo reportado por transferencia y lo cargado en efectivo.</span></span></a>
   </div>
 
   <a class="back-link" href="./">Volver al inicio</a>
@@ -379,6 +409,56 @@ document.addEventListener('DOMContentLoaded', function () {
               : 'Listo: no se cobran cubiertos desde el pr\u00f3ximo pedido.', 'ok');
     });
   });
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var esc = LP.esc;
+  var sb = LP.client();
+  var caja = document.getElementById('mozosAlias');
+
+  function fila(p) {
+    return '<div class="mozo-fila" data-id="' + p.id + '">' +
+      '<b>' + esc(p.nombre) + '</b>' +
+      '<div class="fila-alias">' +
+        '<input type="text" maxlength="60" placeholder="alias.mercadopago o CBU/alias" ' +
+          'aria-label="Alias para transferirle propina a ' + esc(p.nombre) + '" ' +
+          'value="' + esc(p.alias_propina || '') + '">' +
+        '<button type="button" class="btn btn-primary" data-guardar>Guardar</button>' +
+      '</div>' +
+      '<p class="mozo-msg" role="status" aria-live="polite"></p>' +
+    '</div>';
+  }
+
+  function cargar() {
+    if (!sb) { caja.innerHTML = '<p class="cargando">No hay conexi\u00f3n con el sistema.</p>'; return; }
+    LP.personas(sb).then(function (lista) {
+      var mozos = lista.filter(function (p) { return p.rol === 'Mozo'; });
+      caja.innerHTML = mozos.length
+        ? mozos.map(fila).join('')
+        : '<p class="cargando">No hay mozos activos cargados.</p>';
+    });
+  }
+
+  caja.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('[data-guardar]');
+    if (!btn || !sb) return;
+    var wrap = btn.closest('.mozo-fila');
+    var id = wrap.dataset.id;
+    var input = wrap.querySelector('input');
+    var msg = wrap.querySelector('.mozo-msg');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    LP.guardarAliasMozo(sb, id, input.value).then(function (ok) {
+      btn.disabled = false;
+      btn.textContent = 'Guardar';
+      msg.textContent = ok ? 'Guardado.' : 'No pudimos guardar. Prob\u00e1 de nuevo.';
+      msg.className = 'mozo-msg ' + (ok ? 'ok' : 'err');
+    });
+  });
+
+  cargar();
 });
 </script>
 </body>

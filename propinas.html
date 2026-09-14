@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3ece2">
+<meta name="description" content="Propinas de los mozos de La Positiva: lo reportado por transferencia y lo cargado en efectivo.">
+<title>La Positiva - Propinas</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="La Positiva">
+<link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .wrap{max-width:760px;padding-top:calc(20px + var(--sa-t));padding-bottom:80px}
+
+  .sub{color:var(--muted);font-size:15px;margin:3px 0 0}
+
+  .elegir-mozo{margin:16px 0}
+  .elegir-mozo label{display:block;font-size:14px;color:var(--muted-strong);margin-bottom:6px}
+  .elegir-mozo select{
+    width:100%;min-height:var(--tap);padding:0 12px;
+    border-radius:var(--r-md);border:1px solid var(--border-strong);
+    background:#fff;color:var(--ink);font-family:inherit;font-size:16px;
+  }
+
+  .resumen{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0 26px}
+  .resumen .cifra{
+    flex:1 1 150px;background:var(--card);border:1px solid var(--border);
+    border-radius:var(--r-md);padding:14px;
+  }
+  .resumen .cifra span{display:block;font-size:12px;color:var(--muted)}
+  .resumen .cifra b{font-size:22px;font-variant-numeric:tabular-nums}
+  .resumen .cifra.alerta b{color:var(--warn)}
+  .resumen[hidden]{display:none}
+
+  h2.seccion{
+    font-family:'Jost',sans-serif;font-style:normal;
+    font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
+    color:var(--muted-strong);margin:26px 0 10px;display:flex;align-items:center;gap:9px;
+  }
+  h2.seccion .n{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:22px;height:22px;padding:0 6px;border-radius:var(--r-pill);
+    background:var(--warn-bg);color:var(--warn);font-size:13px;font-weight:700;
+  }
+
+  .lista{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+  .vacio{
+    color:var(--muted);text-align:center;padding:22px 16px;font-size:15px;
+    border:1px dashed var(--border-strong);border-radius:var(--r-md);
+  }
+  .prop{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);
+    padding:13px 15px;display:flex;justify-content:space-between;gap:12px;
+    align-items:center;flex-wrap:wrap;
+  }
+  .prop.pendiente{border-color:var(--warn-border);background:var(--warn-soft)}
+  .prop .info{min-width:0;flex:1 1 140px}
+  .prop .mesa{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:19px}
+  .prop .meta{font-size:13px;color:var(--muted);margin-top:2px}
+  .prop .cola{display:flex;align-items:center;gap:10px;flex:none}
+  .prop .monto{font-weight:600;font-size:17px;font-variant-numeric:tabular-nums;flex:none}
+  .medio-badge{
+    font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:600;
+    color:var(--muted-strong);background:var(--border);border-radius:var(--r-pill);
+    padding:3px 9px;white-space:nowrap;
+  }
+  .prop .btn{flex:none;min-height:var(--tap);padding:0 14px;font-size:14px}
+
+  .form-efectivo{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);
+    padding:16px;
+  }
+  .form-efectivo .field{margin-top:12px}
+  .form-efectivo .field:first-child{margin-top:0}
+  .form-efectivo label{display:block;font-size:14px;color:var(--muted-strong);margin-bottom:6px}
+  .form-efectivo input{
+    width:100%;min-height:var(--tap);padding:0 12px;
+    border-radius:var(--r-md);border:1px solid var(--border-strong);
+    background:#fff;color:var(--ink);font-family:inherit;font-size:16px;
+  }
+  .form-efectivo input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .form-efectivo .btn{margin-top:14px}
+  .field-err{color:var(--err-ink);font-size:14px;margin-top:8px}
+  .field-err:empty{display:none}
+
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1 id="tituloMozo">Propinas</h1>
+      <p class="sub" id="subMozo">Cargando...</p>
+    </div>
+    <div class="head-right">
+      <a class="soy" href="./" data-quien hidden></a>
+      <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
+        <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
+      </span>
+      <a class="back-link" href="mozo.html">Volver a mis pedidos</a>
+    </div>
+  </header>
+
+  <p class="cargando" id="cargando">Cargando...</p>
+
+  <div class="elegir-mozo" id="elegirMozo" hidden>
+    <label for="mozoSelect">Ver las propinas de</label>
+    <select id="mozoSelect">
+      <option value="">Eleg&iacute; un mozo...</option>
+    </select>
+  </div>
+
+  <div id="contenido" hidden>
+    <div class="resumen" id="resumen"></div>
+
+    <h2 class="seccion">Por confirmar <span class="n" id="nPendientes">0</span></h2>
+    <p class="sub" style="margin:-4px 0 12px">
+      Lo que un comensal avis&oacute; que ya transfiri&oacute;. Confirm&aacute;lo cuando lo veas
+      entrar en tu cuenta.
+    </p>
+    <ul class="lista" id="pendientes"></ul>
+
+    <h2 class="seccion">Confirmadas</h2>
+    <ul class="lista" id="confirmadas"></ul>
+
+    <h2 class="seccion">Cargar propina en efectivo</h2>
+    <p class="sub" style="margin:-4px 0 12px">
+      Para el comensal de toda la vida que no abre el QR ni transfiere.
+    </p>
+    <form class="form-efectivo" id="efectivoForm">
+      <div class="field">
+        <label for="efMonto">Monto</label>
+        <input id="efMonto" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Ej: 2000">
+      </div>
+      <div class="field">
+        <label for="efMesa">Mesa (opcional)</label>
+        <input id="efMesa" type="text" maxlength="20" placeholder="Ej: Mesa 7">
+      </div>
+      <div class="field">
+        <label for="efComensal">Comensal (opcional)</label>
+        <input id="efComensal" type="text" maxlength="60" placeholder="Si sab&eacute;s qui&eacute;n fue">
+      </div>
+      <p class="field-err" id="efectivoErr" role="alert"></p>
+      <button type="submit" class="btn btn-primary btn-block" id="efectivoBtn">Cargar propina</button>
+    </form>
+  </div>
+
+  <a class="back-link" href="./">Volver al inicio</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+<script src="config.js" defer></script>
+<script src="app.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var esc = LP.esc, money = LP.money;
+  var sb = LP.client();
+  var conn = new LP.ConnBadge(document.getElementById('conn'));
+  var soy = LP.quienSoy();
+
+  var mozos = [];
+  var actual = null;    // fila de la_positiva_personas del mozo que se esta mirando
+  var locked = false;   // true: es un mozo mirando lo suyo, sin selector
+  var propinas = [];
+
+  var elCargando = document.getElementById('cargando');
+  var elSelectWrap = document.getElementById('elegirMozo');
+  var elSelect = document.getElementById('mozoSelect');
+  var elContenido = document.getElementById('contenido');
+  var elTitulo = document.getElementById('tituloMozo');
+  var elSub = document.getElementById('subMozo');
+  var elResumen = document.getElementById('resumen');
+  var elPendientes = document.getElementById('pendientes');
+  var elConfirmadas = document.getElementById('confirmadas');
+
+  function esHoy(iso) {
+    var d = new Date(iso), h = new Date();
+    return d.getFullYear() === h.getFullYear() && d.getMonth() === h.getMonth() &&
+           d.getDate() === h.getDate();
+  }
+
+  function pintarResumen() {
+    var confirmadoHoy = 0, pendientes = 0, nPend = 0;
+    propinas.forEach(function (p) {
+      if (p.estado === 'confirmada' && esHoy(p.created_at)) confirmadoHoy += Number(p.monto) || 0;
+      if (p.estado === 'reportada') { nPend++; pendientes += Number(p.monto) || 0; }
+    });
+    elResumen.innerHTML =
+      '<div class="cifra"><span>Confirmado hoy</span><b>' + money(confirmadoHoy) + '</b></div>' +
+      '<div class="cifra' + (nPend ? ' alerta' : '') + '"><span>Por confirmar</span><b>' + nPend + '</b></div>';
+  }
+
+  function itemPendiente(p) {
+    return '<li class="prop pendiente">' +
+      '<div class="info"><div class="mesa">' + esc(p.mesa) + '</div>' +
+        '<div class="meta">' + (p.comensal ? esc(p.comensal) + ' &middot; ' : '') +
+          esc(LP.timeAgo(p.created_at)) + '</div></div>' +
+      '<div class="cola">' +
+        '<div class="monto">' + (p.monto ? money(p.monto) : 'Sin monto') + '</div>' +
+        '<button type="button" class="btn btn-primary" data-confirmar="' + p.id + '">' +
+          'Ya la vi en mi cuenta</button>' +
+      '</div></li>';
+  }
+
+  function itemConfirmada(p) {
+    return '<li class="prop">' +
+      '<div class="info"><div class="mesa">' + esc(p.mesa) + '</div>' +
+        '<div class="meta">' + (p.comensal ? esc(p.comensal) + ' &middot; ' : '') +
+          esc(LP.timeAgo(p.created_at)) + '</div></div>' +
+      '<div class="cola">' +
+        '<span class="medio-badge">' + (p.medio === 'efectivo' ? 'Efectivo' : 'Transferencia') + '</span>' +
+        '<div class="monto">' + (p.monto ? money(p.monto) : '—') + '</div>' +
+      '</div></li>';
+  }
+
+  function render() {
+    pintarResumen();
+    var pend = propinas.filter(function (p) { return p.estado === 'reportada'; });
+    var conf = propinas.filter(function (p) { return p.estado === 'confirmada'; }).slice(0, 40);
+
+    document.getElementById('nPendientes').textContent = pend.length;
+    elPendientes.innerHTML = pend.length
+      ? pend.map(itemPendiente).join('')
+      : '<li class="vacio">Nada esperando confirmación.</li>';
+
+    elConfirmadas.innerHTML = conf.length
+      ? conf.map(itemConfirmada).join('')
+      : '<li class="vacio">Todavía no hay propinas confirmadas.</li>';
+  }
+
+  function cargar() {
+    if (!sb || !actual) return Promise.resolve();
+    return LP.propinasDeMozo(sb, actual.nombre).then(function (lista) {
+      if (lista === null) { conn.set(navigator.onLine ? 'retry' : 'off'); return; }
+      conn.set(navigator.onLine ? 'live' : 'off');
+      propinas = lista;
+      render();
+    });
+  }
+
+  function elegirMozo(m) {
+    actual = m;
+    elTitulo.textContent = locked ? 'Tus propinas' : ('Propinas de ' + m.nombre);
+    elSub.textContent = m.alias_propina
+      ? 'Tu alias para transferencias: ' + m.alias_propina
+      : 'Todavía no cargáste tu alias. Se hace desde Encargado.';
+    elContenido.hidden = false;
+    propinas = [];
+    render();
+    cargar();
+  }
+
+  elSelect.addEventListener('change', function () {
+    var m = null;
+    for (var i = 0; i < mozos.length; i++) if (mozos[i].nombre === elSelect.value) { m = mozos[i]; break; }
+    if (m) { elegirMozo(m); }
+    else { actual = null; elContenido.hidden = true; }
+  });
+
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-confirmar]');
+    if (!b || !sb) return;
+    var id = b.dataset.confirmar;
+    b.disabled = true;
+    b.textContent = 'Confirmando...';
+    LP.confirmarPropina(sb, id).then(function (ok) {
+      if (!ok) {
+        b.disabled = false;
+        b.textContent = 'Ya la vi en mi cuenta';
+        LP.toast('No pudimos confirmarla. Probá de nuevo.', 'err');
+        return;
+      }
+      LP.toast('Listo, la marcamos confirmada.', 'ok');
+      cargar();
+    });
+  });
+
+  document.getElementById('efectivoForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    if (!sb || !actual) return;
+    var btn = document.getElementById('efectivoBtn');
+    var err = document.getElementById('efectivoErr');
+    err.textContent = '';
+
+    var montoCrudo = (document.getElementById('efMonto').value || '').replace(/[^0-9]/g, '');
+    if (!montoCrudo || Number(montoCrudo) <= 0) {
+      err.textContent = 'Poné un monto mayor a cero.';
+      document.getElementById('efMonto').focus();
+      return;
+    }
+
+    var mesa = document.getElementById('efMesa').value.trim();
+    var comensal = document.getElementById('efComensal').value.trim();
+    var quien = (soy && soy.nombre) || actual.nombre;
+
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    LP.cargarPropinaEfectivo(sb, {
+      mesa: mesa, mozo: actual.nombre, comensal: comensal,
+      monto: montoCrudo, cargado_por: quien
+    }).then(function (r) {
+      btn.disabled = false;
+      btn.textContent = 'Cargar propina';
+      if (!r.ok) { err.textContent = r.motivo || 'No pudimos guardarla.'; return; }
+      document.getElementById('efectivoForm').reset();
+      LP.toast('Propina en efectivo cargada.', 'ok');
+      cargar();
+    });
+  });
+
+  /* ------------------------------------------------------------- inicio -- */
+  if (!sb) {
+    conn.set('off');
+    elCargando.textContent = 'No hay conexión con el sistema.';
+    return;
+  }
+
+  LP.mozosActivos(sb).then(function (lista) {
+    mozos = lista || [];
+    if (!mozos.length) {
+      elCargando.textContent = 'No hay mozos activos cargados en Encargado.';
+      return;
+    }
+    elCargando.hidden = true;
+
+    var propio = null;
+    if (soy && soy.rol === 'Mozo') {
+      for (var i = 0; i < mozos.length; i++) {
+        if (mozos[i].nombre === soy.nombre) { propio = mozos[i]; break; }
+      }
+    }
+
+    if (propio) {
+      locked = true;
+      elSelectWrap.hidden = true;
+      elegirMozo(propio);
+    } else {
+      elSelectWrap.hidden = false;
+      elSelect.innerHTML = '<option value="">Elegí un mozo...</option>' +
+        mozos.map(function (m) {
+          return '<option value="' + esc(m.nombre) + '">' + esc(m.nombre) + '</option>';
+        }).join('');
+    }
+  });
+
+  var canal = sb.channel('propinas-' + Date.now())
+    .on('postgres_changes', { event: '*', schema: 'public', table: LP.PROPINAS_TABLE },
+        function () { cargar(); })
+    .subscribe(function (st) {
+      if (st === 'SUBSCRIBED' && actual) conn.set(navigator.onLine ? 'live' : 'off');
+    });
+  LP.onCleanup(function () { try { sb.removeChannel(canal); } catch (e) {} });
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) cargar();
+  });
+});
+</script>
+</body>
+</html>

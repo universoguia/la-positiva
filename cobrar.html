@@ -68,15 +68,26 @@
   .cobro-opt.sin-monto .monto{font-weight:500;color:var(--muted)}
   @media (hover:hover){.cobro-opt:hover{border-color:var(--muted)}}
 
-  /* Sacar una foto nueva del QR: chico y a un costado, no compite con
-     "Agrandar para el cliente", pero esta ahi mismo si el codigo quedo
-     viejo (el posnet arma un QR por cada cobro, no uno solo para todos). */
-  .qr-nuevo-row{margin-top:10px;text-align:center}
-  .qr-msg{font-size:14px;margin:8px 0 0}
-  .qr-msg:empty{display:none}
-  .qr-msg.ok{color:var(--ok)}
-  .qr-msg.err{color:var(--err-ink)}
-
+  /* Ticket de pago confirmado: reemplaza el QR una vez cobrado, mismo
+     lugar en pantalla, sin foto de comprobante (eso es opcional y lo
+     agrega la cajera despues si quiere, no bloquea nada aca). */
+  .ticket-card{
+    background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);
+    padding:28px 22px;text-align:center;box-shadow:var(--shadow);
+  }
+  .ticket-check{
+    width:52px;height:52px;border-radius:50%;background:var(--ok-soft);
+    color:var(--ok);display:flex;align-items:center;justify-content:center;
+    margin:0 auto 14px;font-size:26px;
+  }
+  .ticket-card h2{margin:0 0 4px;font-size:20px}
+  .ticket-card .sub{color:var(--muted);font-size:14px;margin:0 0 18px}
+  .ticket-linea{
+    border-top:1px dashed var(--border);margin-top:16px;padding-top:14px;
+  }
+  .ticket-fila{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:15px}
+  .ticket-fila span:first-child{color:var(--muted)}
+  .ticket-fila.total{font-size:19px;font-weight:600;color:var(--ink)}
 
   .tip{
     margin-top:16px;padding:12px 14px;border-radius:var(--r-sm);
@@ -247,15 +258,6 @@ document.addEventListener('DOMContentLoaded', function () {
                'alt="Código QR para pagar en La Positiva">' +
           '<p class="qr-pie">Escaneálo con cualquier billetera o app del banco</p>' +
         '</div>' +
-        /* El posnet arma un QR nuevo por cada cobro: si este quedo de otra
-           persona o de otro monto, se saca uno nuevo sin salir de esta
-           pantalla ni perder a quien se le esta cobrando. */
-        '<div class="qr-nuevo-row">' +
-          '<label class="btn btn-ghost" for="qrFileNuevo" id="qrNuevoLabel">' +
-            'Sacar una foto nueva del QR</label>' +
-          '<input type="file" id="qrFileNuevo" accept="image/*" class="visually-hidden">' +
-          '<p class="qr-msg" id="qrNuevoMsg" role="status" aria-live="polite"></p>' +
-        '</div>' +
       '</div>' +
 
       /* En el orden del cobro: mostrar, confirmar, y recien despues las
@@ -312,48 +314,35 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var cb = document.getElementById('cobradoBtn');
     if (cb) cb.addEventListener('click', confirmarCobro);
-
-    var qrFileNuevo = document.getElementById('qrFileNuevo');
-    if (qrFileNuevo) qrFileNuevo.addEventListener('change', subirQRNuevo);
   }
 
-  /* -------------------------------------------- foto nueva del QR ------
-     El posnet genera un codigo por cobro, con su propio monto e ID: usar
-     uno viejo para un monto nuevo no sirve. Se sube igual que en caja.html
-     (mismo LP.subirQR, mismo QR "activo" para todos) pero sin salir de esta
-     pantalla ni perder a quien se le esta cobrando.                      */
-  var subiendoQR = false;
-  function subirQRNuevo() {
-    var input = document.getElementById('qrFileNuevo');
-    var label = document.getElementById('qrNuevoLabel');
-    var msg = document.getElementById('qrNuevoMsg');
-    var file = input.files && input.files[0];
-    if (!file || subiendoQR) return;
+  /* ---------------------------------------------- ticket de confirmado --
+     Cada QR es de un solo pago: un monto y un momento que no se repiten.
+     El ticket lo deja bien claro (a quien, cuanto, cuando) en vez de un
+     toast que se borra solo. Sin foto de comprobante: eso es aparte y
+     opcional, no bloquea el paso a la proxima persona.                  */
+  function mostrarTicket(pedido) {
+    var etiqueta = etiquetas[pedido.id] || (pedido.id === 'mesa' ? 'Toda la mesa' : 'Este pago');
+    var ahora = new Date();
+    var hora = ahora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    var fecha = ahora.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
 
-    if (!/^image\//.test(file.type || '')) {
-      msg.textContent = 'Eso no es una imagen. Subí una foto o captura del QR.';
-      msg.className = 'qr-msg err';
-      input.value = '';
-      return;
-    }
+    cont.innerHTML =
+      '<div class="ticket-card">' +
+        '<div class="ticket-check">&#10003;</div>' +
+        '<h2>Pago confirmado</h2>' +
+        '<p class="sub">Ya qued&oacute; registrado en el sistema</p>' +
+        '<div class="ticket-linea">' +
+          '<div class="ticket-fila"><span>Mesa</span><span>' + esc(pedido.mesa) + '</span></div>' +
+          '<div class="ticket-fila"><span>Qui&eacute;n pag&oacute;</span><span>' + esc(etiqueta) + '</span></div>' +
+          '<div class="ticket-fila"><span>Cu&aacute;ndo</span><span>' + esc(fecha) + ', ' + esc(hora) + '</span></div>' +
+          '<div class="ticket-fila total"><span>Monto</span><span>' + money(LP.cobrable(pedido)) + '</span></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="acciones"><button type="button" class="btn btn-primary btn-block" id="otraPersonaBtn">' +
+        'Cobrar a otra persona</button></div>';
 
-    subiendoQR = true;
-    label.textContent = 'Subiendo...';
-    msg.textContent = ''; msg.className = 'qr-msg';
-
-    LP.subirQR(sb, file, 'QR de cobro', YO).then(function (nuevoQr) {
-      subiendoQR = false;
-      input.value = '';
-      qr = nuevoQr;
-      pintar();
-      LP.toast('QR actualizado. Ya se lo podés mostrar.', 'ok');
-    }, function (e) {
-      subiendoQR = false;
-      input.value = '';
-      label.textContent = 'Sacar una foto nueva del QR';
-      msg.textContent = LP.humanError(e, 'No se pudo subir el QR. Probá de nuevo.');
-      msg.className = 'qr-msg err';
-    });
+    document.getElementById('otraPersonaBtn').addEventListener('click', cargar);
   }
 
   /* --------------------------------------------------- modo pantalla --- */
@@ -505,14 +494,13 @@ document.addEventListener('DOMContentLoaded', function () {
             });
           return;
         }
-        LP.toast('Pago confirmado.', 'ok');
         /* Avisa igual que la caja. Antes esta pantalla marcaba el pago y no
            avisaba a nadie: cobrar con el QR desde el salon dejaba a Jonathan
            sin enterarse. Solo si el pago se confirmo recien, para no volver
            a avisar cuando ya estaba pago.                                */
         res.data.forEach(function (p) { LP.avisarPago(sb, p); });
+        mostrarTicket(elegido);
         elegido = null;
-        cargar();
       }, function (e) {
         LP.toast(LP.humanError(e, 'No se pudo confirmar el pago.'), 'err');
         btn.disabled = false;

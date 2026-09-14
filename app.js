@@ -29,6 +29,7 @@
   var PRECIOS_TABLE = CFG.PRECIOS_TABLE || 'la_positiva_precios';
   var NOTAS_TABLE = CFG.NOTAS_TABLE || 'la_positiva_notas';
   var PERSONAS_TABLE = CFG.PERSONAS_TABLE || 'la_positiva_personas';
+  var PROPINAS_TABLE = CFG.PROPINAS_TABLE || 'la_positiva_propinas';
   var BUCKET = CFG.BUCKET;
   var IMG_BASE = CFG.IMG_BASE;
 
@@ -691,6 +692,118 @@
       }, function (e) { humanError(e); return []; });
   }
 
+  /* --- Propinas -------------------------------------------------------
+     El QR de cobro de la comida es unico por persona y por posnet: la
+     propina NO pasa por ahi. Se paga aparte, por transferencia al alias
+     bancario DEL MOZO (no del local) o en efectivo. No hay integracion
+     bancaria real -nadie puede confirmar automaticamente que la plata
+     entro-, asi que el flujo es de auto-reporte mas confirmacion manual:
+
+       1) El comensal, desde la carta de su mesa, toca "Ya transferí".
+          Eso guarda una fila 'reportada': todavia nadie la vio en el banco.
+       2) El mozo la confirma cuando la ve entrar en su cuenta. Recien ahi
+          pasa a 'confirmada'.
+
+     El efectivo es distinto: el mozo lo carga a mano porque ya lo tiene en
+     el bolsillo, y entra 'confirmada' de una, sin paso 1.                */
+
+  function mozosActivos(sb) {
+    return personas(sb).then(function (lista) {
+      return lista.filter(function (p) { return p.rol === 'Mozo'; });
+    });
+  }
+
+  /* El alias vive en la_positiva_personas, junto con el resto del mozo: no
+     tiene sentido una tabla aparte para un solo campo de texto. */
+  function guardarAliasMozo(sb, id, alias) {
+    if (!sb || !id) return Promise.resolve(false);
+    var limpio = String(alias || '').trim().slice(0, 60) || null;
+    return sb.from(PERSONAS_TABLE).update({ alias_propina: limpio }).eq('id', id)
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return false; }
+        return true;
+      }, function (e) { humanError(e); return false; });
+  }
+
+  function numeroOnulo(v) {
+    if (v === null || v === undefined || v === '') return null;
+    var n = Number(v);
+    return (isFinite(n) && n >= 0) ? n : null;
+  }
+
+  /* El comensal avisa que ya transfirio. Nace 'reportada': el mozo todavia
+     no la vio en su banco. */
+  function reportarPropina(sb, datos) {
+    if (!sb) return Promise.resolve({ ok: false, motivo: 'No hay conexión con el sistema.' });
+    datos = datos || {};
+    if (!datos.mesa || !datos.mozo) {
+      return Promise.resolve({ ok: false, motivo: 'Falta saber la mesa o el mozo.' });
+    }
+    return sb.from(PROPINAS_TABLE).insert({
+      mesa: String(datos.mesa).slice(0, 20),
+      mozo: String(datos.mozo).slice(0, 60),
+      mozo_alias: datos.mozo_alias ? String(datos.mozo_alias).slice(0, 60) : null,
+      comensal: datos.comensal ? String(datos.comensal).slice(0, 60) : null,
+      monto: numeroOnulo(datos.monto),
+      medio: 'alias',
+      estado: 'reportada',
+      cargado_por: 'Comensal'
+    }).select().single().then(function (res) {
+      if (res.error) { humanError(res.error); return { ok: false, motivo: 'No pudimos guardar el aviso.' }; }
+      return { ok: true, propina: res.data };
+    }, function (e) { humanError(e); return { ok: false, motivo: 'No pudimos guardar el aviso.' }; });
+  }
+
+  /* El mozo la vio entrar en su cuenta: pasa a confirmada. Solo se puede
+     confirmar una vez -el .eq('estado','reportada') es el candado-, para
+     no pisar una confirmacion que hizo otro celular un segundo antes. */
+  function confirmarPropina(sb, id) {
+    if (!sb || !id) return Promise.resolve(false);
+    return sb.from(PROPINAS_TABLE)
+      .update({ estado: 'confirmada', confirmado_at: new Date().toISOString() })
+      .eq('id', id).eq('estado', 'reportada')
+      .select()
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return false; }
+        return !!(res.data && res.data.length);
+      }, function (e) { humanError(e); return false; });
+  }
+
+  /* Efectivo cargado a mano: no hay nada que confirmar despues, el mozo ya
+     la tiene encima. */
+  function cargarPropinaEfectivo(sb, datos) {
+    if (!sb) return Promise.resolve({ ok: false, motivo: 'No hay conexión con el sistema.' });
+    datos = datos || {};
+    var monto = Number(datos.monto);
+    if (!datos.mozo || !isFinite(monto) || monto <= 0) {
+      return Promise.resolve({ ok: false, motivo: 'Falta el mozo o un monto mayor a cero.' });
+    }
+    return sb.from(PROPINAS_TABLE).insert({
+      mesa: datos.mesa ? String(datos.mesa).slice(0, 20) : 'Sin mesa',
+      mozo: String(datos.mozo).slice(0, 60),
+      comensal: datos.comensal ? String(datos.comensal).slice(0, 60) : null,
+      monto: monto,
+      medio: 'efectivo',
+      estado: 'confirmada',
+      cargado_por: (datos.cargado_por || datos.mozo || '').slice(0, 40) || null,
+      confirmado_at: new Date().toISOString()
+    }).select().single().then(function (res) {
+      if (res.error) { humanError(res.error); return { ok: false, motivo: 'No pudimos guardar la propina.' }; }
+      return { ok: true, propina: res.data };
+    }, function (e) { humanError(e); return { ok: false, motivo: 'No pudimos guardar la propina.' }; });
+  }
+
+  /* Todas las propinas de un mozo, mas nuevas primero. */
+  function propinasDeMozo(sb, mozo) {
+    if (!sb || !mozo) return Promise.resolve(null);
+    return sb.from(PROPINAS_TABLE).select('*').eq('mozo', mozo)
+      .order('created_at', { ascending: false })
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return null; }
+        return res.data || [];
+      }, function (e) { humanError(e); return null; });
+  }
+
   function quienSoy() {
     try {
       var crudo = localStorage.getItem(YO_KEY);
@@ -742,15 +855,17 @@
       { url: 'caja.html',        texto: 'Los pagos' },
       { url: 'cobrar.html',      texto: 'Cobrar con QR' },
       { url: 'carta-fotos.html', texto: 'La carta y lo que se termin\u00f3' },
-      { url: 'qr-mesa.html',     texto: 'Los QR de las mesas' }
+      { url: 'qr-mesa.html',     texto: 'Los QR de las mesas' },
+      { url: 'propinas.html',    texto: 'Las propinas de los mozos' }
     ],
     /* El mozo tiene tres caminos, en el orden del servicio: tomar la comanda,
        gestionar las mesas, cobrar. Desde ahi ve todo lo que ya existe:
        aprobado, cocinando, entregado, cobrado. */
     Mozo: [
-      { url: 'mozo.html',   texto: 'Tomar comanda' },
-      { url: 'mesas.html',  texto: 'Gestionar mesas' },
-      { url: 'cobrar.html', texto: 'Cobrar con QR' }
+      { url: 'mozo.html',     texto: 'Tomar comanda' },
+      { url: 'mesas.html',    texto: 'Gestionar mesas' },
+      { url: 'cobrar.html',   texto: 'Cobrar con QR' },
+      { url: 'propinas.html', texto: 'Mis propinas' }
     ],
     Caja: [
       { url: 'caja.html',   texto: 'Los pagos' },
@@ -2168,6 +2283,13 @@
     NOTAS_TABLE: NOTAS_TABLE,
     PERSONAS_TABLE: PERSONAS_TABLE,
     personas: personas,
+    PROPINAS_TABLE: PROPINAS_TABLE,
+    mozosActivos: mozosActivos,
+    guardarAliasMozo: guardarAliasMozo,
+    reportarPropina: reportarPropina,
+    confirmarPropina: confirmarPropina,
+    cargarPropinaEfectivo: cargarPropinaEfectivo,
+    propinasDeMozo: propinasDeMozo,
     quienSoy: quienSoy,
     entrarComo: entrarComo,
     salir: salir,

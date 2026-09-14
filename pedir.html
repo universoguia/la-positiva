@@ -418,6 +418,36 @@
   /* El estado no depende solo del color: se acompana con texto. */
   .track-step .track-mark{margin-left:auto;font-size:14px;font-weight:500}
 
+  /* -------------------------------------------------------------- propina --
+     Aparte del pago de la comida: banner grande y separado, no una fila
+     mas de la carta. Se ve apenas se entra, antes de ponerse a pedir. */
+  .tip-wrap{padding:14px max(14px,var(--sa-l)) 0 max(14px,var(--sa-r))}
+  .tip-card{
+    background:var(--ink);color:#fff;border-radius:var(--r-lg);
+    padding:16px 18px;display:flex;align-items:center;justify-content:space-between;
+    gap:14px;flex-wrap:wrap;
+  }
+  .tip-card .tip-txt strong{
+    display:block;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;
+    font-weight:500;font-size:21px;color:var(--gold);
+  }
+  .tip-card .tip-txt span{display:block;font-size:14px;color:var(--dark-muted);margin-top:2px}
+  .tip-card .btn{flex:none}
+  .tip-card[hidden]{display:none}
+
+  .tip-mozo{
+    background:var(--accent-soft);border:1px solid var(--accent);border-radius:var(--r-md);
+    padding:16px;text-align:center;margin-bottom:16px;
+  }
+  .tip-mozo .nom{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;
+    font-size:22px;color:var(--ink);margin:0 0 10px}
+  .tip-mozo .alias{
+    font-size:19px;font-weight:600;color:var(--accent);word-break:break-all;
+    background:#fff;border-radius:var(--r-sm);padding:10px 14px;margin-bottom:10px;
+  }
+  .tip-sinalias{color:var(--muted);font-size:14px;line-height:1.5}
+  .tip-elegir{margin:0 0 10px;font-size:15px;color:var(--muted-strong)}
+
   .offline-bar{
     position:fixed;left:0;right:0;top:0;z-index:90;
     background:var(--err);color:#fff;text-align:center;
@@ -449,6 +479,16 @@
       <div class="cats" id="cats" role="group" aria-label="Categorías de la carta"></div>
     </div>
   </header>
+
+  <div class="tip-wrap">
+    <div class="tip-card" id="tipCard" hidden>
+      <div class="tip-txt">
+        <strong>&iquest;Quer&eacute;s dejarle propina a tu mozo?</strong>
+        <span>Va aparte de la comida, directo a su alias.</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="tipOpenBtn">Dejar propina</button>
+    </div>
+  </div>
 
   <main id="menuList" tabindex="-1"></main>
   <p class="visually-hidden" id="cartLive" role="status" aria-live="polite"></p>
@@ -545,6 +585,17 @@
       <button type="button" class="close-x" data-close="statusSheet" aria-label="Cerrar">&#10005;</button>
     </div>
     <div class="status-screen" id="statusScreen"></div>
+  </div>
+</div>
+
+<!-- ------------------------------------------------------------ propina -- -->
+<div class="sheet" id="tipSheet" role="dialog" aria-modal="true" aria-labelledby="tipTitle" hidden>
+  <div class="sheet-panel">
+    <div class="sheet-head">
+      <h2 id="tipTitle">Propina para tu mozo</h2>
+      <button type="button" class="close-x" data-close="tipSheet" aria-label="Cerrar">&#10005;</button>
+    </div>
+    <div id="tipBody"></div>
   </div>
 </div>
 
@@ -1261,6 +1312,136 @@ document.addEventListener('DOMContentLoaded', function () {
       box.textContent = LP.humanError(err, 'No pudimos enviar el pedido. Probá de nuevo.');
       box.scrollIntoView({ block: 'nearest' });
     }
+  }
+
+  /* ---------------------------------------------------------- propina --
+     Va aparte del pago de la comida: no hay integración bancaria real,
+     nadie puede confirmar solo que la plata llegó. Por eso es auto-reporte:
+     el comensal avisa "ya transferí" y el mozo la confirma después, cuando
+     la ve entrar en su cuenta.
+
+     El sistema no sabe qué mozo está atendiendo ESTA mesa ahora mismo -no
+     existe ese tracking hoy, y no lo inventamos acá-, así que se le pregunta
+     directo al comensal. Con un solo mozo activo no hace falta preguntar. */
+  var tipCard = document.getElementById('tipCard');
+  var tipSheet = document.getElementById('tipSheet');
+  var tipBody = document.getElementById('tipBody');
+  var mozosLista = [];
+  var mozoElegido = null;
+
+  function buscarMozo(nombre) {
+    for (var i = 0; i < mozosLista.length; i++) {
+      if (mozosLista[i].nombre === nombre) return mozosLista[i];
+    }
+    return null;
+  }
+
+  function pantallaElegirMozo() {
+    mozoElegido = null;
+    tipBody.innerHTML = '<p class="tip-elegir">&iquest;Quién te atendió?</p>' +
+      mozosLista.map(function (m) {
+        return '<button type="button" class="opcion" data-mozo="' + esc(m.nombre) + '">' +
+          '<span>' + esc(m.nombre) + '</span></button>';
+      }).join('');
+  }
+
+  function pantallaMozo(m) {
+    mozoElegido = m;
+    var sinAlias = !m.alias_propina;
+    var cambiar = mozosLista.length > 1
+      ? '<button type="button" class="btn btn-ghost" id="tipCambiar">No es ' +
+        esc(m.nombre) + ', elegir otro</button>'
+      : '';
+    tipBody.innerHTML = cambiar +
+      '<div class="tip-mozo">' +
+        '<p class="nom">' + esc(m.nombre) + '</p>' +
+        (sinAlias
+          ? '<p class="tip-sinalias">Todavía no cargó su alias para transferencias. ' +
+            'Dejale la propina en efectivo cuando te acerque el pedido.</p>'
+          : '<div class="alias">' + esc(m.alias_propina) + '</div>' +
+            '<button type="button" class="btn btn-secondary" id="tipCopiar">Copiar alias</button>') +
+      '</div>' +
+      (sinAlias ? '<button type="button" class="btn btn-secondary btn-block" data-close="tipSheet">Entendido</button>' :
+        '<div class="field"><label for="tipMonto">Cuánto transferiste (opcional)</label>' +
+          '<input id="tipMonto" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Ej: 3000"></div>' +
+        '<div class="field"><label for="tipComensal">Tu nombre (opcional)</label>' +
+          '<input id="tipComensal" type="text" maxlength="40" placeholder="Para que sepa quién fue"></div>' +
+        '<p class="field-err" id="tipErr" role="alert"></p>' +
+        '<button type="button" class="btn btn-primary btn-block btn-grande" id="tipEnviar">Ya transferí</button>');
+
+    if (!sinAlias) {
+      var nombreInput = document.getElementById('tipComensal');
+      var yaEscrito = document.getElementById('clienteNombre');
+      if (nombreInput && yaEscrito && yaEscrito.value.trim()) nombreInput.value = yaEscrito.value.trim();
+    }
+  }
+
+  function pantallaGraciasPropina(m) {
+    tipBody.innerHTML =
+      '<div class="check" aria-hidden="true">&#10003;</div>' +
+      '<h3 style="text-align:center;margin:0 0 6px">&iexcl;Gracias!</h3>' +
+      '<p style="text-align:center;color:var(--muted);margin:0 0 18px">' +
+        'Le avisamos a ' + esc(m.nombre) + ' para que la confirme apenas la vea en su cuenta.</p>' +
+      '<button type="button" class="btn btn-secondary btn-block" data-close="tipSheet">Cerrar</button>';
+  }
+
+  function enviarPropina() {
+    if (!mozoElegido) return;
+    var btn = document.getElementById('tipEnviar');
+    var err = document.getElementById('tipErr');
+    err.textContent = '';
+    if (SIN_MESA) { err.textContent = 'No sabemos en qué mesa estás.'; return; }
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    var montoCrudo = (document.getElementById('tipMonto').value || '').replace(/[^0-9]/g, '');
+    var comensal = (document.getElementById('tipComensal').value || '').trim();
+    LP.reportarPropina(sb, {
+      mesa: 'Mesa ' + MESA,
+      mozo: mozoElegido.nombre,
+      mozo_alias: mozoElegido.alias_propina,
+      comensal: comensal || null,
+      monto: montoCrudo ? Number(montoCrudo) : null
+    }).then(function (r) {
+      if (!r.ok) {
+        btn.disabled = false;
+        btn.textContent = 'Ya transferí';
+        err.textContent = r.motivo || 'No pudimos guardarlo. Probá de nuevo.';
+        return;
+      }
+      pantallaGraciasPropina(mozoElegido);
+    });
+  }
+
+  tipBody.addEventListener('click', function (ev) {
+    var elegir = ev.target.closest('[data-mozo]');
+    if (elegir) { var m = buscarMozo(elegir.dataset.mozo); if (m) pantallaMozo(m); return; }
+    if (ev.target.closest('#tipCambiar')) { pantallaElegirMozo(); return; }
+    if (ev.target.closest('#tipCopiar')) {
+      var alias = mozoElegido && mozoElegido.alias_propina;
+      if (!alias) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(alias).then(function () {
+          LP.toast('Alias copiado.', 'ok');
+        }, function () { LP.toast('No pudimos copiarlo. Copialo a mano.', 'err'); });
+      }
+      return;
+    }
+    if (ev.target.closest('#tipEnviar')) { enviarPropina(); return; }
+    if (ev.target.closest('[data-close]')) { LP.closeDialog(tipSheet); return; }
+  });
+
+  document.getElementById('tipOpenBtn').addEventListener('click', function () {
+    if (!mozosLista.length) return;
+    LP.openDialog(tipSheet);
+    if (mozosLista.length === 1) pantallaMozo(mozosLista[0]);
+    else pantallaElegirMozo();
+  });
+
+  if (sb && !SIN_MESA) {
+    LP.mozosActivos(sb).then(function (lista) {
+      mozosLista = lista || [];
+      tipCard.hidden = !mozosLista.length;
+    });
   }
 
   /* ------------------------------------------------------- seguimiento -- */
