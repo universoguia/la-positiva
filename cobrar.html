@@ -98,7 +98,30 @@
   .cobro-opt[aria-checked="true"] .monto{color:var(--accent)}
   .cobro-opt.sin-monto{color:var(--muted-strong)}
   .cobro-opt.sin-monto .monto{font-weight:500;color:var(--muted)}
+  /* El elegir-mesa usa los mismos renglones, pero son links. */
+  a.cobro-opt{text-decoration:none}
   @media (hover:hover){.cobro-opt:hover{border-color:var(--muted)}}
+
+  /* --------------------------------------------- mesa sin QR todavia --- */
+  /* No es una pantalla de error: es un paso del circuito que se resuelve
+     desde acá, avisándole a la caja sin caminar hasta el mostrador. */
+  .sub-monto{margin:0 0 6px;font-size:17px;color:var(--muted-strong)}
+  .sub-monto b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .pedido-estado{margin:0 0 14px;font-size:15px;color:var(--warn);line-height:1.5}
+  .pedido-estado:empty{display:none}
+  .state .btn{margin:6px 4px 0}
+
+  /* Qué mesa es, al lado del código. Con un QR por mesa, mostrar el de otra
+     es el error caro: el nombre tiene que verse sin buscarlo. */
+  .qr-mesa{
+    display:block;color:var(--ink);font-size:17px;font-weight:600;margin-bottom:3px;
+  }
+  /* Cargar el QR y confirmar que entró la plata son dos momentos. */
+  .dos-momentos{
+    margin:0 0 8px;padding:10px 12px;border-radius:var(--r-sm);
+    background:var(--warn-soft);border:1px solid var(--warn-border);
+    color:var(--warn);font-size:14px;line-height:1.5;flex:1 1 100%;
+  }
 
   /* Ticket de pago confirmado: reemplaza el QR una vez cobrado, mismo
      lugar en pantalla, sin foto de comprobante (eso es opcional y lo
@@ -150,7 +173,7 @@
   <header class="top">
     <div>
       <h1>Cobrar con QR</h1>
-      <p class="sub">Mostrale el QR al cliente y confirm&aacute; cuando pag&oacute;</p>
+      <p class="sub" id="subtitulo">Cada mesa tiene su propio QR. Mostrale el de esta mesa y confirm&aacute; cuando pag&oacute;</p>
     </div>
     <div class="head-right">
       <a class="soy" href="./" data-quien hidden></a>
@@ -159,7 +182,7 @@
   </header>
 
   <div id="contenido">
-    <div class="state"><div class="spinner"></div><p>Buscando el QR del local...</p></div>
+    <div class="state"><div class="spinner"></div><p>Buscando el QR de la mesa...</p></div>
   </div>
 </div>
 
@@ -174,6 +197,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var cont = document.getElementById('contenido');
 
   var qr = null;
+  var sesion = null;    // la fila de la sesion de mesa: el QR cuelga de ella
   var pendientes = [];
   var elegido = null;   // pedido seleccionado, o null = cobro sin monto
   var etiquetas = {};   // id de pedido -> a quien corresponde (nombre o "Comensal N")
@@ -206,55 +230,167 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }());
 
-  /* ------------------------------------------------------------- carga -- */
+  /* ------------------------------------------------------------- carga --
+     Sin mesa no hay QR. El QR dejo de ser del local y pasa a ser de la
+     sesion de mesa, asi que entrar aca sin ?sesion= ya no puede mostrar
+     nada: lo primero es elegir a que mesa se le cobra.                  */
   function cargar() {
     if (!sb) { sinConexion(); return; }
+    if (!SESION) { elegirMesa(); return; }
+
     Promise.all([
-      LP.qrActivo(sb),
+      LP.qrDeSesion(sb, SESION),
       (function () {
-        var q = sb.from(LP.TABLE).select('*').eq('pagado', false)
+        return sb.from(LP.TABLE).select('*').eq('pagado', false)
           // Lo que se saco de la cuenta no se cobra. Antes esta pantalla era
           // la unica sin este filtro, asi que ofrecia cobrar platos anulados.
-          .not('estado', 'in', LP.NO_SE_COBRA_SQL);
-        if (SESION) q = q.eq('sesion_id', SESION);
-        return q.order('created_at', { ascending: false }).limit(25)
+          .not('estado', 'in', LP.NO_SE_COBRA_SQL)
+          .eq('sesion_id', SESION)
+          .order('created_at', { ascending: false }).limit(25)
           .then(function (r) { return r.error ? [] : (r.data || []); },
                 function () { return []; });
-      })()
+      })(),
+      /* La fila de la sesion: hace falta para el nombre de la mesa aunque no
+         quede nada pendiente, y para saber si ya se le pidio el QR a caja. */
+      sb.from(LP.SESIONES_TABLE).select('*').eq('id', SESION).maybeSingle()
+        .then(function (r) { return r.error ? null : r.data; }, function () { return null; })
     ]).then(function (res) {
       qr = res[0];
       pendientes = res[1];
+      sesion = res[2];
       /* Desde una mesa: si hay mas de una ronda, se arma "Toda la mesa" con la
          suma, y viene elegida. Con una sola, esa. Le saca un paso al mozo y
          evita que el cliente pague dos veces con dos QR. */
-      if (SESION && pendientes.length > 1) {
+      if (pendientes.length > 1) {
         var suma = 0;
         pendientes.forEach(function (p) { suma += LP.cobrable(p); });
         pendientes.unshift({ id: 'mesa', mesa: pendientes[0].mesa, lines: [], total: suma,
                              estado: pendientes[0].estado, pagado: false,
                              _ids: pendientes.map(function (p) { return p.id; }) });
       }
-      if (SESION && pendientes.length) elegido = pendientes[0];
+      if (pendientes.length) elegido = pendientes[0];
       pintar();
+    });
+  }
+
+  /* Elegir la mesa cuando se entro sin ?sesion=: desde la portada, desde caja
+     o desde un acceso directo viejo. Antes esta pantalla abria el QR unico
+     del local y listo; ahora hay que saber de que mesa hablamos.        */
+  function elegirMesa() {
+    cont.innerHTML = '<div class="state"><div class="spinner"></div>' +
+      '<p>Buscando las mesas abiertas...</p></div>';
+    LP.mesasAbiertas(sb).then(function (lista) {
+      if (lista === null) { sinConexion(); return; }
+      var conCuenta = (lista || []).filter(function (m) { return m.debe > 0; });
+      if (!conCuenta.length) {
+        cont.innerHTML =
+          '<div class="state"><h2>No hay ninguna mesa para cobrar</h2>' +
+          '<p>Cuando una mesa tenga algo pendiente, aparece ac\u00e1 para elegirla.</p>' +
+          '<a class="btn btn-secondary" href="mesas.html">Ir al sal\u00f3n</a></div>';
+        return;
+      }
+      cont.innerHTML =
+        '<div class="picker">' +
+          '<span id="mesaLbl">&iquest;Qu&eacute; mesa va a pagar?</span>' +
+          '<div class="cobro-opts" id="mesaOpts">' +
+            conCuenta.map(function (m) {
+              return '<a class="cobro-opt" href="cobrar.html?sesion=' + esc(m.sesion.id) + '">' +
+                  '<span>' + esc(m.mesa) +
+                    (LP.hayPedidoDeQR(m.sesion) ? ' &middot; pidi&oacute; el QR' : '') + '</span>' +
+                  '<span class="monto">' + money(m.debe) + '</span>' +
+                '</a>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
+        '<p class="tip"><strong>Cada mesa tiene su propio QR</strong>' +
+          'El que carga la caja vale para esa mesa y esa visita, no para todo el local.</p>';
     });
   }
 
   function sinConexion() {
     cont.innerHTML = '<div class="state state-err"><h3>No hay conexi\u00f3n con el sistema</h3>' +
-      '<p>No se pudo cargar el QR del local.</p></div>';
+      '<p>No se pudo cargar el QR de la mesa.</p></div>';
+  }
+
+  function nombreMesa() {
+    if (sesion && sesion.mesa) return sesion.mesa;
+    if (pendientes.length && pendientes[0].mesa) return pendientes[0].mesa;
+    return 'esta mesa';
+  }
+
+  /* Esta mesa todavia no tiene QR. No es una pantalla de error: es un paso
+     del circuito, y tiene que poder resolverse desde aca sin caminar hasta
+     la caja. De ahi el boton que le avisa a la cajera.                  */
+  function pintarSinQR() {
+    var yaPidio = LP.hayPedidoDeQR(sesion);
+    cont.innerHTML =
+      '<div class="state">' +
+        '<h2>Todavía no hay QR para ' + esc(nombreMesa()) + '</h2>' +
+        '<p>El QR es de cada mesa: la caja le saca una foto al posnet con el ' +
+        'monto de <b>esta</b> mesa y lo carga acá. El de otra mesa no sirve.</p>' +
+        (pendientes.length
+          ? '<p class="sub-monto">Esta mesa debe <b>' + money(deudaDeLaMesa()) + '</b></p>'
+          : '') +
+        '<p class="pedido-estado" id="pedidoEstado">' +
+          (yaPidio
+            ? 'Ya se lo pidieron a la caja ' + esc(LP.timeAgo(sesion.qr_pedido_en)) +
+              (sesion.qr_pedido_por ? ' (' + esc(sesion.qr_pedido_por) + ')' : '') + '.'
+            : '') +
+        '</p>' +
+        '<button type="button" class="btn btn-primary" id="pedirQR">' +
+          (yaPidio ? 'Volver a pedirlo' : 'Pedirle el QR a la caja') + '</button>' +
+        '<a class="btn btn-secondary" href="caja.html?sesion=' + esc(SESION) + '#qr">' +
+          'Cargarlo yo desde caja</a>' +
+      '</div>';
+    document.getElementById('pedirQR').addEventListener('click', pedirQR);
+  }
+
+  function deudaDeLaMesa() {
+    var suma = 0;
+    pendientes.forEach(function (p) { if (p.id !== 'mesa') suma += LP.cobrable(p); });
+    return suma;
+  }
+
+  /* El aviso a la caja. Reusa el mismo push que ya avisa los pagos: no hay
+     canal nuevo. Si el push no sale igual queda anotado en la sesion, y la
+     caja lo ve en su pantalla; por eso el mensaje de falla no dice que el
+     pedido se perdio, dice que el aviso no salio.                       */
+  function pedirQR() {
+    var b = document.getElementById('pedirQR');
+    if (!b || b.disabled) return;
+    if (!sesion) { LP.toast('No encontramos la cuenta de esta mesa.', 'err'); return; }
+    b.disabled = true;
+    var antes = b.textContent;
+    b.textContent = 'Avisando a la caja...';
+
+    LP.pedirQRaCaja(sb, sesion, YO).then(function (r) {
+      b.disabled = false;
+      if (!r.ok) { b.textContent = antes; LP.toast(r.motivo, 'err'); return; }
+      sesion = r.sesion;
+      b.textContent = 'Volver a pedirlo';
+      var est = document.getElementById('pedidoEstado');
+      var aviso = r.aviso || {};
+      if (aviso.ok) {
+        if (est) est.textContent = 'Listo: la caja ya sabe que ' + nombreMesa() + ' necesita el QR.';
+        LP.toast('Pedido enviado a la caja.', 'ok');
+      } else {
+        /* El pedido quedo anotado, lo que no salio es el aviso al celular.
+           Se dice tal cual: si la cajera no lo ve, hay que ir. */
+        if (est) est.textContent = 'Qued\u00f3 anotado para la caja, pero el aviso al celular no sali\u00f3.';
+        LP.toast('Qued\u00f3 anotado, pero el aviso no lleg\u00f3 al celular de la caja.', 'err');
+      }
+    });
   }
 
   /* ------------------------------------------------------------ pintar -- */
   function pintar() {
     if (qr === false) { sinConexion(); return; }   // no pudimos consultar: no es 'no hay QR'
-    if (!qr) {
-      cont.innerHTML =
-        '<div class="state"><h2>Todavía no hay un QR cargado</h2>' +
-        '<p>Alguien de caja tiene que sacarle una foto al QR del posnet ' +
-        'y subirlo una sola vez. Después aparece acá para todos.</p>' +
-        '<a class="btn btn-primary" href="caja.html#qr">Ir a caja a cargarlo</a></div>';
-      return;
-    }
+    if (!qr) { pintarSinQR(); return; }
+    /* Ultimo control antes de poner la imagen en pantalla: si el QR que
+       volvio no es el de ESTA mesa, no se muestra. Mostrar el de otra mesa
+       es la peor falla posible de esta pantalla y no puede depender de un
+       solo filtro en la consulta.                                       */
+    if (String(qr.sesion_id) !== String(SESION)) { qr = null; pintarSinQR(); return; }
 
     /* A quien corresponde cada pedido pendiente. El nombre es opcional al
        pedir, asi que sin el se numera "Comensal 1, 2..." para que dos montos
@@ -288,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function () {
           ? '<div class="cobro-opts" role="radiogroup" aria-labelledby="pedidoLbl" id="pedidoOpts">' +
               pendientes.map(optHTML).join('') + opcionSinMonto +
             '</div>'
-          : '<p class="picker-vacia">' + (SESION ? 'Esta mesa no tiene nada pendiente de cobro.' : 'No hay pedidos sin cobrar.') +
+          : '<p class="picker-vacia">Esta mesa no tiene nada pendiente de cobro.' +
             ' Si igual quieren pagar algo, el cliente escribe el monto.</p>') +
       '</div>' +
 
@@ -308,8 +444,12 @@ document.addEventListener('DOMContentLoaded', function () {
         '</div>' +
         '<div class="qr-card">' +
           '<img id="qrImg" src="' + esc(qr.imagen_url) + '" ' +
-               'alt="Código QR para pagar en ' + esc(LP.nombreLocal()) + '">' +
-          '<p class="qr-pie">Escaneálo con cualquier billetera o app del banco</p>' +
+               'alt="Código QR para pagar ' + esc(nombreMesa()) + ' en ' + esc(LP.nombreLocal()) + '">' +
+          /* Que mesa es, escrito al lado del codigo. Con un QR por mesa,
+             confundirse de pantalla cuesta plata: el mozo tiene que poder
+             comprobar de un vistazo que le esta mostrando el de ESTA mesa. */
+          '<p class="qr-pie"><b class="qr-mesa">' + esc(nombreMesa()) + '</b>' +
+            'Escane&aacute;lo con cualquier billetera o app del banco</p>' +
         '</div>' +
       '</div>' +
 
@@ -319,8 +459,13 @@ document.addEventListener('DOMContentLoaded', function () {
       '<div class="acciones">' +
         '<button type="button" class="btn btn-primary btn-block" id="zoomBtn">' +
           'Agrandar para el cliente</button>' +
+        /* Mostrar el QR y confirmar que entro la plata son dos momentos
+           distintos. Se dice aca, justo arriba del boton verde: el QR ya
+           esta en pantalla y la tentacion es darlo por cobrado. */
         (elegido
-          ? '<button type="button" class="btn btn-ok btn-block" id="cobradoBtn">' +
+          ? '<p class="dos-momentos">Confirm&aacute; reci&eacute;n cuando el posnet muestre que ' +
+              'entr&oacute; la plata. Mostrar el QR no es haber cobrado.</p>' +
+            '<button type="button" class="btn btn-ok btn-block" id="cobradoBtn">' +
             'Ya pag\u00f3: confirmar ' + money(LP.cobrable(elegido)) + '</button>'
           : '') +
         // El link solo existe si el QR lo traia o si caja lo cargo a mano.
@@ -339,8 +484,9 @@ document.addEventListener('DOMContentLoaded', function () {
       '<p class="tip"><strong>Para que escanee rápido</strong>' +
         'Subí el brillo del celular al máximo y no tapes los bordes del código.</p>' +
 
-      '<div class="acciones"><a class="btn btn-ghost btn-block" href="caja.html#qr">' +
-        'Cambiar el QR del local</a></div>';
+      '<div class="acciones"><a class="btn btn-ghost btn-block" ' +
+        'href="caja.html?sesion=' + esc(SESION) + '#qr">' +
+        'Cambiar el QR de ' + esc(nombreMesa()) + '</a></div>';
 
     var opts = document.getElementById('pedidoOpts');
     if (opts) opts.addEventListener('click', function (ev) {

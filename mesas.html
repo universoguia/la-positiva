@@ -154,7 +154,15 @@
   .hoja-sub{font-size:14px;color:var(--muted);margin:-6px 0 14px}
   .hoja-et{font-size:14px;color:var(--muted-strong);margin:0 0 8px;font-weight:500}
 
-
+  /* El QR es de ESTA mesa y de ESTA visita. El mozo tiene que ver si ya
+     está cargado sin caminar hasta la caja a preguntar. */
+  .qr-mesa-estado{
+    margin:14px 0 0;padding:10px 12px;border-radius:var(--r-sm);
+    background:var(--bg);border:1px solid var(--border-strong);
+    color:var(--muted-strong);font-size:14px;line-height:1.5;
+  }
+  .qr-mesa-estado.listo{background:var(--ok-soft);border-color:var(--ok-border);color:var(--ok)}
+  .qr-mesa-estado.pedido{background:var(--warn-soft);border-color:var(--warn-border);color:var(--warn)}
 
   .abrio{font-size:12px;color:var(--muted);margin:3px 0 0}
 
@@ -289,6 +297,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var YO = (soy && soy.nombre) || 'Salón';
 
   var plano = [];                       // las mesas, con o sin cuenta
+  var qrsMesa = {};                     // sesion_id -> el QR de cobro de esa mesa
   var cargado = false;
   var plantaActiva = null;              // 'Baja' | 'Alta'
   var mesaAbierta = null;               // etiqueta de la mesa abierta en la hoja
@@ -419,6 +428,14 @@ document.addEventListener('DOMContentLoaded', function () {
       for (var j = 0; j < c.pedidos.length; j++) {
         if (String(c.pedidos[j].id) === String(id)) return c.pedidos[j];
       }
+    }
+    return null;
+  }
+
+  function mesaPorSesion(id) {
+    for (var i = 0; i < plano.length; i++) {
+      var c = plano[i].cuenta;
+      if (c && String(c.sesion.id) === String(id)) return plano[i];
     }
     return null;
   }
@@ -674,14 +691,40 @@ document.addEventListener('DOMContentLoaded', function () {
        parametro, la pantalla de cobro ofrecia los impagos de todo el local. */
     var textoCerrar = limpiar ? 'Mesa limpia, liberar'
                               : (sinPedir ? 'Se fueron, liberar' : 'Cerrar la mesa');
+
+    /* El QR es de ESTA mesa y de ESTA visita. Si todavia no lo cargaron, el
+       mozo no tiene que caminar hasta la caja a avisar: lo pide desde aca y
+       ve en la misma linea cuando quedo listo. */
+    var qr = qrsMesa[m.sesion.id];
+    var pedido = LP.hayPedidoDeQR(m.sesion);
+    var lineaQR = !debe ? '' :
+      '<p class="qr-mesa-estado' + (qr ? ' listo' : (pedido ? ' pedido' : '')) + '">' +
+        (qr
+          ? 'QR de esta mesa cargado ' + esc(LP.timeAgo(qr.created_at)) +
+            (qr.cargado_por ? ' por ' + esc(qr.cargado_por) : '') + '.'
+          : pedido
+            ? 'Todav\u00eda sin QR. Se lo pidieron a la caja ' +
+              esc(LP.timeAgo(m.sesion.qr_pedido_en)) +
+              (m.sesion.qr_pedido_por ? ' (' + esc(m.sesion.qr_pedido_por) + ')' : '') + '.'
+            : 'Esta mesa todav\u00eda no tiene QR cargado.') +
+      '</p>';
+
+    /* Sin QR, la accion que resuelve el momento no es ir a cobrar -no hay
+       nada que mostrar- sino pedirselo a la caja: esa va llena. */
     var acciones = '<div class="acciones">' +
-        (debe ? '<a class="btn btn-primary" href="cobrar.html?sesion=' + esc(m.sesion.id) +
+        (debe && !qr
+          ? '<button type="button" class="btn btn-primary" data-pedirqr="' +
+              esc(m.sesion.id) + '">' +
+              (pedido ? 'Volver a pedir el QR' : 'Pedirle el QR a la caja') + '</button>'
+          : '') +
+        (debe ? '<a class="btn ' + (qr ? 'btn-primary' : 'btn-secondary') +
+                '" href="cobrar.html?sesion=' + esc(m.sesion.id) +
                 '">Cobrar con QR</a>' : '') +
         '<button type="button" class="btn ' + (debe ? 'btn-secondary' : 'btn-primary') +
           '" data-cerrar="' + esc(m.sesion.id) + '">' + textoCerrar + '</button>' +
       '</div>';
 
-    return cab + rondas + acciones;
+    return cab + rondas + lineaQR + acciones;
   }
 
   function rondaHTML(p, i) {
@@ -827,6 +870,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (d.sentar || d.reservar) { ejecutarAbrir(b, d.sentar || d.reservar, !!d.reservar); return; }
     if (d.ocupar) { ejecutarLlegaron(b, d.ocupar); return; }
     if (d.cerrar) { ejecutarCerrar(b, d.cerrar); return; }
+    if (d.pedirqr) { ejecutarPedirQR(b, d.pedirqr); return; }
   });
 
   /* --------------------------------------------------------- acciones --- */
@@ -844,6 +888,29 @@ document.addEventListener('DOMContentLoaded', function () {
   function recargarYSoltar(b) {
     return cargar(true).then(function () {
       if (b && document.body.contains(b) && b.disabled) soltar(b);
+    });
+  }
+
+  /* Pedirle el QR a la caja. Usa el mismo push que ya avisa los pagos: no
+     hay canal nuevo. Y aunque el push no salga, el pedido queda anotado en
+     la sesion y la caja lo ve igual en su pantalla, asi que el mensaje de
+     falla dice lo que pasa de verdad: quedo anotado, el aviso no llego.  */
+  function ejecutarPedirQR(b, sesionId) {
+    if (enVuelo.pedirqr) return;
+    var t = mesaPorSesion(sesionId);
+    if (!t || !t.cuenta) { LP.toast('Esa mesa ya no est\u00e1 abierta.', 'err'); return; }
+    enVuelo.pedirqr = true;
+    bloquear(b, 'Avisando a la caja...');
+
+    LP.pedirQRaCaja(sb, t.cuenta.sesion, YO).then(function (r) {
+      delete enVuelo.pedirqr;
+      if (!r.ok) { soltar(b); LP.toast(r.motivo, 'err'); return; }
+      var aviso = r.aviso || {};
+      LP.toast(aviso.ok
+        ? 'Listo: la caja sabe que ' + t.etiqueta + ' necesita el QR.'
+        : 'Qued\u00f3 anotado para la caja, pero el aviso al celular no sali\u00f3.',
+        aviso.ok ? 'ok' : 'err');
+      recargarYSoltar(b);
     });
   }
 
@@ -999,7 +1066,22 @@ document.addEventListener('DOMContentLoaded', function () {
       conn.set(navigator.onLine ? 'live' : 'off');
       plano = datos;
       cargado = true;
-      pintar();
+      /* Los QR de las mesas abiertas, en UNA consulta: el mozo tiene que ver
+         desde el salon si su mesa ya tiene el QR cargado, sin ir a caja a
+         preguntar. Que falle no puede tumbar el plano -el salon se ve igual,
+         solo se pierde el cartelito del QR-, por eso no corta la cadena. */
+      var ids = [];
+      datos.forEach(function (t) { if (t.cuenta) ids.push(t.cuenta.sesion.id); });
+      return LP.qrsDeSesiones(sb, ids).then(function (mapa) {
+        qrsMesa = mapa || {};
+        pintar();
+        /* La hoja abierta también, y no esperando los 30 s del refresco de
+           los "hace X min": el mozo está parado en la mesa mirando esta
+           pantalla justo para enterarse de que la caja ya le cargó el QR.
+           Solo en la vista de la mesa: en los pasos de sacar un plato se
+           está eligiendo algo y repintar le sacaría los botones. */
+        if (mesaAbierta && vista === 'mesa' && LP.isDialogOpen(hoja)) verMesa(mesaAbierta);
+      }, function () { pintar(); });
     }).then(function () {
       if (pendiente) { pendiente = false; return cargar(true); }
     });
@@ -1014,6 +1096,10 @@ document.addEventListener('DOMContentLoaded', function () {
       .on('postgres_changes', { event: '*', schema: 'public', table: LP.TABLE },
           function () { cargar(true); })
       .on('postgres_changes', { event: '*', schema: 'public', table: LP.SESIONES_TABLE },
+          function () { cargar(true); })
+      /* Y sobre los QR: cuando la caja carga el de una mesa, el mozo lo ve
+         aparecer en el salon sin recargar ni ir a preguntar. */
+      .on('postgres_changes', { event: '*', schema: 'public', table: LP.COBROS_TABLE },
           function () { cargar(true); });
     canal = mio;
     mio.subscribe(function (st) {

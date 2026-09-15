@@ -146,10 +146,82 @@
   /* Si no entra al lado del input (celular), baja y ocupa todo el ancho. */
   .qr-link-row .btn{flex:1 0 120px}
 
+  /* ------------------------------------------- elegir la mesa del QR --- */
+  /* Un renglón por mesa abierta, de 52px, que se toca entero. Lo mismo que
+     usa cobrar.html para elegir a quién se le cobra: un gesto solo en todo
+     el circuito de cobro. */
+  .qr-mesas{margin:0 0 14px}
+  .qr-link-label{display:block;font-size:16px;color:var(--muted-strong);margin-bottom:6px}
+  .qr-mesas-lista{display:grid;gap:8px}
+  .qr-mesa-opt{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    width:100%;min-height:52px;padding:10px 14px;text-align:left;
+    border:2px solid var(--border-strong);border-radius:var(--r-md);
+    background:#fff;color:var(--ink);font-family:inherit;font-size:16px;
+    transition:border-color .15s,background-color .15s;
+  }
+  .qr-mesa-opt[aria-checked="true"]{border-color:var(--accent);background:var(--accent-soft)}
+  .qr-mesa-opt .nom{font-weight:600}
+  .qr-mesa-opt .est{display:block;font-size:13px;font-weight:400;color:var(--muted);margin-top:2px}
+  .qr-mesa-opt .est.falta{color:var(--warn)}
+  .qr-mesa-opt .est.pide{color:var(--err-ink);font-weight:600}
+  .qr-mesa-opt .plata{flex:none;font-variant-numeric:tabular-nums;color:var(--muted-strong);font-size:15px}
+  @media (hover:hover){.qr-mesa-opt:hover{border-color:var(--muted)}}
+
+  /* Lo que el salón está pidiendo ahora mismo. Rojo: es gente esperando. */
+  .qr-pide{
+    margin:0 0 14px;padding:12px 14px;border-radius:var(--r-md);
+    background:var(--err-bg);border:1px solid var(--err-border);
+    color:var(--err-ink);font-size:15px;line-height:1.5;
+  }
+  .qr-pide b{display:block;font-size:16px;margin-bottom:2px}
+  .qr-pide:empty{display:none}
+
+  /* Cargar el QR y confirmar que entró la plata son dos momentos. */
+  .qr-dos-momentos{
+    margin:16px 0 12px;padding:11px 13px;border-radius:var(--r-sm);
+    background:var(--warn-soft);border:1px solid var(--warn-border);
+    color:var(--warn);font-size:14px;line-height:1.5;
+  }
+
   .qr-msg{font-size:14px;margin:10px 0 0}
   .qr-msg:empty{display:none}
   .qr-msg.ok{color:var(--ok)}
   .qr-msg.err{color:var(--err-ink)}
+
+  /* ------------------------------------------------- hoja de la cuenta -- */
+  .det-sub{margin:0 0 14px;color:var(--muted);font-size:15px;line-height:1.5}
+  .det-lineas{
+    margin:0 0 14px;border-top:1px dashed var(--border);
+    border-bottom:1px dashed var(--border);padding:10px 0;
+  }
+  .det-lineas div{display:flex;gap:10px;font-size:16px;padding:4px 0}
+  .det-lineas .q{font-weight:600;min-width:30px;font-variant-numeric:tabular-nums}
+  .det-lineas .imp{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--muted-strong)}
+  .det-lineas .fuera{color:var(--muted);text-decoration:line-through}
+  .det-total{
+    display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    margin:0 0 6px;font-size:16px;color:var(--muted-strong);
+  }
+  .det-total b{font-size:30px;color:var(--ink);font-variant-numeric:tabular-nums}
+  .det-dato{display:flex;justify-content:space-between;gap:12px;font-size:15px;padding:3px 0}
+  .det-dato span:first-child{color:var(--muted)}
+  .det-ok{
+    margin:0 0 14px;padding:12px 14px;border-radius:var(--r-md);
+    background:var(--ok-soft);border:1px solid var(--ok-border);
+    color:var(--ok);font-size:15px;line-height:1.5;
+  }
+  .det-peligro{
+    margin:0 0 14px;padding:12px 14px;border-radius:var(--r-md);
+    background:var(--err-bg);border:1px solid var(--err-border);
+    color:var(--err-ink);font-size:15px;line-height:1.5;
+  }
+  .det-peligro b{display:block;font-size:16px;margin-bottom:3px}
+  .btn-deshacer{
+    width:100%;min-height:var(--tap);margin-top:10px;padding:0 18px;
+    border-radius:var(--r-md);border:1px solid var(--err-border);
+    background:transparent;color:var(--err-ink);font-family:inherit;font-size:15px;
+  }
   /* El label hace de boton del input oculto. Como el label va antes en el
      DOM, el foco se refleja con :has() desde el contenedor. */
   .qr-panel:has(#qrFile:focus-visible) #qrLabel{outline:3px solid var(--accent);outline-offset:2px}
@@ -182,27 +254,39 @@
     </div>
   </header>
 
-  <!-- Cargar el QR es una tarea de UNA sola vez, y se estaba comiendo la
-       primera pantalla entera todos los turnos: en el celular los pagos
-       pendientes arrancaban recien a los 880px. Ahora, si el QR ya esta
-       cargado, el panel nace plegado y lo primero que se ve es el trabajo
-       del dia. Si no hay QR, se abre solo (lo hace pintarQR). -->
+  <!-- El QR ya NO es del local: es de cada mesa, y por mesa quiere decir por
+       visita. La mesa 5 de hoy y la mesa 5 de mañana son dos cuentas y no
+       comparten QR. Por eso lo primero del panel es elegir la mesa: sin mesa
+       no hay QR que cargar ni que mostrar.
+
+       El panel nace abierto cuando hay algo que hacer (una mesa pidió el QR,
+       o una mesa debe y no tiene) y plegado cuando está todo cubierto. -->
   <details class="section qr-det" id="qr" open>
     <summary class="section-head">
-      <h2 id="h-qr">QR de cobro del local</h2>
-      <span class="qr-det-pie" id="qrResumen">Sin cargar</span>
+      <h2 id="h-qr">QR de cobro por mesa</h2>
+      <span class="qr-det-pie" id="qrResumen">Cargando las mesas...</span>
     </summary>
     <div class="card qr-panel">
       <p class="qr-intro">
-        Sacale una foto al QR del posnet, o subí la captura de tu app de cobro.
-        Se carga <strong>una sola vez</strong> y después cualquiera lo muestra desde su celular.
+        Cada mesa tiene <strong>su propio QR</strong>. Elegí la mesa, sacale una foto al
+        QR del posnet con el monto de <strong>esa</strong> mesa y subila.
+        El QR de una mesa nunca se le muestra a otra.
       </p>
 
-      <!-- Nace con el estado real (sin QR cargado), no con un spinner: asi el
-           panel no cambia de alto cuando responde Supabase. -->
+      <!-- Lo que el salón pidió y todavía no se cargó. Va arriba de todo del
+           panel: es gente esperando de pie al lado de una mesa. -->
+      <div id="qrPedidos"></div>
+
+      <!-- La mesa a la que se le carga el QR. Nace con su texto puesto para
+           que el panel no cambie de alto cuando responde Supabase. -->
+      <div class="qr-mesas" id="qrMesas">
+        <p class="qr-vacio">Buscando las mesas con la cuenta abierta...</p>
+      </div>
+
+      <!-- Nace con el estado real (sin mesa elegida), no con un spinner: asi
+           el panel no cambia de alto cuando responde Supabase. -->
       <div id="qrEstado">
-        <p class="qr-vacio">Todavía no hay ningún QR cargado. Hasta que subas uno,
-          la pantalla de cobro no le puede mostrar nada al cliente.</p>
+        <p class="qr-vacio">Elegí primero a qué mesa le vas a cargar el QR.</p>
       </div>
 
       <label class="btn btn-primary btn-block" for="qrFile" id="qrLabel">
@@ -232,8 +316,15 @@
         <p class="qr-msg" id="qrLinkMsg" role="status" aria-live="polite"></p>
       </div>
 
-      <a class="btn btn-secondary btn-block" href="cobrar.html">
-        Ir a mostrar el QR a un cliente
+      <!-- Dos momentos distintos y se dice acá, en la pantalla donde se hace
+           el primero: cargar el QR no es haber cobrado. -->
+      <p class="qr-dos-momentos">
+        Subir el QR <strong>no confirma ningún pago</strong>. La plata se confirma después,
+        abriendo la cuenta, cuando el posnet muestra que entró.
+      </p>
+
+      <a class="btn btn-secondary btn-block" id="qrIrACobrar" href="cobrar.html">
+        Ir a mostrarle el QR al cliente
       </a>
     </div>
   </details>
@@ -268,8 +359,30 @@
     <div class="cards" data-body="pag"></div>
   </section>
 
+</div>
 
+<!-- La cuenta abierta. Confirmar un pago SOLO se puede desde acá adentro.
 
+     Lo pidió el dueño con estas palabras: "afuera puede provocarse un error,
+     que en realidad no pagó y marcó como pagado". El botón vivía en la fila
+     de la lista, al lado de otras diez fichas, y un roce con el pulgar
+     mientras se scrollea daba una mesa por cobrada. Ahora hay que abrir la
+     cuenta y ver el importe y el detalle antes de tocar nada.
+
+     Es una traba a propósito. No se le agregan atajos.
+
+     La misma hoja tiene la vuelta atrás: si igual se confirmó de más, se
+     deshace desde acá, eligiendo el motivo. -->
+<div class="sheet" id="detalle" hidden role="dialog" aria-modal="true" aria-labelledby="detTit">
+  <div class="sheet-panel">
+    <div class="sheet-head">
+      <button type="button" class="close-x" id="detBack" aria-label="Volver" hidden>&#8592;</button>
+      <h2 id="detTit">La cuenta</h2>
+      <button type="button" class="close-x" id="detX" aria-label="Cerrar">&#10005;</button>
+    </div>
+    <p class="det-sub" id="detSub"></p>
+    <div id="detCuerpo"></div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
@@ -363,11 +476,30 @@ document.addEventListener('DOMContentLoaded', function () {
           (notifying[o.id] ? ' disabled' : '') + '>' +
           (notifying[o.id] ? 'Reintentando...' : 'Reintentar aviso') + '</button>';
       }
-      foot = '<span class="badge b-ok">Pago confirmado</span>' + nota;
+      /* Deshacer tampoco vive en la fila: se entra a la cuenta, igual que
+         para confirmar. Misma puerta para las dos acciones de plata. */
+      foot = '<span class="badge b-ok">Pago confirmado</span>' + nota +
+        '<button type="button" class="btn btn-secondary btn-block" data-ver="' + esc(o.id) + '">' +
+          'Ver la cuenta</button>';
     } else {
-      foot = '<button type="button" class="btn btn-primary btn-block" data-pay="' + esc(o.id) + '"' +
+      /* El botón de confirmar YA NO está acá, y es a propósito.
+
+         El dueño: "afuera puede provocarse un error, que en realidad no pagó
+         y marcó como pagado". Confirmar desde la fila, con el pulgar
+         scrolleando entre diez fichas iguales, daba mesas por cobradas que
+         no habían pagado. Ahora hay que abrir la cuenta y ver el importe y
+         el detalle. Es una traba deliberada: no se le agregan atajos.      */
+      foot = '<button type="button" class="btn btn-primary btn-block" data-ver="' + esc(o.id) + '"' +
         (busy ? ' disabled' : '') + '>' +
-        (busy ? 'Confirmando...' : 'Confirmar pago y avisar al encargado') + '</button>' +
+        (busy ? 'Confirmando...' : 'Abrir la cuenta para cobrar') + '</button>' +
+        /* Un pago que se deshizo vuelve acá. Se dice por qué, o la caja
+           cobra dos veces creyendo que nunca se cobró. */
+        (o.pago_revertido_en
+          ? '<p class="pnote warn">Se deshizo el pago ' +
+              esc(LP.timeAgo(o.pago_revertido_en)) +
+              (o.pago_revertido_por ? ' (' + esc(o.pago_revertido_por) + ')' : '') +
+              ': ' + esc(o.pago_revertido_motivo || 'sin motivo') + '.</p>'
+          : '') +
         '<p class="pnote warn" data-err="' + esc(o.id) + '" role="alert"></p>';
     }
 
@@ -439,8 +571,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ------------------------------------------------------- interaccion -- */
   wrap.addEventListener('click', function (ev) {
-    var pay = ev.target.closest('[data-pay]');
-    if (pay && !pay.disabled) { confirmarPago(pay.dataset.pay); return; }
+    var ver = ev.target.closest('[data-ver]');
+    if (ver && !ver.disabled) { verDetalle(ver.dataset.ver); return; }
     var retry = ev.target.closest('[data-retry]');
     if (retry && !retry.disabled) { avisar(retry.dataset.retry, true); }
   });
@@ -450,6 +582,169 @@ document.addEventListener('DOMContentLoaded', function () {
     return null;
   }
 
+  /* ------------------------------------------ la cuenta abierta (AJ-016) --
+     Una sola hoja con dos vistas: la cuenta -donde se confirma el pago- y
+     el paso de deshacer, donde se elige el motivo. Igual que la hoja de
+     sacar un plato en el salón: mismo gesto, mismo lugar, misma flecha.  */
+  var hoja = document.getElementById('detalle');
+  var detTit = document.getElementById('detTit');
+  var detSub = document.getElementById('detSub');
+  var detCuerpo = document.getElementById('detCuerpo');
+  var detBack = document.getElementById('detBack');
+  var detId = null;              // el pedido abierto en la hoja
+  var detVista = 'cuenta';       // 'cuenta' | 'deshacer'
+  var deshaciendo = false;
+
+  var METODOS_LARGO = {
+    Efectivo: 'Efectivo al mozo',
+    QR: 'QR desde el celular',
+    Tarjeta: 'Tarjeta (simulado)'
+  };
+
+  function cerrarDet() {
+    LP.closeDialog(hoja);
+    detCuerpo.innerHTML = '';
+    detId = null;
+    detVista = 'cuenta';
+    detBack.hidden = true;
+  }
+
+  function verDetalle(id) {
+    var o = findOrder(id);
+    if (!o) { LP.toast('Ese pedido ya no está en la lista.', 'err'); return; }
+    detId = o.id;
+    detVista = 'cuenta';
+    detBack.hidden = true;
+    if (!LP.isDialogOpen(hoja)) LP.openDialog(hoja, { persistent: true, focus: '#detX' });
+
+    var cobra = LP.cobrable(o);
+    var salioAlgo = cobra < (Number(o.total) || 0);
+    var busy = !!pending[o.id];
+
+    detTit.textContent = o.mesa;
+    detSub.textContent = 'Pedido #' + o.id + (o.cliente ? ' · ' + o.cliente : '') +
+      ' · ' + LP.timeAgo(o.created_at);
+
+    var lineas = LP.lineasDe(o).map(function (l) {
+      var fuera = LP.lineaSacada(l);
+      return '<div' + (fuera ? ' class="fuera"' : '') + '>' +
+        '<span class="q">' + esc(l.qty) + '&times;</span>' +
+        '<span>' + esc(l.name) + '</span>' +
+        '<span class="imp">' + money(LP.importeDeLinea(l)) + '</span></div>';
+    }).join('') || '<div>Sin detalle cargado</div>';
+
+    var cabeza =
+      '<div class="det-lineas">' + lineas + '</div>' +
+      '<div class="det-total"><span>' +
+        (o.pagado ? 'Se cobró' : 'Hay que cobrar') + '</span>' +
+        '<b>' + money(cobra) + '</b></div>' +
+      (salioAlgo
+        ? '<div class="det-dato"><span>Se pidió</span><span>' + money(o.total) +
+          ' · salió de la cuenta ' + money((Number(o.total) || 0) - cobra) + '</span></div>'
+        : '') +
+      '<div class="det-dato"><span>C&oacute;mo paga</span><span>' +
+        esc(METODOS_LARGO[o.metodo_pago] || 'Sin especificar') + '</span></div>' +
+      '<div class="det-dato"><span>Estado del pedido</span><span>' + esc(o.estado) + '</span></div>';
+
+    if (o.pagado) {
+      detCuerpo.innerHTML = cabeza +
+        '<div class="det-ok" style="margin-top:14px">Este pago ya est&aacute; confirmado.</div>' +
+        '<button type="button" class="btn-deshacer" id="detDeshacer">' +
+          'Deshacer: no hab&iacute;a entrado la plata</button>';
+      document.getElementById('detDeshacer').addEventListener('click', verDeshacer);
+      return;
+    }
+
+    /* El aviso va ARRIBA del botón verde y no abajo: es lo que hay que leer
+       antes de tocarlo, no después. Dice la única regla que importa acá:
+       el QR en pantalla no es plata cobrada. */
+    detCuerpo.innerHTML = cabeza +
+      '<div class="det-peligro" style="margin-top:14px">' +
+        '<b>Confirm&aacute; reci&eacute;n cuando el posnet lo muestre</b>' +
+        'Cargar el QR y confirmar que entr&oacute; la plata son dos momentos distintos. ' +
+        'Esto avisa al encargado de que ' + esc(o.mesa) + ' pag&oacute; ' + money(cobra) + '.' +
+      '</div>' +
+      '<button type="button" class="btn btn-ok btn-block" id="detCobrar"' +
+        (busy ? ' disabled' : '') + '>' +
+        (busy ? 'Confirmando...' : 'Sí, entró ' + money(cobra) + ': confirmar') + '</button>' +
+      '<p class="pnote warn" id="detErr" role="alert"></p>';
+    document.getElementById('detCobrar').addEventListener('click', function () {
+      confirmarPago(o.id);
+    });
+  }
+
+  /* Deshacer una confirmación (AJ-009). Elegir el motivo ES la confirmación,
+     igual que al sacar un plato: sin "¿estás seguro?" de más, pero sin poder
+     hacerlo de un solo toque distraído tampoco. */
+  function verDeshacer() {
+    var o = findOrder(detId);
+    if (!o) { cerrarDet(); return; }
+    detVista = 'deshacer';
+    detBack.hidden = false;
+    var cobra = LP.cobrable(o);
+
+    detTit.textContent = '¿Por qué lo deshacés?';
+    detSub.textContent = o.mesa + ' · ' + money(cobra);
+    detCuerpo.innerHTML =
+      '<div class="det-peligro">' +
+        '<b>' + esc(o.mesa) + ' vuelve a deber ' + money(cobra) + '</b>' +
+        'El pedido vuelve a los pagos pendientes. No se borra nada: queda anotado ' +
+        'que lo deshiciste vos (' + esc(YO) + ') y a qu&eacute; hora.' +
+      '</div>' +
+      LP.MOTIVOS_REVERTIR.map(function (m) {
+        return '<button type="button" class="opcion" data-motivo="' + esc(m) + '">' +
+          esc(m) + '</button>';
+      }).join('');
+  }
+
+  detCuerpo.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-motivo]');
+    if (b && !b.disabled) ejecutarDeshacer(b, b.dataset.motivo);
+  });
+
+  function ejecutarDeshacer(boton, motivo) {
+    if (deshaciendo) return;
+    var o = findOrder(detId);
+    if (!o) { cerrarDet(); return; }
+    deshaciendo = true;
+    [].forEach.call(detCuerpo.querySelectorAll('button'), function (x) { x.disabled = true; });
+    boton.textContent = 'Deshaciendo...';
+
+    LP.revertirPago(sb, o, motivo, YO).then(function (r) {
+      deshaciendo = false;
+      if (!r.ok) {
+        LP.toast(r.motivo, 'err');
+        // Choque: lo deshizo otro. Se recarga y se muestra como quedo.
+        load(true).then(function () { if (detId) verDetalle(detId); });
+        return;
+      }
+      /* El aviso de "pago confirmado" de esta ficha ya no vale: se limpia
+         para que la tarjeta no siga diciendo que el aviso falló. */
+      delete notifyState[o.id];
+      orders = orders.map(function (x) {
+        return String(x.id) === String(o.id) ? r.pedido : x;
+      });
+      cerrarDet();
+      render();
+      LP.toast(r.pedido.mesa + ' vuelve a los pagos pendientes.', 'ok');
+      load(true);
+    });
+  }
+
+  detBack.addEventListener('click', function () {
+    if (detVista === 'deshacer' && detId) { verDetalle(detId); return; }
+    cerrarDet();
+  });
+  document.getElementById('detX').addEventListener('click', cerrarDet);
+  hoja.addEventListener('click', function (ev) { if (ev.target === hoja) cerrarDet(); });
+  // En captura y antes que el helper, para que el cierre limpie el estado propio.
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape' && LP.isDialogOpen(hoja)) cerrarDet();
+  }, true);
+
+  /* Solo se llega acá desde adentro de la hoja: el botón de la fila ya no
+     existe. Lo demás quedó igual, incluido el .eq('pagado', false), que es
+     el candado contra dos puestos confirmando el mismo pago.            */
   function confirmarPago(id) {
     if (pending[id]) return;                 // sin doble confirmacion
     var o = findOrder(id);
@@ -457,6 +752,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!sb) { LP.toast('No hay conexi\u00f3n con el sistema.', 'err'); return; }
 
     pending[id] = true;
+    var enCurso = document.getElementById('detCobrar');
+    if (enCurso) { enCurso.disabled = true; enCurso.textContent = 'Confirmando...'; }
     render();
 
     sb.from(LP.TABLE)
@@ -469,12 +766,16 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!res.data || !res.data.length) {
           // Otro puesto lo confirmo primero: es una carrera, no un error.
           LP.toast('Ese pago ya había sido confirmado en otro puesto.', 'ok');
+          cerrarDet();
           load(true);
           return;
         }
         orders = orders.map(function (x) {
           return String(x.id) === String(id) ? res.data[0] : x;
         });
+        /* Se cierra la hoja: el trabajo de esa cuenta terminó. Quedarse
+           adentro con el botón a la vista invita a tocarlo de nuevo. */
+        cerrarDet();
         render();
         LP.toast('Pago confirmado.', 'ok');
         avisar(id, false);                   // el aviso es un paso aparte
@@ -484,8 +785,19 @@ document.addEventListener('DOMContentLoaded', function () {
   function falloPago(id, err) {
     delete pending[id];
     render();
-    var box = document.querySelector('[data-err="' + id + '"]');
     var msg = LP.humanError(err, 'No se pudo confirmar el pago. Probá de nuevo.');
+    /* La hoja está abierta y es donde está mirando: el error va adentro, y
+       el botón vuelve a su texto en vez de quedar en "Confirmando...". */
+    var dentro = document.getElementById('detErr');
+    if (dentro) dentro.textContent = msg;
+    var btn = document.getElementById('detCobrar');
+    if (btn) {
+      btn.disabled = false;
+      var o = findOrder(id);
+      btn.textContent = o ? 'Sí, entró ' + money(LP.cobrable(o)) + ': confirmar'
+                          : 'Confirmar el pago';
+    }
+    var box = document.querySelector('[data-err="' + id + '"]');
     if (box) box.textContent = msg;
     LP.toast(msg, 'err');
   }
@@ -586,6 +898,22 @@ document.addEventListener('DOMContentLoaded', function () {
         loaded = true;
         elState.innerHTML = '';
         render();
+        /* Si la cuenta esta abierta en la hoja, se repinta con lo que acaba
+           de llegar: el mozo puede haber sacado un plato mientras la cajera
+           la miraba, y confirmar el importe viejo seria cobrar de mas.
+           Solo en la vista de la cuenta: en el paso de deshacer se esta
+           eligiendo un motivo y repintar le sacaria los botones de abajo. */
+        if (detId && detVista === 'cuenta' && LP.isDialogOpen(hoja) && !pending[detId]) {
+          if (findOrder(detId)) {
+            verDetalle(detId);
+          } else {
+            /* Desaparecio de la lista: la anularon entera mientras estaba
+               abierta. Se cierra y se dice, en vez de dejar en pantalla un
+               importe que ya no se cobra. */
+            cerrarDet();
+            LP.toast('Esa cuenta se anuló recién. No la cobres.', 'err');
+          }
+        }
       }, function (e) { inFlight = false; showError(e, quiet); });
   }
 
@@ -649,6 +977,13 @@ document.addEventListener('DOMContentLoaded', function () {
       .on('postgres_changes', { event: '*', schema: 'public', table: LP.TABLE }, function () {
         if (!Object.keys(pending).length) load(true);
       })
+      /* Las mesas y los QR también: el salón pide el QR desde el celular del
+         mozo y eso tiene que aparecer acá sin recargar la página. Es gente
+         esperando de pie al lado de una mesa. */
+      .on('postgres_changes', { event: '*', schema: 'public', table: LP.SESIONES_TABLE },
+          function () { cargarQR(true); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: LP.COBROS_TABLE },
+          function () { cargarQR(true); })
       .subscribe(function (status) {
         if (status === 'SUBSCRIBED') {
           conn.set(navigator.onLine ? 'live' : 'off'); retryMs = 2000;
@@ -674,59 +1009,191 @@ document.addEventListener('DOMContentLoaded', function () {
     if (channel && sb) { try { sb.removeChannel(channel); } catch (e) {} }
   });
 
-  /* ------------------------------------------------- QR de cobro ------- */
+  /* ------------------------------------------- QR de cobro por mesa ----
+     El QR dejo de ser del local. Cada mesa abierta tiene el suyo, y "mesa"
+     quiere decir la VISITA: la mesa 5 de hoy y la mesa 5 de maniana son dos
+     cuentas distintas y no comparten codigo. Por eso el panel arranca
+     eligiendo la mesa: sin mesa no hay QR ni que cargar ni que mostrar.  */
   var elQrEstado = document.getElementById('qrEstado');
   var elQrMsg = document.getElementById('qrMsg');
   var elQrFile = document.getElementById('qrFile');
   var elQrLabel = document.getElementById('qrLabel');
   var elQrDet = document.getElementById('qr');
   var elQrResumen = document.getElementById('qrResumen');
+  var elQrMesas = document.getElementById('qrMesas');
+  var elQrPedidos = document.getElementById('qrPedidos');
+  var elQrIrACobrar = document.getElementById('qrIrACobrar');
   var subiendo = false;
 
-  /* Plegado o abierto. Se abre solo cuando falta el QR (hay algo que hacer),
-     cuando se llego con #qr (la cajera viene de la pantalla de cobro a
-     cambiarlo) o cuando ella misma lo abrio a mano en esta visita. */
+  var mesasQR = [];              // las mesas con la cuenta abierta
+  var qrPorSesion = {};          // sesion_id -> su QR activo
+  var sesionQR = null;           // la mesa elegida en el panel
+  /* Si se llego desde la pantalla de cobro (cobrar.html manda ?sesion=), esa
+     es la mesa que hay que atender: viene preelegida. */
+  var sesionURL = new URLSearchParams(location.search).get('sesion') || '';
+
+  /* Plegado o abierto. Se abre solo cuando hay algo que hacer -una mesa
+     pidio el QR, o una mesa debe y no tiene QR cargado-, cuando se llego con
+     #qr, o cuando la cajera lo abrio a mano en esta visita. */
   var qrTocado = false;
+  /* El evento 'toggle' se dispara IGUAL cuando lo abre o lo cierra el codigo,
+     no solo cuando lo toca una persona. Sin esta bandera, el primer plegado
+     automatico se contaba como "la cajera lo cerro a mano" y el panel no se
+     volvia a abrir solo en todo el turno: justo cuando ahora hace falta, que
+     es cuando una mesa pide el QR en medio del servicio.               */
+  var qrPropio = false;
+  function abrirQrDet(v) {
+    if (!elQrDet || elQrDet.open === v) return;
+    qrPropio = true;
+    elQrDet.open = v;
+    // El toggle llega en la misma vuelta; se libera despues.
+    setTimeout(function () { qrPropio = false; }, 0);
+  }
+
   if (elQrDet) {
-    elQrDet.addEventListener('toggle', function () { qrTocado = true; });
+    elQrDet.addEventListener('toggle', function () { if (!qrPropio) qrTocado = true; });
     // Llegar a #qr con la pagina ya abierta (el link de la pantalla de cobro
     // cuando la cajera vuelve por su cuenta) no recarga nada: hay que abrirlo.
     window.addEventListener('hashchange', function () {
-      if (location.hash === '#qr') elQrDet.open = true;
+      if (location.hash === '#qr') { qrTocado = false; abrirQrDet(true); }
     });
   }
 
-  function acomodarQrDet(hayQR) {
+  function acomodarQrDet(hayTarea) {
     if (!elQrDet || qrTocado) return;
-    elQrDet.open = !hayQR || location.hash === '#qr';
+    abrirQrDet(hayTarea || location.hash === '#qr');
   }
 
-  function pintarQR(qr) {
-    if (!qr) {
-      elQrEstado.innerHTML = '<p class="qr-vacio">Todavía no hay ningún QR cargado. ' +
-        'Hasta que subas uno, la pantalla de cobro no le puede mostrar nada al cliente.</p>';
-      elQrLabel.textContent = 'Subir o sacar foto del QR';
-      if (elQrResumen) elQrResumen.textContent = 'Falta cargarlo';
+  function mesaDeSesion(id) {
+    for (var i = 0; i < mesasQR.length; i++) {
+      if (String(mesasQR[i].sesion.id) === String(id)) return mesasQR[i];
+    }
+    return null;
+  }
+
+  /* Que le falta a cada mesa. Tres estados y en este orden de urgencia:
+     lo pidio el salon > debe y no tiene QR > ya tiene QR. */
+  function estadoQRde(m) {
+    if (LP.hayPedidoDeQR(m.sesion)) return 'pide';
+    if (!qrPorSesion[m.sesion.id] && m.debe > 0) return 'falta';
+    return qrPorSesion[m.sesion.id] ? 'listo' : 'sin-deuda';
+  }
+
+  function pintarMesasQR() {
+    if (!mesasQR.length) {
+      elQrMesas.innerHTML = '<p class="qr-vacio">No hay ninguna mesa con la cuenta ' +
+        'abierta. El QR se carga cuando hay una mesa a la que cobrarle.</p>';
+      elQrPedidos.innerHTML = '';
+      if (elQrResumen) elQrResumen.textContent = 'Sin mesas abiertas';
       acomodarQrDet(false);
       return;
     }
+
+    // Lo que el salon esta pidiendo ahora mismo, arriba de todo.
+    var piden = mesasQR.filter(function (m) { return LP.hayPedidoDeQR(m.sesion); });
+    elQrPedidos.innerHTML = piden.length
+      ? '<div class="qr-pide"><b>' +
+          (piden.length === 1 ? piden[0].mesa + ' est\u00e1 pidiendo el QR'
+                              : piden.length + ' mesas est\u00e1n pidiendo el QR') + '</b>' +
+          piden.map(function (m) {
+            return esc(m.mesa) + ' \u00b7 ' + money(m.debe) + ' \u00b7 ' +
+              esc(LP.timeAgo(m.sesion.qr_pedido_en)) +
+              (m.sesion.qr_pedido_por ? ' (' + esc(m.sesion.qr_pedido_por) + ')' : '');
+          }).join('<br>') +
+        '</div>'
+      : '';
+
+    var falta = mesasQR.filter(function (m) { return estadoQRde(m) === 'falta'; }).length;
+    /* Mesas que de verdad tienen algo que cobrar. Sin esto, con todas las
+       mesas pagas el resumen decia "todas las mesas con QR", que es mentira:
+       lo que pasa es que no hay nada que cobrar.                         */
+    var conDeuda = mesasQR.filter(function (m) { return m.debe > 0; }).length;
     if (elQrResumen) {
-      elQrResumen.textContent = 'Cargado ' + LP.timeAgo(qr.created_at) +
-        (qr.link_pago ? ' · con link de pago' : '');
+      elQrResumen.textContent = piden.length
+        ? (piden.length === 1 ? 'Una mesa pide el QR' : piden.length + ' mesas piden el QR')
+        : falta
+          ? (falta === 1 ? 'Una mesa sin QR' : falta + ' mesas sin QR')
+          : conDeuda
+            ? 'Todas las mesas por cobrar tienen QR'
+            : 'No hay nada para cobrar';
     }
-    acomodarQrDet(true);
+    acomodarQrDet(piden.length > 0 || falta > 0);
+
+    var TEXTO = {
+      pide: 'Lo est\u00e1 pidiendo el sal\u00f3n',
+      falta: 'Todav\u00eda sin QR',
+      listo: 'QR cargado',
+      'sin-deuda': 'Sin nada pendiente'
+    };
+
+    elQrMesas.innerHTML =
+      '<span id="qrMesaLbl" class="qr-link-label">&iquest;A qu&eacute; mesa le carg&aacute;s el QR?</span>' +
+      '<div class="qr-mesas-lista" role="radiogroup" aria-labelledby="qrMesaLbl">' +
+        mesasQR.map(function (m) {
+          var est = estadoQRde(m);
+          var elegida = String(m.sesion.id) === String(sesionQR);
+          return '<button type="button" class="qr-mesa-opt" role="radio" ' +
+            'aria-checked="' + (elegida ? 'true' : 'false') + '" ' +
+            'data-sesion="' + esc(m.sesion.id) + '">' +
+            '<span><span class="nom">' + esc(m.mesa) + '</span>' +
+              '<span class="est ' + esc(est) + '">' + TEXTO[est] + '</span></span>' +
+            '<span class="plata">' + money(m.debe) + '</span>' +
+          '</button>';
+        }).join('') +
+      '</div>';
+  }
+
+  elQrMesas.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-sesion]');
+    if (!b) return;
+    elegirSesionQR(b.dataset.sesion);
+  });
+
+  function elegirSesionQR(id) {
+    sesionQR = id || null;
+    pintarMesasQR();
+    pintarQR(sesionQR ? (qrPorSesion[sesionQR] || null) : null);
+    pintarLink(sesionQR ? (qrPorSesion[sesionQR] || null) : null, null);
+    if (elQrIrACobrar) {
+      elQrIrACobrar.href = sesionQR ? 'cobrar.html?sesion=' + encodeURIComponent(sesionQR)
+                                    : 'cobrar.html';
+    }
+  }
+
+  function pintarQR(qr) {
+    var m = sesionQR ? mesaDeSesion(sesionQR) : null;
+    var nombre = m ? m.mesa : 'la mesa';
+
+    if (!sesionQR) {
+      elQrEstado.innerHTML = '<p class="qr-vacio">Eleg\u00ed primero a qu\u00e9 mesa ' +
+        'le vas a cargar el QR.</p>';
+      elQrLabel.textContent = 'Subir o sacar foto del QR';
+      elQrFile.disabled = true;
+      elQrLabel.setAttribute('aria-disabled', 'true');
+      return;
+    }
+    elQrFile.disabled = false;
+    elQrLabel.removeAttribute('aria-disabled');
+
+    if (!qr) {
+      elQrEstado.innerHTML = '<p class="qr-vacio">' + esc(nombre) + ' todav\u00eda no tiene QR. ' +
+        'Hasta que subas uno, en la pantalla de cobro esa mesa no puede mostrar nada.' +
+        (m && m.debe > 0 ? ' Debe ' + money(m.debe) + '.' : '') + '</p>';
+      elQrLabel.textContent = 'Subir el QR de ' + nombre;
+      return;
+    }
     elQrEstado.innerHTML =
       '<div class="qr-actual">' +
-        '<img src="' + esc(qr.imagen_url) + '" alt="QR de cobro cargado" ' +
+        '<img src="' + esc(qr.imagen_url) + '" alt="QR de cobro de ' + esc(nombre) + '" ' +
              'width="96" height="96" decoding="async">' +
         '<div class="meta">' +
           '<strong>' + esc(qr.etiqueta) + '</strong>' +
           '<span>Cargado ' + esc(LP.timeAgo(qr.created_at)) +
             (qr.cargado_por ? ' por ' + esc(qr.cargado_por) : '') + '</span>' +
-          '<span>Es el que ven todos los empleados</span>' +
+          '<span>Es el que ve <b>' + esc(nombre) + '</b>, y solo esa mesa</span>' +
         '</div>' +
       '</div>';
-    elQrLabel.textContent = 'Reemplazar por otro QR';
+    elQrLabel.textContent = 'Reemplazar el QR de ' + nombre;
   }
 
   /* --- Link de pago -------------------------------------------------------
@@ -747,7 +1214,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var nota, aviso = false;
     if (!hayQR) {
-      nota = 'Primero subí el QR. Después, si tenés un link de pago, se puede agregar acá.';
+      nota = 'Primero elegí la mesa y subí su QR. Después, si tenés un link de pago, ' +
+             'se puede agregar acá.';
     } else if (qr.link_pago) {
       nota = 'Listo: este QR tiene link. Desde la pantalla de cobro se puede compartir por mensaje.';
     } else if (lectura && lectura.soportado === false) {
@@ -787,13 +1255,50 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  function cargarQR() {
+  /* Una consulta de mesas abiertas y una de QR: no una por mesa. En un
+     servicio con doce mesas eso serian doce viajes cada vez que alguien
+     toca algo.                                                          */
+  var cargandoQR = false;
+  function cargarQR(silencioso) {
     if (!sb) {
+      elQrMesas.innerHTML = '<p class="qr-vacio">Sin conexi\u00f3n: no podemos traer las mesas.</p>';
       pintarQR(null); pintarLink(null, null);
       elQrFile.disabled = true; elQrLabel.setAttribute('aria-disabled', 'true');
-      return;
+      return Promise.resolve();
     }
-    LP.qrActivo(sb).then(function (qr) { pintarQR(qr); pintarLink(qr, null); });
+    if (cargandoQR) return Promise.resolve();
+    cargandoQR = true;
+
+    return LP.mesasAbiertas(sb).then(function (lista) {
+      if (lista === null) {
+        cargandoQR = false;
+        if (!silencioso) LP.toast('No pudimos traer las mesas.', 'err');
+        return;
+      }
+      mesasQR = lista;
+      var ids = lista.map(function (m) { return m.sesion.id; });
+      return LP.qrsDeSesiones(sb, ids).then(function (mapa) {
+        cargandoQR = false;
+        qrPorSesion = mapa;
+
+        /* Que mesa queda elegida, en este orden: la que venia en la URL, la
+           que el usuario ya habia elegido (si sigue abierta), la que esta
+           pidiendo el QR, y si no ninguna. Nunca se elige sola una mesa
+           cualquiera: cargarle el QR a la mesa equivocada es el error que
+           todo esto viene a evitar.                                     */
+        var quiero = sesionURL || sesionQR;
+        sesionURL = '';
+        if (quiero && !mesaDeSesion(quiero)) quiero = null;
+        if (!quiero) {
+          var pide = null;
+          mesasQR.forEach(function (m) {
+            if (!pide && LP.hayPedidoDeQR(m.sesion)) pide = m.sesion.id;
+          });
+          quiero = pide;
+        }
+        elegirSesionQR(quiero);
+      });
+    }, function () { cargandoQR = false; });
   }
 
   elQrFile.addEventListener('change', function () {
@@ -811,22 +1316,32 @@ document.addEventListener('DOMContentLoaded', function () {
     elQrLabel.textContent = 'Subiendo...';
     msg('', '');
 
-    LP.subirQR(sb, file, 'QR de cobro', null).then(function (qr) {
+    var m = mesaDeSesion(sesionQR);
+    var nombre = m ? m.mesa : 'la mesa';
+    LP.subirQR(sb, file, 'QR de ' + nombre, YO, sesionQR).then(function (qr) {
       subiendo = false;
       elQrLabel.removeAttribute('aria-disabled');
       elQrFile.value = '';
+      qrPorSesion[qr.sesion_id] = qr;
+      /* Cargar el QR responde el pedido del salon: lo limpia subirQR() en la
+         base, y aca se limpia en la copia que tenemos en pantalla para que
+         la mesa no siga figurando como "pidiendo". */
+      if (m) { m.sesion.qr_pedido_en = null; m.sesion.qr_pedido_por = null; }
+      pintarMesasQR();
       pintarQR(qr);
       pintarLink(qr, qr.__lectura);
       msg(qr.link_pago
-        ? 'Listo. Además le leimos el link de pago.'
-        : 'Listo. Ya lo pueden mostrar desde cualquier celular.', 'ok');
-      LP.toast('QR de cobro actualizado.', 'ok');
+        ? 'Listo, el QR de ' + nombre + ' qued\u00f3 cargado. Adem\u00e1s le leimos el link de pago.'
+        : 'Listo. ' + nombre + ' ya puede mostrar su QR. Esto no confirma ning\u00fan pago.', 'ok');
+      LP.toast('QR de ' + nombre + ' cargado.', 'ok');
     }, function (e) {
       subiendo = false;
       elQrLabel.removeAttribute('aria-disabled');
-      elQrLabel.textContent = 'Subir o sacar foto del QR';
+      elQrLabel.textContent = sesionQR ? 'Subir el QR de ' + nombre : 'Subir o sacar foto del QR';
       elQrFile.value = '';
-      msg(LP.humanError(e, 'No se pudo subir el QR. Probá de nuevo.'), 'err');
+      // Los mensajes propios (por ejemplo "elegi primero la mesa") van tal cual.
+      msg((e && e.humano) ? e.message
+                          : LP.humanError(e, 'No se pudo subir el QR. Prob\u00e1 de nuevo.'), 'err');
     });
   });
 
@@ -836,6 +1351,8 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   /* ------------------------------------------------------------ inicio -- */
+  // Si se llego con ?sesion=, el panel del QR se abre: alguien vino a cargarlo.
+  if (sesionURL) abrirQrDet(true);
   cargarQR();
   showSkeleton();
   conn.set(navigator.onLine ? 'connecting' : 'off');

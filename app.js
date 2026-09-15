@@ -2239,20 +2239,64 @@
     } catch (e) { return null; }
   }
 
-  function qrActivo(sb) {
-    if (!sb) return Promise.resolve(null);
+  /* El QR de cobro es de UNA SESION DE MESA, no del local.
+
+     Antes habia un solo QR con activo=true y se le mostraba a todo el mundo.
+     Eso significaba que la mesa 3 y la mesa 8 escaneaban el mismo codigo y la
+     caja no tenia forma de saber cual de las dos transferencias era cual. El
+     duenio lo decidio al reves: un QR por mesa, y por mesa quiere decir por
+     VISITA -la mesa 5 de hoy y la mesa 5 de maniana son dos cuentas
+     distintas-, que es exactamente lo que modela la sesion.
+
+     Por eso esta funcion EXIGE la sesion. Sin sesion no devuelve ningun QR,
+     nunca: preferimos que la pantalla diga "todavia no hay QR para esta mesa"
+     antes que mostrar el de otra. El QR viejo del local quedo con sesion_id
+     nulo y por lo tanto invisible, pero no se borro.
+
+     Devuelve tres cosas distintas y hay que respetarlas: false = no pudimos
+     consultar, null = no hay QR para esa mesa, fila = el QR.             */
+  function qrDeSesion(sb, sesionId) {
+    if (!sb || !sesionId) return Promise.resolve(null);
     return sb.from(COBROS_TABLE).select('*')
+      .eq('sesion_id', sesionId)
       .eq('activo', true).order('created_at', { ascending: false })
       .limit(1).maybeSingle()
       .then(function (res) {
-        // false = no pudimos consultar. null = no hay QR. No es lo mismo.
         if (res.error) { humanError(res.error); return false; }
-        return res.data;
+        /* Cinturon y tirantes. El filtro de arriba ya alcanza, pero esto es
+           plata: si por lo que fuera volviera una fila de otra mesa, se
+           descarta en vez de mostrarse.                                  */
+        var fila = res.data || null;
+        if (fila && String(fila.sesion_id) !== String(sesionId)) return null;
+        return fila;
       }, function (e) { humanError(e); return false; });
   }
 
-  function subirQR(sb, file, etiqueta, quien) {
+  /* Los QR de varias sesiones de una sola consulta, para la caja, que mira
+     todas las mesas abiertas a la vez. Devuelve { sesion_id: fila }.     */
+  function qrsDeSesiones(sb, ids) {
+    if (!sb || !ids || !ids.length) return Promise.resolve({});
+    return sb.from(COBROS_TABLE).select('*')
+      .in('sesion_id', ids).eq('activo', true)
+      .order('created_at', { ascending: false })
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return {}; }
+        var m = {};
+        (res.data || []).forEach(function (q) {
+          // Vienen del mas nuevo al mas viejo: el primero de cada mesa manda.
+          if (!m[q.sesion_id]) m[q.sesion_id] = q;
+        });
+        return m;
+      }, function (e) { humanError(e); return {}; });
+  }
+
+  function subirQR(sb, file, etiqueta, quien, sesionId) {
     if (!sb) return Promise.reject(new Error('sin cliente'));
+    if (!sesionId) {
+      var falta = new Error('Elegí primero a qué mesa le vas a cargar el QR.');
+      falta.humano = true;
+      return Promise.reject(falta);
+    }
     // Se lee el archivo original, no el comprimido: mejor definicion.
     var lectura = decodificarQR(file);
     return prepararImagen(file).then(function (blob) {
@@ -2271,15 +2315,20 @@
           var url = pub && pub.data && pub.data.publicUrl;
           if (!url) throw new Error('sin URL publica');
 
-          // Solo un QR activo por vez; el anterior queda de historial.
+          /* Solo un QR activo por MESA; el anterior de esa mesa queda de
+             historial. El .eq('sesion_id') es la diferencia con la version
+             vieja: antes esto apagaba el QR de todo el local, asi que cargar
+             el de la mesa 8 dejaba a la mesa 3 sin nada que mostrar.    */
           return lectura.then(function (leido) {
-            return sb.from(COBROS_TABLE).update({ activo: false }).eq('activo', true)
+            return sb.from(COBROS_TABLE).update({ activo: false })
+              .eq('activo', true).eq('sesion_id', sesionId)
               .then(function () {
                 return sb.from(COBROS_TABLE).insert({
                   etiqueta: (etiqueta || 'QR de cobro').slice(0, 60),
                   imagen_path: path,
                   imagen_url: url,
                   activo: true,
+                  sesion_id: sesionId,
                   cargado_por: (quien || '').slice(0, 40) || null,
                   link_pago: leido.link,
                   qr_texto: leido.texto ? leido.texto.slice(0, 1200) : null
@@ -2287,6 +2336,12 @@
               })
               .then(function (ins) {
                 if (ins.error) throw ins.error;
+                /* Cargar el QR responde el pedido del salon: se limpia la
+                   marca para que la caja no siga viendo "la mesa 3 pide el
+                   QR" cuando ya se lo cargo.                            */
+                sb.from(SESIONES_TABLE)
+                  .update({ qr_pedido_en: null, qr_pedido_por: null })
+                  .eq('id', sesionId).then(function () {}, function () {});
                 // El resultado de la lectura viaja aparte para poder explicar
                 // en pantalla por que no se obtuvo un link.
                 ins.data.__lectura = leido;
@@ -2316,6 +2371,118 @@
       });
   }
 
+  /* --- Pedirle el QR a la caja --------------------------------------------
+     El mozo esta parado en la mesa, el cliente quiere pagar y esa mesa
+     todavia no tiene QR cargado. Hasta ahora la unica salida era caminar
+     hasta la caja a avisar. Esto manda el mismo aviso push que ya usa el
+     resto del sistema -no hay canal nuevo- y deja la marca en la sesion para
+     que la caja lo vea aunque el aviso no le haya llegado.
+
+     La marca en la base es la parte que NO se puede perder: un push depende
+     de que la cajera haya activado las notificaciones en su celular. La
+     pantalla de caja lee qr_pedido_en y muestra el pedido igual.        */
+  function pedirQRaCaja(sb, sesion, quien) {
+    if (!sb || !sesion || !sesion.id) {
+      return Promise.resolve({ ok: false, motivo: 'No hay conexión con el sistema.' });
+    }
+    var mesa = sesion.mesa || 'Una mesa';
+    return sb.from(SESIONES_TABLE)
+      .update({ qr_pedido_en: new Date().toISOString(),
+                qr_pedido_por: (quien || '').slice(0, 40) || null })
+      .eq('id', sesion.id).is('cerrada_en', null)
+      .select()
+      .then(function (res) {
+        if (res.error) {
+          humanError(res.error);
+          return { ok: false, motivo: 'No pudimos avisarle a la caja. Probá de nuevo.' };
+        }
+        if (!res.data || !res.data.length) {
+          return { ok: false, motivo: 'Esa cuenta ya está cerrada.' };
+        }
+        /* El aviso va al rol 'Jonathan', que es el que comparten Caja y
+           Duenio (ver ROL_DE_AVISOS): el mismo destino que el aviso de pago.
+           insistir=true porque el cliente esta esperando de pie.         */
+        return avisar(sb, 'Jonathan', 'Piden el QR de cobro',
+                      mesa + ' quiere pagar y todavía no tiene QR cargado.' +
+                      (quien ? ' Lo pide ' + quien + '.' : ''),
+                      null, 'caja.html#qr', true)
+          .then(function (r) {
+            // El pedido quedo anotado igual: el aviso es el extra, no el dato.
+            return { ok: true, sesion: res.data[0], aviso: r };
+          });
+      }, function (e) {
+        humanError(e);
+        return { ok: false, motivo: 'No pudimos avisarle a la caja. Probá de nuevo.' };
+      });
+  }
+
+  function hayPedidoDeQR(sesion) {
+    return !!(sesion && sesion.qr_pedido_en);
+  }
+
+  /* --- Deshacer un pago confirmado por error ------------------------------
+     El duenio: "afuera puede provocarse un error, que en realidad no pago y
+     marco como pagado". Confirmar se endurecio (solo adentro del detalle),
+     pero endurecer no alcanza: si igual se toca mal, tiene que haber vuelta
+     atras, o la caja termina cuadrando con un pago que nunca entro.
+
+     NO se borra la fila ni se pierde el rastro. Mismo criterio que anular una
+     comanda: queda quien lo hizo, cuando y por que. El pedido vuelve a la
+     lista de pendientes, que es donde corresponde que este si la plata no
+     entro.
+
+     El .eq('pagado', true) es el candado de siempre: si otro puesto ya lo
+     revirtio, este update no pega y se avisa en vez de escribir dos veces. */
+  var MOTIVOS_REVERTIR = [
+    'No había entrado la plata',
+    'Lo confirmé sin querer',
+    'Era la mesa equivocada',
+    'El cliente anuló la transferencia'
+  ];
+
+  function revertirPago(sb, pedido, motivo, quien) {
+    if (!sb || !pedido) {
+      return Promise.resolve({ ok: false, motivo: 'No hay conexión con el sistema.' });
+    }
+    if (!pedido.pagado) {
+      return Promise.resolve({ ok: false, motivo: 'Ese pedido no figura como pagado.' });
+    }
+    return sb.from(TABLE)
+      .update({
+        pagado: false,
+        pago_revertido_en: new Date().toISOString(),
+        pago_revertido_por: (quien || 'Caja').slice(0, 40),
+        pago_revertido_motivo: (motivo || 'Sin motivo').slice(0, 200),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', pedido.id).eq('pagado', true)
+      .select()
+      .then(function (res) {
+        if (res.error) {
+          humanError(res.error);
+          return { ok: false, motivo: 'No se pudo deshacer el pago. Probá de nuevo.' };
+        }
+        var fila = (res.data || [])[0];
+        if (!fila) {
+          return { ok: false, choque: true,
+                   motivo: 'Ese pago ya lo había deshecho otra persona.' };
+        }
+        /* Al cobrar, liberarSiPagado() pudo haber puesto la mesa en
+           'Limpieza'. No se la toca de vuelta a proposito: estadoReal() ya
+           muestra Ocupada cuando una mesa marcada para limpiar vuelve a
+           deber, asi que el salon se entera solo y no hay dos escrituras
+           peleando por el estado de la sesion.                           */
+        avisar(sb, 'Jonathan', 'Se deshizo un pago',
+               fila.mesa + ' - ' + money(cobrable(fila)) + ' vuelve a estar sin cobrar. ' +
+               (motivo || 'Sin motivo') + '.',
+               fila.id, 'caja.html', true);
+        return { ok: true, pedido: fila };
+      }, function (e) {
+        humanError(e);
+        return { ok: false, motivo: 'No se pudo deshacer el pago. Probá de nuevo.' };
+      });
+  }
+
   global.LP = {
     SUPABASE_URL: SUPABASE_URL,
     SUPABASE_ANON: SUPABASE_ANON,
@@ -2324,11 +2491,20 @@
     COBROS_TABLE: COBROS_TABLE,
     BUCKET: BUCKET,
     IMG_BASE: IMG_BASE,
-    qrActivo: qrActivo,
+    /* Ya NO existe qrActivo(): era "el QR del local" y devolvia el mismo
+       codigo para todas las mesas. Se saco del export a proposito, para que
+       cualquier pantalla que lo siga llamando falle fuerte y temprano en vez
+       de mostrarle a una mesa el QR de otra. */
+    qrDeSesion: qrDeSesion,
+    qrsDeSesiones: qrsDeSesiones,
     subirQR: subirQR,
     decodificarQR: decodificarQR,
     comoLink: comoLink,
     guardarLink: guardarLink,
+    pedirQRaCaja: pedirQRaCaja,
+    hayPedidoDeQR: hayPedidoDeQR,
+    MOTIVOS_REVERTIR: MOTIVOS_REVERTIR,
+    revertirPago: revertirPago,
     client: client,
     esc: esc,
     money: money,
