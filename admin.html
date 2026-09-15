@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f3ece2">
-<meta name="description" content="El estado del salón y los ajustes del local de La Positiva.">
-<title>La Positiva - Encargado</title>
+<meta name="description" content="Cómo viene el salón de La Positiva, de un vistazo.">
+<title>La Positiva - Dueña</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -20,41 +20,135 @@
      Si no hay nada guardado no escribe nada y la app queda como siempre. -->
 <script src="tema.js"></script>
 <style>
-  /* Dos cosas y nada mas: como viene el salon ahora, y quien recibe los
-     avisos. Lo demas son cuatro links. Si esta pantalla crece, deja de
-     servir para lo que existe: mirarla de reojo entre mesa y mesa. */
-  .wrap{max-width:760px;padding-top:calc(26px + var(--sa-t))}
+  /* ======================================================================
+     LA PANTALLA DE NELLY
 
-  /* Escritorio: dos columnas. En 1440 la pantalla era una tira de 760px de
-     ancho y 1183 de alto, con 680px de pantalla vacia al costado y scroll
-     obligado. Ahora el pulso del salon va a la izquierda y los links y los
-     numeros a la derecha, y entra todo de una. */
-  .tablero > .col{min-width:0}
-  @media (min-width:1000px){
-    .wrap{max-width:1100px}
-    .tablero{
-      display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);
-      gap:30px;align-items:start;
-    }
-    .tablero .col > :first-child{margin-top:0}
+     El duenio, mirando la version anterior: "Creo que hay muchas cosas, son
+     muchas cosas. Al principio solamente quisiera ver lo esencial... que se
+     vea todo comprimido, reducido, oculto, y despues que ella vaya si
+     quiere. Si le mostramos todo al principio se va a marear."
+
+     Asi que esta pantalla se gana QUITANDO. Lo de arriba -las cinco cifras,
+     como esta cada mesa y un solo boton- es lo unico que se ve al entrar, y
+     entra sin scrollear en la tablet. Todo lo demas sigue existiendo, igual
+     que antes, pero adentro de dos cajones cerrados.
+
+     Si alguna vez hay que agregar algo, va adentro de un cajon. Arriba no.
+     ====================================================================== */
+  .wrap{max-width:900px;padding-top:calc(20px + var(--sa-t));padding-bottom:28px}
+
+  /* Cinco cifras. La grilla comun trae cuatro columnas; aca son cinco de
+     700px en adelante, y de a dos en el celular con la ultima a lo ancho
+     (una cifra sola a media pantalla se lee como un error). */
+  @media (min-width:700px){
+    .cifras{grid-template-columns:repeat(5,minmax(0,1fr))}
   }
-
+  @media (max-width:699px){
+    .cifras .cifra:nth-child(5){grid-column:1 / -1}
+  }
 
   h2{
     font-family:var(--font-cuerpo);font-style:normal;
     font-size:13px;letter-spacing:.11em;text-transform:uppercase;font-weight:600;
-    color:var(--muted-strong);margin:30px 0 12px;
+    color:var(--muted-strong);margin:18px 0 8px;
   }
 
   /* ------------------------------------------------------------ el salon -- */
 
   .demorados{
-    margin-top:12px;padding:13px 16px;border-radius:var(--r-md);
+    margin:0 0 12px;padding:13px 16px;border-radius:var(--r-md);
     background:var(--warn-soft);border:1px solid var(--warn-border);color:var(--warn);
     font-size:15px;line-height:1.5;
   }
   .demorados b{display:block;color:var(--ink);margin-bottom:3px}
   .demorados[hidden]{display:none}
+
+  /* --- Como esta cada mesa ------------------------------------------------
+     Las palabras del duenio: "cuales pidieron, cuales esperan, cuales ya
+     comieron". Una tarjeta chica por mesa abierta, nada mas. Las libres no
+     se dibujan: ya estan contadas arriba y llenarian la pantalla de mesas
+     que no piden nada.
+
+     Tres colores y no siete: gris = esta en curso, no hay nada que hacer;
+     ambar = alguien tiene que mover algo; verde = terminado.            */
+  .vistazo{
+    list-style:none;margin:0 0 16px;padding:0;
+    display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));
+  }
+  .vistazo:empty{display:none}
+  .vmesa{
+    background:var(--card);border:1px solid var(--border);
+    border-left:5px solid var(--border-strong);
+    border-radius:var(--r-md);padding:9px 12px;min-width:0;
+  }
+  .vmesa b{display:block;font-size:16px;font-weight:500;line-height:1.25}
+  .vmesa span{
+    display:block;font-size:13px;color:var(--muted);line-height:1.35;
+    margin-top:2px;overflow-wrap:anywhere;
+  }
+  .v-hacer{background:var(--warn-soft);border-color:var(--warn-border);border-left-color:var(--warn)}
+  .v-hacer span{color:var(--warn)}
+  .v-fin{background:var(--ok-soft);border-color:var(--ok-border);border-left-color:var(--ok)}
+  .v-fin span{color:var(--ok)}
+
+  .vacio{
+    margin:0 0 20px;padding:16px;border-radius:var(--r-md);
+    background:var(--card);border:1px solid var(--border);
+    color:var(--muted);font-size:15px;
+  }
+  .vacio[hidden]{display:none}
+
+  /* El unico boton de la pantalla. Grande, a lo ancho, y lleva al plano del
+     salon, que es donde se puede hacer algo con lo que se acaba de ver. */
+  .ver-salon{display:flex;width:100%;margin:0 0 24px}
+
+  /* ====================================================================== */
+  /* LO QUE ESTA GUARDADO                                                   */
+  /* No se borro nada: esta todo adentro de estos dos cajones, cerrados.    */
+  /* ====================================================================== */
+  .guardado{border-top:1px solid var(--border);padding-top:6px}
+  .cajon{border-bottom:1px solid var(--border)}
+  .cajon > summary{
+    cursor:pointer;list-style:none;display:flex;align-items:center;gap:9px;
+    min-height:var(--tap);padding:10px 2px;
+    font-family:var(--font-cuerpo);font-style:normal;
+    font-size:15px;font-weight:500;color:var(--muted-strong);
+  }
+  .cajon > summary::-webkit-details-marker{display:none}
+  .cajon > summary::before{
+    content:'\203A';display:inline-block;font-size:19px;line-height:1;
+    color:var(--muted);transition:transform .15s;flex:none;width:12px;
+  }
+  .cajon[open] > summary::before{transform:rotate(90deg)}
+  .cajon > summary:focus-visible{border-radius:var(--r-sm)}
+  @media (hover:hover){.cajon > summary:hover{color:var(--ink)}}
+  .cajon-cuerpo{padding:2px 0 22px}
+  .cajon-cuerpo h3{
+    font-family:var(--font-cuerpo);font-style:normal;
+    font-size:13px;letter-spacing:.11em;text-transform:uppercase;font-weight:600;
+    color:var(--muted-strong);margin:26px 0 10px;
+  }
+  .cajon-cuerpo > h3:first-child{margin-top:8px}
+  .cajon-cuerpo .nota{margin:0 0 12px;font-size:13px;color:var(--muted);line-height:1.45}
+
+  /* ------------------------------------------------- las dos estadisticas -- */
+  /* Dos, no un tablero. Y cada una dice de que periodo habla, porque un
+     numero sin periodo no se puede usar para nada.                       */
+  .datos{display:grid;gap:10px}
+  @media (min-width:640px){.datos{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .dato{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--r-md);padding:14px 16px;min-width:0;
+  }
+  .dato-etq{display:block;font-size:13px;color:var(--muted);line-height:1.4}
+  .dato-num{
+    display:block;font-size:22px;font-weight:500;line-height:1.25;
+    margin:6px 0 4px;overflow-wrap:anywhere;
+  }
+  /* Cuando todavia no hay con que: el numero no se inventa, se dice que no
+     se puede. En gris y mas chico, para que no se lea como un dato. */
+  .dato-num.flojo{font-size:17px;color:var(--muted-strong)}
+  .dato-pie{display:block;font-size:13px;color:var(--muted);line-height:1.45}
 
   /* ------------------------------------------------------------- avisos -- */
   .roles{display:grid;gap:10px}
@@ -72,10 +166,7 @@
 
   /* -------------------------------------------------------------- links -- */
   .atajos{display:grid;gap:9px}
-  /* Son cuatro: en tres columnas quedaba uno huerfano en la segunda fila. */
   @media (min-width:560px){.atajos{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  /* Ya adentro de la columna derecha del escritorio, uno por fila. */
-  @media (min-width:1000px){.atajos{grid-template-columns:minmax(0,1fr)}}
   /* Un link se tiene que ver como link: flecha a la derecha y toque visible. */
   .atajo{
     display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -88,9 +179,8 @@
   .atajo b{display:block;font-size:16px;font-weight:500;margin-bottom:3px}
   .atajo span{font-size:13px;color:var(--muted);line-height:1.45}
 
-  /* Un numero del local que el duenio cambia solo. Es la unica cosa de esta
-     pantalla que se escribe: por eso va en su propia tarjeta y no entre los
-     atajos. */
+  /* Un numero del local que la duenia cambia sola. Es la unica cosa de esta
+     pantalla que se escribe: por eso va en su propia tarjeta. */
   .ajuste{
     background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);
     padding:14px 16px;
@@ -111,25 +201,7 @@
   .ajuste-msg.ok{color:var(--ok)}
   .ajuste-msg.err{color:var(--err-ink)}
 
-  .cargando{color:var(--muted);padding:16px 0;font-size:15px}
-
-  /* Lo financiero fino (hoy: el importe de los cubiertos) no compite con el
-     pulso operativo de arriba. Un clic de distancia, no en la cara: Nelly no
-     es de numeros, eso lo maneja alguien de confianza cuando hace falta. */
-  .finanzas{margin:30px 0 12px}
-  .finanzas summary{
-    cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;
-    font-family:var(--font-cuerpo);font-style:normal;
-    font-size:13px;letter-spacing:.11em;text-transform:uppercase;font-weight:600;
-    color:var(--muted-strong);padding:6px 0;min-height:var(--tap);
-  }
-  .finanzas summary::-webkit-details-marker{display:none}
-  .finanzas summary::before{
-    content:'\203A';display:inline-block;font-size:16px;color:var(--muted);
-    transition:transform .15s;
-  }
-  .finanzas[open] summary::before{transform:rotate(90deg)}
-  .finanzas .ajuste{margin-top:12px}
+  .cargando{color:var(--muted);padding:12px 0;font-size:15px;margin:0}
 
   /* El interruptor de si el comensal ve el renglon del cubierto desglosado.
      Es una casilla de verdad (se puede tocar con el teclado y la lee un
@@ -183,8 +255,8 @@
 <div class="wrap">
   <header class="top">
     <div>
-      <h1>Encargado</h1>
-      <p class="sub">Cómo viene el salón y quién recibe los avisos</p>
+      <h1>Due&ntilde;a</h1>
+      <p class="sub">C&oacute;mo viene el sal&oacute;n, ahora</p>
     </div>
     <div class="head-right">
       <a class="soy" href="./" data-quien hidden></a>
@@ -195,77 +267,107 @@
     </div>
   </header>
 
-  <div class="tablero">
-   <div class="col">
-  <h2>El salón ahora</h2>
+  <!-- ================= LO ESENCIAL: entra sin scrollear ================= -->
   <div class="cifras" id="cifras">
-    <div class="cifra"><span>Mesas abiertas</span><b>—</b></div>
-    <div class="cifra"><span>Para aprobar</span><b>—</b></div>
-    <div class="cifra"><span>En cocina</span><b>—</b></div>
-    <div class="cifra"><span>Falta cobrar</span><b>—</b></div>
+    <div class="cifra"><span>Mesas ocupadas</span><b>&mdash;</b></div>
+    <div class="cifra"><span>Mesas libres</span><b>&mdash;</b></div>
+    <div class="cifra"><span>Pedidos en cocina</span><b>&mdash;</b></div>
+    <div class="cifra"><span>Falta cobrar</span><b>&mdash;</b></div>
+    <div class="cifra"><span>Se cobr&oacute; hoy</span><b>&mdash;</b></div>
   </div>
+
   <p class="demorados" id="demorados" hidden></p>
 
-  <h2>Quién recibe los avisos</h2>
-  <div class="roles" id="roles"><p class="cargando">Cargando...</p></div>
-   </div>
+  <h2 id="tMesas">C&oacute;mo est&aacute; cada mesa</h2>
+  <ul class="vistazo" id="vistazo" aria-labelledby="tMesas"></ul>
+  <p class="vacio" id="vistazoVacio">Cargando el sal&oacute;n...</p>
 
-   <div class="col">
-  <h2>Otras pantallas</h2>
-  <div class="atajos">
-    <a class="atajo" href="mesas.html"><span><b>El salón y las cuentas</b>
-      <span>La cuenta de cada mesa, ronda por ronda.</span></span></a>
-    <a class="atajo" href="carta-fotos.html"><span><b>La carta y lo que se terminó</b>
-      <span>Fotos, precios y marcar lo que ya no hay.</span></span></a>
-    <a class="atajo" href="qr-mesa.html"><span><b>Los QR de las mesas</b>
-      <span>Generar e imprimir el código de cada mesa.</span></span></a>
-    <a class="atajo" href="propinas.html"><span><b>Las propinas de los mozos</b>
-      <span>Lo reportado por transferencia y lo cargado en efectivo.</span></span></a>
-    <a class="atajo" href="diseno.html"><span><b>El dise&ntilde;o del local</b>
-      <span>El nombre, el color, la letra y la forma de todas las pantallas.</span></span></a>
-  </div>
+  <a class="btn btn-primary btn-grande ver-salon" href="mesas.html">&iquest;C&oacute;mo viene el sal&oacute;n?</a>
 
-  <details class="finanzas">
-    <summary>Números y finanzas</summary>
-    <div class="ajuste">
-      <b>Cubiertos por mesa</b>
-      <p>Se cobran una sola vez por mesa, en el primer pedido. Pon&eacute; 0 para no cobrarlos.
-         Las mesas que ya est&aacute;n abiertas no cambian.</p>
-      <div class="ajuste-fila">
-        <span class="pesos">$</span>
-        <input type="text" inputmode="numeric" pattern="[0-9]*" id="cubierto"
-               aria-label="Importe de los cubiertos por mesa" value="" placeholder="0">
-        <button type="button" class="btn btn-primary" id="cubiertoGuardar">Guardar</button>
+  <!-- ================= LO DEMAS, GUARDADO ================= -->
+  <div class="guardado">
+
+    <details class="cajon" id="cajonDia">
+      <summary>C&oacute;mo fue el d&iacute;a de hoy</summary>
+      <div class="cajon-cuerpo">
+        <div class="datos">
+          <div class="dato">
+            <span class="dato-etq">El plato que m&aacute;s se pidi&oacute; &middot; hoy</span>
+            <b class="dato-num" id="platoNum">&mdash;</b>
+            <span class="dato-pie" id="platoPie">Cargando...</span>
+          </div>
+          <div class="dato">
+            <span class="dato-etq">La hora de m&aacute;s movimiento &middot; hoy</span>
+            <b class="dato-num" id="horaNum">&mdash;</b>
+            <span class="dato-pie" id="horaPie">Cargando...</span>
+          </div>
+        </div>
+        <p class="nota" style="margin:12px 0 0">
+          Se cuenta desde las 12 de la noche de hoy. Lo que se anul&oacute; no cuenta.
+        </p>
       </div>
-      <p class="ajuste-msg" id="cubiertoMsg" role="status" aria-live="polite"></p>
+    </details>
 
-      <!-- Mostrar o no el renglon. No cambia lo que se cobra: cobrar, se
-           cobra siempre. Lo unico que cambia es si el comensal lo ve
-           desglosado o incluido en el total con la nota al lado. -->
-      <div class="ajuste-sub">
-        <label class="interruptor">
-          <input type="checkbox" id="cubiertoDesglose" checked>
-          <span class="int-caja" aria-hidden="true"></span>
-          <span class="int-tex">
-            <b>Mostrarle el rengl&oacute;n al comensal</b>
-            <span id="cubiertoDesgloseAyuda">Cargando...</span>
-          </span>
-        </label>
-        <p class="ajuste-msg" id="cubiertoDesgloseMsg" role="status" aria-live="polite"></p>
+    <details class="cajon" id="cajonAjustes">
+      <summary>Ajustes y otras pantallas</summary>
+      <div class="cajon-cuerpo">
+
+        <h3>Qui&eacute;n recibe los avisos</h3>
+        <div class="roles" id="roles"><p class="cargando">Cargando...</p></div>
+
+        <h3>Cubiertos por mesa</h3>
+        <div class="ajuste">
+          <b>Cubiertos por mesa</b>
+          <p>Se cobran una sola vez por mesa, en el primer pedido. Pon&eacute; 0 para no cobrarlos.
+             Las mesas que ya est&aacute;n abiertas no cambian.</p>
+          <div class="ajuste-fila">
+            <span class="pesos">$</span>
+            <input type="text" inputmode="numeric" pattern="[0-9]*" id="cubierto"
+                   aria-label="Importe de los cubiertos por mesa" value="" placeholder="0">
+            <button type="button" class="btn btn-primary" id="cubiertoGuardar">Guardar</button>
+          </div>
+          <p class="ajuste-msg" id="cubiertoMsg" role="status" aria-live="polite"></p>
+
+          <!-- Mostrar o no el renglon. No cambia lo que se cobra: cobrar, se
+               cobra siempre. Lo unico que cambia es si el comensal lo ve
+               desglosado o incluido en el total con la nota al lado. -->
+          <div class="ajuste-sub">
+            <label class="interruptor">
+              <input type="checkbox" id="cubiertoDesglose" checked>
+              <span class="int-caja" aria-hidden="true"></span>
+              <span class="int-tex">
+                <b>Mostrarle el rengl&oacute;n al comensal</b>
+                <span id="cubiertoDesgloseAyuda">Cargando...</span>
+              </span>
+            </label>
+            <p class="ajuste-msg" id="cubiertoDesgloseMsg" role="status" aria-live="polite"></p>
+          </div>
+        </div>
+
+        <h3>Alias de propinas de los mozos</h3>
+        <p class="nota">
+          Es el alias al que el comensal transfiere la propina, directo al mozo. No pasa
+          por el local.
+        </p>
+        <div class="mozos" id="mozosAlias"><p class="cargando">Cargando...</p></div>
+
+        <h3>Otras pantallas</h3>
+        <div class="atajos">
+          <a class="atajo" href="mesas.html"><span><b>El sal&oacute;n y las cuentas</b>
+            <span>La cuenta de cada mesa, ronda por ronda.</span></span></a>
+          <a class="atajo" href="carta-fotos.html"><span><b>La carta y lo que se termin&oacute;</b>
+            <span>Fotos, precios y marcar lo que ya no hay.</span></span></a>
+          <a class="atajo" href="qr-mesa.html"><span><b>Los QR de las mesas</b>
+            <span>Generar e imprimir el c&oacute;digo de cada mesa.</span></span></a>
+          <a class="atajo" href="propinas.html"><span><b>Las propinas de los mozos</b>
+            <span>Lo reportado por transferencia y lo cargado en efectivo.</span></span></a>
+          <a class="atajo" href="diseno.html"><span><b>El dise&ntilde;o del local</b>
+            <span>El nombre, el color, la letra y la forma de todas las pantallas.</span></span></a>
+        </div>
+
       </div>
-    </div>
-  </details>
+    </details>
 
-  <details class="finanzas">
-    <summary>Alias de propinas de los mozos</summary>
-    <p style="margin:12px 0 12px;font-size:13px;color:var(--muted);line-height:1.45">
-      Es el alias al que el comensal transfiere la propina, directo al mozo. No pasa
-      por el local.
-    </p>
-    <div class="mozos" id="mozosAlias"><p class="cargando">Cargando...</p></div>
-  </details>
-
-   </div>
   </div>
 </div>
 
@@ -279,13 +381,25 @@ document.addEventListener('DOMContentLoaded', function () {
   var sb = LP.client();
   var conn = new LP.ConnBadge(document.getElementById('conn'));
 
-  /* Los tres roles que reciben avisos. 'Jonathan' es el rol del encargado y
-     de la caja: en un local de este tamanio son la misma persona mirando. */
+  /* Los tres roles que reciben avisos. 'Jonathan' es el rol de la duenia y de
+     la caja: en un local de este tamanio son la misma persona mirando. */
   var ROLES = [
-    { id: 'Mozo',     nombre: 'Mozo',     que: 'Los pedidos para aprobar' },
-    { id: 'Cocina',   nombre: 'Cocina',   que: 'Las comandas que manda el mozo' },
-    { id: 'Jonathan', nombre: 'Encargado', que: 'Los pagos que confirma la caja' }
+    { id: 'Mozo',     nombre: 'Mozo',          que: 'Los pedidos para aprobar' },
+    { id: 'Cocina',   nombre: 'Cocina',        que: 'Las comandas que manda el mozo' },
+    { id: 'Jonathan', nombre: 'Dueña',    que: 'Los pagos que confirma la caja' }
   ];
+
+  /* Los estados de pedido que todavia estan dando vueltas. */
+  var VIVOS = ['Por aprobar', 'En cocina', 'Cocinando', 'Listo'];
+
+  /* Desde las 12 de la noche de hoy, en la hora del local. Se calcula en cada
+     consulta y no una vez al abrir: la tablet queda prendida todo el dia y a
+     la medianoche el dia tiene que cambiar solo. */
+  function desdeHoy() {
+    var d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString();
+  }
 
   /* 872 min no se lee. Pasada la hora se dice en horas. */
   function hace(mins) {
@@ -294,41 +408,64 @@ document.addEventListener('DOMContentLoaded', function () {
     return h + (h === 1 ? ' hora' : ' horas');
   }
 
-  /* --------------------------------------------------------- el salon --- */
-  function pintarSalon(mesas, pedidos) {
-    var sinAprobar = 0, enCocina = 0, demorados = [];
-    var ahora = Date.now();
-
-    pedidos.forEach(function (p) {
-      if (p.estado === 'Por aprobar') sinAprobar++;
+  /* ------------------------------------------------------- las 5 cifras --- */
+  function pintarCifras(mesas, catalogo, vivos, pedidosHoy) {
+    var enCocina = 0;
+    vivos.forEach(function (p) {
       if (p.estado === 'En cocina' || p.estado === 'Cocinando') enCocina++;
-      var mins = Math.round((ahora - new Date(p.created_at).getTime()) / 60000);
-      if (mins >= 15 && p.estado !== 'Entregado' && p.estado !== 'Rechazado') {
-        demorados.push({ mesa: p.mesa, mins: mins });
-      }
+    });
+
+    /* Libres = las mesas del plano que no tienen cuenta abierta. Las sesiones
+       que no son de una mesa del plano (el mostrador, la mesa de ejemplo)
+       cuentan como ocupadas pero no le restan a las libres: no son mesas del
+       salon. Por eso los dos numeros pueden no sumar el total del plano. */
+    var abiertas = {};
+    mesas.forEach(function (m) { abiertas[m.mesa] = true; });
+    var libres = 0;
+    (catalogo || []).forEach(function (m) {
+      if (!abiertas['Mesa ' + m.numero] && !abiertas[m.numero]) libres++;
     });
 
     var debe = 0;
-    (mesas || []).forEach(function (m) { debe += m.debe; });
+    mesas.forEach(function (m) { debe += m.debe; });
+
+    /* Lo cobrado hoy: los pedidos DE HOY que ya están pagados. No hay una
+       columna con la hora del cobro -sólo el booleano `pagado`-, así que el
+       día se cuenta por el pedido y no por el cobro. En un restaurante la
+       mesa paga el mismo día que pide, así que las dos cosas coinciden;
+       la excepción sería una cuenta que cruza la medianoche.
+       Se suma lo COBRABLE y no el total, como en toda la app: si volvió un
+       plato, lo que entró es lo que quedó vivo. */
+    var cobrado = 0;
+    pedidosHoy.forEach(function (p) { if (p.pagado) cobrado += LP.cobrable(p); });
 
     var c = document.getElementById('cifras').children;
-    c[0].querySelector('b').textContent = (mesas || []).length;
-    c[1].querySelector('b').textContent = sinAprobar;
-    c[1].className = 'cifra' + (sinAprobar > 0 ? ' alerta' : '');
+    c[0].querySelector('b').textContent = mesas.length;
+    c[1].querySelector('b').textContent = catalogo ? libres : '—';
     c[2].querySelector('b').textContent = enCocina;
     c[3].querySelector('b').textContent = money(debe);
     // Ambar como en el plano: que falte cobrar es lo normal con mesas abiertas.
     c[3].className = 'cifra' + (debe > 0 ? ' alerta' : '');
+    c[4].querySelector('b').textContent = money(cobrado);
+  }
 
-    /* Lo demorado va aparte y con nombre: una cifra sola no dice cual mesa
-       hay que ir a mirar, que es lo unico accionable de esta pantalla.
+  /* ------------------------------------------------------ lo demorado ----- */
+  function pintarDemorados(vivos) {
+    var ahora = Date.now();
+    var demorados = [];
+    vivos.forEach(function (p) {
+      var mins = Math.round((ahora - new Date(p.created_at).getTime()) / 60000);
+      /* La consulta ya trae SOLO lo que no esta entregado ni anulado, que es
+         justo lo que pidio el duenio: cuando el mozo toca "Lo lleve a la
+         mesa", la mesa deja de figurar aca y NADIE la marca como pagada. */
+      if (mins >= 15) demorados.push({ mesa: p.mesa, mins: mins });
+    });
 
-       Se agrupa POR MESA y no por pedido: una mesa con tres rondas demoradas
-       es una mesa a la que hay que ir, no tres. Antes decia "6 mesas" y
-       listaba "Mesa 7" cuatro veces. */
     var caja = document.getElementById('demorados');
     if (!demorados.length) { caja.hidden = true; return; }
 
+    /* Se agrupa POR MESA y no por pedido: una mesa con tres rondas demoradas
+       es una mesa a la que hay que ir, no tres. */
     var porMesa = {};
     demorados.forEach(function (d) {
       if (!porMesa[d.mesa] || d.mins > porMesa[d.mesa]) porMesa[d.mesa] = d.mins;
@@ -347,7 +484,67 @@ document.addEventListener('DOMContentLoaded', function () {
     caja.hidden = false;
   }
 
+  /* ------------------------------------------------- como esta cada mesa -- */
+  /* Las palabras del duenio: "cuales pidieron, cuales esperan, cuales ya
+     comieron". Una mesa entra en UN solo estado, el mas urgente que tenga.
+
+     'orden' es para ordenarlas: primero lo que hay que mover, al final lo que
+     ya esta cerrado. 'clase' es el color: v-hacer (ambar) = alguien tiene que
+     moverse, v-curso (gris) = esta pasando y no hay nada que hacer, v-fin
+     (verde) = terminado.                                                  */
+  function comoEsta(c) {
+    var porAprobar = 0, cocinando = 0, listo = 0, vivas = 0;
+
+    (c.pedidos || []).forEach(function (p) {
+      if (!LP.seCobra(p)) return;              // anulada: no es actividad de la mesa
+      vivas++;
+      if (p.estado === 'Por aprobar') porAprobar++;
+      else if (p.estado === 'Listo') listo++;
+      else if (p.estado === 'En cocina' || p.estado === 'Cocinando') cocinando++;
+    });
+
+    if (porAprobar) return { orden: 1, clase: 'v-hacer', txt: 'Pidió recién' };
+    if (listo)      return { orden: 2, clase: 'v-hacer', txt: 'La comida está lista' };
+    if (cocinando)  return { orden: 3, clase: 'v-curso', txt: 'Esperando la comida' };
+
+    if (!vivas) {
+      return c.sesion.estado === 'Reservada'
+        ? { orden: 6, clase: 'v-curso', txt: 'Reservada' }
+        : { orden: 5, clase: 'v-curso', txt: 'Sentados, sin pedir' };
+    }
+    if (c.debe > 0) return { orden: 4, clase: 'v-hacer', txt: 'Ya comió, falta cobrar' };
+    return { orden: 7, clase: 'v-fin', txt: 'Pagó' };
+  }
+
+  function pintarVistazo(mesas) {
+    var ul = document.getElementById('vistazo');
+    var vacio = document.getElementById('vistazoVacio');
+
+    if (!mesas.length) {
+      ul.innerHTML = '';
+      vacio.textContent = 'Ninguna mesa abierta ahora. El salón está tranquilo.';
+      vacio.hidden = false;
+      return;
+    }
+    vacio.hidden = true;
+
+    var filas = mesas.map(function (c) {
+      return { c: c, e: comoEsta(c) };
+    }).sort(function (a, b) {
+      if (a.e.orden !== b.e.orden) return a.e.orden - b.e.orden;
+      return String(a.c.mesa).localeCompare(String(b.c.mesa), 'es', { numeric: true });
+    });
+
+    ul.innerHTML = filas.map(function (f) {
+      return '<li class="vmesa ' + f.e.clase + '">' +
+        '<b>' + esc(f.c.mesa) + '</b>' +
+        '<span>' + esc(f.e.txt) + '</span>' +
+      '</li>';
+    }).join('');
+  }
+
   /* ---------------------------------------------------------- los roles -- */
+  var rolesPintados = false;
   function pintarRoles() {
     var caja = document.getElementById('roles');
     return Promise.all(ROLES.map(function (r) {
@@ -355,6 +552,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return { rol: r, n: n };
       });
     })).then(function (filas) {
+      rolesPintados = true;
       caja.innerHTML = filas.map(function (f) {
         var n = f.n;
         var sin = n === 0;
@@ -384,10 +582,160 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function (r) {
         b.disabled = false;
         b.textContent = 'Probar';
-        var A_QUIEN = { Mozo: 'al mozo', Cocina: 'a la cocina', Jonathan: 'al encargado' };
+        var A_QUIEN = { Mozo: 'al mozo', Cocina: 'a la cocina', Jonathan: 'a la dueña' };
         if (r.ok) LP.toast('Aviso de prueba enviado ' + (A_QUIEN[rol] || rol) + '.', 'ok');
         else LP.toast(r.motivo || 'No salió el aviso.', 'err');
       });
+  });
+
+  /* ====================================================================
+     LAS DOS ESTADISTICAS DEL DIA
+
+     Dos numeros, no un tablero. Y la regla que las gobierna: si el dato no
+     alcanza para que el numero signifique algo, NO se muestra un numero.
+     Se dice en castellano que todavia no se puede, con la cuenta real a la
+     vista. Un "plato mas pedido" con una sola venta es mentira, y Nelly
+     tiene que poder confiar en lo que ve.
+     ==================================================================== */
+
+  var MIN_PLATOS     = 10;   // platos pedidos hoy para que el ranking valga
+  var MIN_DEL_PLATO  = 3;    // y el ganador tiene que tener al menos estos
+  var MIN_MESAS      = 6;    // mesas abiertas hoy para hablar de franja horaria
+  var MIN_DE_LA_HORA = 3;    // y la franja ganadora, al menos estas
+
+  function decirDato(idNum, idPie, texto, pie, flojo) {
+    var num = document.getElementById(idNum);
+    num.textContent = texto;
+    num.className = 'dato-num' + (flojo ? ' flojo' : '');
+    document.getElementById(idPie).textContent = pie;
+  }
+
+  /* El plato que mas se pidio hoy.
+     Quedan afuera: las comandas anuladas (estado Rechazado), las lineas
+     sacadas de la cuenta una por una, y los cubiertos -que no son un plato,
+     son el servicio de mesa y saldrian primeros siempre-.               */
+  function pintarPlato(pedidosHoy) {
+    var cuenta = {}, total = 0;
+
+    pedidosHoy.forEach(function (p) {
+      if (!LP.seCobra(p)) return;                       // comanda anulada
+      LP.lineasDe(p).forEach(function (l) {
+        if (LP.lineaSacada(l) || l.cubierto) return;    // plato sacado / cubiertos
+        var clave = l.id || l.name;
+        if (!clave) return;
+        var n = Number(l.qty) || 1;
+        if (!cuenta[clave]) cuenta[clave] = { nombre: l.name || clave, n: 0 };
+        cuenta[clave].n += n;
+        total += n;
+      });
+    });
+
+    if (!total) {
+      decirDato('platoNum', 'platoPie', 'Todavía no se pidió nada hoy',
+        'Cuando el día arranque, acá va a aparecer el plato que más se pide.', true);
+      return;
+    }
+
+    var top = null;
+    Object.keys(cuenta).forEach(function (k) {
+      if (!top || cuenta[k].n > top.n) top = cuenta[k];
+    });
+
+    if (total < MIN_PLATOS || top.n < MIN_DEL_PLATO) {
+      decirDato('platoNum', 'platoPie', 'Todavía no se puede decir',
+        'Van ' + total + (total === 1 ? ' plato pedido' : ' platos pedidos') +
+        ' hoy. Con tan poco, el número no significa nada.', true);
+      return;
+    }
+
+    decirDato('platoNum', 'platoPie', top.nombre,
+      top.n + (top.n === 1 ? ' porción' : ' porciones') +
+      ', de ' + total + ' platos pedidos hoy.', false);
+  }
+
+  /* La hora de mas movimiento.
+     Se mide por CUANTAS MESAS ABRIERON en cada franja de una hora, que es lo
+     que pregunto el duenio: "cuando es que se llena mas, cuando llegan mas
+     clientes, a que hora llega". Si las mesas tienen cargada la gente que se
+     sento, se suma tambien; si no, se muestra igual con las mesas solas: la
+     columna es opcional y las sesiones viejas no la tienen.             */
+  function pintarHora(sesionesHoy) {
+    var franjas = {}, mesas = 0;
+
+    sesionesHoy.forEach(function (s) {
+      var h = new Date(s.abierta_en).getHours();
+      if (!isFinite(h)) return;
+      if (!franjas[h]) franjas[h] = { h: h, mesas: 0, gente: 0 };
+      franjas[h].mesas++;
+      mesas++;
+      var g = Number(s.comensales);
+      if (isFinite(g) && g > 0) franjas[h].gente += g;
+    });
+
+    if (!mesas) {
+      decirDato('horaNum', 'horaPie', 'Todavía no abrió ninguna mesa hoy',
+        'Acá va a aparecer la franja en la que llega más gente.', true);
+      return;
+    }
+
+    var top = null;
+    Object.keys(franjas).forEach(function (k) {
+      if (!top || franjas[k].mesas > top.mesas) top = franjas[k];
+    });
+
+    if (mesas < MIN_MESAS || top.mesas < MIN_DE_LA_HORA) {
+      decirDato('horaNum', 'horaPie', 'Todavía no se puede decir',
+        'Hoy abrieron ' + mesas + (mesas === 1 ? ' mesa' : ' mesas') +
+        '. Con tan poco, no hay una hora de más movimiento.', true);
+      return;
+    }
+
+    decirDato('horaNum', 'horaPie',
+      'Entre las ' + top.h + ' y las ' + ((top.h + 1) % 24),
+      top.mesas + ' mesas' +
+      (top.gente > 0 ? ' · ' + top.gente + (top.gente === 1 ? ' persona' : ' personas') : '') +
+      ', de ' + mesas + ' abiertas hoy.', false);
+  }
+
+  /* Las estadisticas NO viven en el bucle de 30 segundos: son del dia, no del
+     momento, y esta pantalla se abre para mirar el salon. Se calculan cuando
+     se abre el cajon, con los pedidos de hoy que ya estan cargados mas una
+     consulta de sesiones.                                                */
+  var ultimosPedidosHoy = [];
+  function calcularElDia() {
+    /* Sin conexión no se dice "hoy no se pidió nada": eso sería inventar un
+       dato. Se dice que no se pudo mirar. */
+    if (!sb) {
+      decirDato('platoNum', 'platoPie', '—', 'No hay conexión con el sistema.', true);
+      decirDato('horaNum', 'horaPie', '—', 'No hay conexión con el sistema.', true);
+      return;
+    }
+    pintarPlato(ultimosPedidosHoy);
+    sb.from(LP.SESIONES_TABLE).select('id, abierta_en, comensales')
+      .gte('abierta_en', desdeHoy())
+      .then(function (res) {
+        if (res.error) {
+          decirDato('horaNum', 'horaPie', '—',
+            'No pudimos traer las mesas de hoy. Probá de nuevo.', true);
+          return;
+        }
+        pintarHora(res.data || []);
+      }, function () {
+        decirDato('horaNum', 'horaPie', '—',
+          'No pudimos traer las mesas de hoy. Probá de nuevo.', true);
+      });
+  }
+
+  var cajonDia = document.getElementById('cajonDia');
+  cajonDia.addEventListener('toggle', function () {
+    if (cajonDia.open) calcularElDia();
+  });
+
+  /* Los avisos tambien son tres consultas: se cuentan recien cuando se abre
+     el cajon donde se ven. */
+  var cajonAjustes = document.getElementById('cajonAjustes');
+  cajonAjustes.addEventListener('toggle', function () {
+    if (cajonAjustes.open && sb) pintarRoles();
   });
 
   /* ------------------------------------------------------------ carga --- */
@@ -397,16 +745,27 @@ document.addEventListener('DOMContentLoaded', function () {
     enVuelo = true;
     return Promise.all([
       LP.mesasAbiertas(sb),
-      sb.from(LP.TABLE).select('mesa, estado, created_at')
-        .in('estado', ['Por aprobar', 'En cocina', 'Cocinando', 'Listo'])
+      LP.mesasDelLocal(sb),
+      sb.from(LP.TABLE).select('mesa, estado, created_at').in('estado', VIVOS),
+      sb.from(LP.TABLE).select('id, estado, total, lines, pagado')
+        .gte('created_at', desdeHoy())
     ]).then(function (res) {
       enVuelo = false;
-      var mesas = res[0], ped = res[1];
+      var mesas = res[0], catalogo = res[1], vivos = res[2], hoy = res[3];
       // Con error, se dejan los numeros anteriores y el cartel dice la verdad:
       // antes un salon lleno se pintaba vacio y en verde.
-      if (mesas === null || !ped || ped.error) { conn.set(navigator.onLine ? 'retry' : 'off'); return; }
+      if (mesas === null || !vivos || vivos.error || !hoy || hoy.error) {
+        conn.set(navigator.onLine ? 'retry' : 'off');
+        return;
+      }
       conn.set(navigator.onLine ? 'live' : 'off');
-      pintarSalon(mesas, ped.data || []);
+      ultimosPedidosHoy = hoy.data || [];
+      pintarCifras(mesas, catalogo, vivos.data || [], ultimosPedidosHoy);
+      pintarDemorados(vivos.data || []);
+      pintarVistazo(mesas);
+      // Si el cajon del dia esta abierto mientras entra un pedido, que no
+      // quede mostrando lo de hace un rato.
+      if (cajonDia.open) pintarPlato(ultimosPedidosHoy);
     }, function () {
       enVuelo = false;
       conn.set(navigator.onLine ? 'retry' : 'off');
@@ -415,13 +774,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
   if (!sb) {
     conn.set('off');
-    document.getElementById('roles').innerHTML = '<p class="cargando">No hay conexi\u00f3n con el sistema.</p>';
+    document.getElementById('roles').innerHTML = '<p class="cargando">No hay conexión con el sistema.</p>';
+    document.getElementById('vistazoVacio').textContent = 'No hay conexión con el sistema.';
     var dem = document.getElementById('demorados'); if (dem) dem.hidden = true;
     return;
   }
 
   cargar();
-  pintarRoles();
 
   var canal = sb.channel('admin-' + Date.now())
     .on('postgres_changes', { event: '*', schema: 'public', table: LP.TABLE },
@@ -435,10 +794,14 @@ document.addEventListener('DOMContentLoaded', function () {
   LP.onCleanup(function () { try { sb.removeChannel(canal); } catch (e) {} });
 
   // Al volver de alta.html (a veces desde la cache del celular, sin recargar)
-  // la fila de avisos tiene que volver a contar.
-  window.addEventListener('pageshow', function (e) { if (e.persisted) { cargar(); pintarRoles(); } });
+  // la fila de avisos tiene que volver a contar, pero solo si esta a la vista.
+  function refrescar() {
+    cargar();
+    if (cajonAjustes.open && rolesPintados) pintarRoles();
+  }
+  window.addEventListener('pageshow', function (e) { if (e.persisted) refrescar(); });
   document.addEventListener('visibilitychange', function () {
-    if (!document.hidden) cargar(); pintarRoles();
+    if (!document.hidden) refrescar();
   });
   // Los minutos de demora corren aunque no cambie nada en la base.
   setInterval(function () { if (!document.hidden) cargar(); }, 30000);
@@ -455,7 +818,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var tildeAyuda = document.getElementById('cubiertoDesgloseAyuda');
   var tildeMsg = document.getElementById('cubiertoDesgloseMsg');
   var soy = LP.quienSoy();
-  var YO = (soy && soy.nombre) || 'Encargado';
+  var YO = (soy && soy.nombre) || 'Dueña';
 
   function decir(t, clase) { msg.textContent = t || ''; msg.className = 'ajuste-msg' + (clase ? ' ' + clase : ''); }
 

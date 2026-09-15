@@ -204,7 +204,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (de === 'mozo.html' || (!de && rol === 'Mozo')) {
       b.href = 'mozo.html'; b.textContent = 'Volver a mis pedidos';
     } else if (de === 'admin.html' || (!de && rol === 'Duenio')) {
-      b.href = 'admin.html'; b.textContent = 'Volver al encargado';
+      b.href = 'admin.html'; b.textContent = 'Volver al panel';
     }
   }());
 
@@ -293,7 +293,7 @@ document.addEventListener('DOMContentLoaded', function () {
     elTitulo.textContent = locked ? 'Tus propinas' : ('Propinas de ' + m.nombre);
     elSub.textContent = m.alias_propina
       ? 'Tu alias para transferencias: ' + m.alias_propina
-      : 'Todavía no cargáste tu alias. Se hace desde Encargado.';
+      : 'Todavía no cargáste tu alias. Se hace desde el panel de la dueña.';
     elContenido.hidden = false;
     propinas = [];
     render();
@@ -368,7 +368,7 @@ document.addEventListener('DOMContentLoaded', function () {
   LP.mozosActivos(sb).then(function (lista) {
     mozos = lista || [];
     if (!mozos.length) {
-      elCargando.textContent = 'No hay mozos activos cargados en Encargado.';
+      elCargando.textContent = 'No hay mozos activos cargados en el panel de la dueña.';
       return;
     }
     elCargando.hidden = true;
