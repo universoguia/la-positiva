@@ -163,6 +163,9 @@ document.addEventListener('DOMContentLoaded', function () {
   'use strict';
   var esc = LP.esc;
 
+  /* Los QR de cobro son plata: los carga la caja o la duenia. */
+  if (LP.guardaDeSeccion('qr-mesa.html') === 'no') return;
+
   var sb = LP.client();
   var caja = document.getElementById('piezas');
   var cuantas = document.getElementById('cuantas');

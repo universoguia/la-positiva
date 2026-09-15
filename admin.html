@@ -287,7 +287,7 @@
   <!-- ================= LO DEMAS, GUARDADO ================= -->
   <div class="guardado">
 
-    <details class="cajon" id="cajonDia">
+    <details class="cajon" id="cajonDia" data-si-func="f_estadisticas">
       <summary>C&oacute;mo fue el d&iacute;a de hoy</summary>
       <div class="cajon-cuerpo">
         <div class="datos">
@@ -344,12 +344,14 @@
           </div>
         </div>
 
-        <h3>Alias de propinas de los mozos</h3>
-        <p class="nota">
-          Es el alias al que el comensal transfiere la propina, directo al mozo. No pasa
-          por el local.
-        </p>
-        <div class="mozos" id="mozosAlias"><p class="cargando">Cargando...</p></div>
+        <div data-si-func="f_propinas">
+          <h3>Alias de propinas de los mozos</h3>
+          <p class="nota">
+            Es el alias al que el comensal transfiere la propina, directo al mozo. No pasa
+            por el local.
+          </p>
+          <div class="mozos" id="mozosAlias"><p class="cargando">Cargando...</p></div>
+        </div>
 
         <h3>Otras pantallas</h3>
         <div class="atajos">
@@ -359,10 +361,12 @@
             <span>Fotos, precios y marcar lo que ya no hay.</span></span></a>
           <a class="atajo" href="qr-mesa.html"><span><b>Los QR de las mesas</b>
             <span>Generar e imprimir el c&oacute;digo de cada mesa.</span></span></a>
-          <a class="atajo" href="propinas.html"><span><b>Las propinas de los mozos</b>
+          <a class="atajo" href="propinas.html" data-si-func="f_propinas"><span><b>Las propinas de los mozos</b>
             <span>Lo reportado por transferencia y lo cargado en efectivo.</span></span></a>
           <a class="atajo" href="diseno.html"><span><b>El dise&ntilde;o del local</b>
             <span>El nombre, el color, la letra y la forma de todas las pantallas.</span></span></a>
+          <a class="atajo" href="tecnico.html"><span><b>Panel t&eacute;cnico</b>
+            <span>Prender, apagar y renombrar partes del sistema.</span></span></a>
         </div>
 
       </div>
@@ -377,6 +381,9 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   'use strict';
+  /* El panel de la duenia es de Nelly y de Oscar. */
+  if (LP.guardaDeSeccion('admin.html') === 'no') return;
+
   var esc = LP.esc, money = LP.money;
   var sb = LP.client();
   var conn = new LP.ConnBadge(document.getElementById('conn'));

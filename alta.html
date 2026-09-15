@@ -254,6 +254,9 @@
 document.addEventListener('DOMContentLoaded', function () {
   'use strict';
   var esc = LP.esc;
+  /* Activar los avisos lo hace cada uno en SU celular: entran todos. */
+  if (LP.guardaDeSeccion('alta.html') === 'no') return;
+
   var sb = LP.client();
   /* El rol viene por la URL. Si no viene, se usa quien sos (guardado al
      entrar). Si tampoco hay, Cocina, que es el caso mas frecuente.       */

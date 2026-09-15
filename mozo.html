@@ -20,6 +20,19 @@
      Si no hay nada guardado no escribe nada y la app queda como siempre. -->
 <script src="tema.js"></script>
 <style>
+  /* --- fase 5: la nota de voz y las frases de siempre --------------- */
+  .nota-cabeza{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .nota-cabeza label{margin:0}
+  .btn-voz{
+    flex:none;min-height:40px;padding:0 13px;border-radius:var(--r-pill);
+    border:1px solid var(--accent);background:var(--card);color:var(--accent);
+    font:inherit;font-size:15px;font-weight:500;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+  }
+  .btn-voz:active{background:var(--bg)}
+  .btn-voz:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .nota-alta .btn-voz{min-height:var(--tap)}
+
   /* Colores propios de la cabecera (el resto viene de styles.css). */
   /* Antes: 820px y una sola columna de tarjetas. En la tablet del salon y en
      la notebook sobraba medio metro de pantalla a la derecha mientras el mozo
@@ -392,10 +405,17 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
 <script src="config.js" defer></script>
 <script src="app.js" defer></script>
+<!-- La grabadora de notas. Va DESPUES de app.js: usa LP. -->
+<script src="notas.js" defer></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   'use strict';
   var esc = LP.esc, money = LP.money;
+  /* El puesto primero. Caja entra pero solo mira: necesita ver como
+     viene el salon para saber que mesa va a pedir la cuenta, y no tiene
+     nada que aprobar ni que anular. */
+  if (LP.guardaDeSeccion('mozo.html') === 'no') return;
+
   var sb = LP.client();
   /* Quien esta usando el panel. Se firma con el nombre real -para saber quien
      aprobo y quien le escribio a la cocina-, pero los avisos van al ROL:
@@ -419,6 +439,8 @@ document.addEventListener('DOMContentLoaded', function () {
   var notas = {};                       // { pedido_id: [notas] }
   var ocupado = Object.create(null);
   var borradores = Object.create(null); // lo tipeado, para no perderlo al repintar
+  var frases = [];        // las notas frecuentes del local, se piden una vez
+  var voces = {};         // { pedido_id: [notas de voz] }
   var conocidos = null;
   var cargado = false;
   /* Las mesas con la cuenta abierta (LP.mesasAbiertas). De aca salen cuanta
@@ -689,12 +711,16 @@ document.addEventListener('DOMContentLoaded', function () {
         '<details class="plegable" data-det="' + p.id + '">' +
           '<summary>Agregar un detalle para la cocina</summary>' +
           '<div class="campo">' +
-            '<label for="det-' + p.id + '">Algo que dijo el comensal y no está en la carta</label>' +
+            '<div class="nota-cabeza">' +
+              '<label for="det-' + p.id + '">Algo que dijo el comensal y no está en la carta</label>' +
+              botonVoz('det-' + p.id) +
+            '</div>' +
             '<textarea id="det-' + p.id + '" data-borrador="det-' + p.id + '" ' +
               'placeholder="Sin sal, la carne bien cocida, alergia al maní..."></textarea>' +
+            chipsFrases('det-' + p.id) +
           '</div>' +
         '</details>' +
-        '<div class="acciones">' +
+        '<div class="acciones" data-solo-edita>' +
           '<button type="button" class="btn btn-primary" data-aprobar="' + p.id + '">' +
             'Enviar a cocina</button>' +
           /* Dice SACAR y no "Rechazar": es la misma palabra y el mismo gesto
@@ -719,6 +745,7 @@ document.addEventListener('DOMContentLoaded', function () {
               : '<details class="detalle-fijo"><summary>Ver nota del comensal</summary>' +
                 '<p>' + esc(p.detalle_comensal) + '</p></details>')
           : '') +
+        vozHTML(p) +
         /* Anular la comanda entera se puede en CUALQUIER punto, no solo antes
            de aprobarla: "hay gente que no siempre se queda, y es normal".
            Antes, mandada la comanda a la cocina, no habia forma de darla de
@@ -727,7 +754,7 @@ document.addEventListener('DOMContentLoaded', function () {
            cocinandolo.
            "Lo lleve a la mesa" va en verde: es la accion que cierra la ronda
            y el duenio pidio distinguir los estados por color.            */
-        '<div class="acciones">' +
+        '<div class="acciones" data-solo-edita>' +
           (listo ? '<button type="button" class="btn btn-ok" ' +
                    'data-entregar="' + p.id + '">Lo llevé a la mesa</button>' : '') +
           '<button type="button" class="btn-rechazar" data-anular="' + p.id + '">' +
@@ -771,16 +798,65 @@ document.addEventListener('DOMContentLoaded', function () {
         '<b>' + money(c.debe) + '</b></div>' +
       linea +
       /* Sin QR, lo que resuelve el momento no es ir a cobrar -no hay nada que
-         mostrar- sino pedirselo a la caja: ese va lleno. Igual que en el salon. */
-      '<div class="acciones">' +
-        (qr ? '' : '<button type="button" class="btn btn-primary" data-pedirqr="' +
-                   esc(c.sesion.id) + '">' +
-                   (pedido ? 'Volver a pedir el QR' : 'Pedirle el QR a la caja') +
-                   '</button>') +
-        '<a class="btn ' + (qr ? 'btn-primary' : 'btn-secondary') +
-          '" href="cobrar.html?sesion=' + esc(c.sesion.id) + '">Cobrar con QR</a>' +
-      '</div>' +
+         mostrar- sino pedirselo a la caja: ese va lleno. Igual que en el salon.
+
+         Y con el cobro por QR apagado desde el panel tecnico no va ninguno de
+         los dos: cobrar.html rebota al inicio y el QR que pidiera la caja no
+         se podria mostrar en ningun lado. La mesa se sigue cerrando desde el
+         salon, que es el camino que no depende de esto. */
+      (!LP.func('f_qr_pago') ? '' :
+        '<div class="acciones">' +
+          (qr ? '' : '<button type="button" class="btn btn-primary" data-pedirqr="' +
+                     esc(c.sesion.id) + '">' +
+                     (pedido ? 'Volver a pedir el QR' : 'Pedirle el QR a la caja') +
+                     '</button>') +
+          '<a class="btn ' + (qr ? 'btn-primary' : 'btn-secondary') +
+            '" href="cobrar.html?sesion=' + esc(c.sesion.id) + '">Cobrar con QR</a>' +
+        '</div>') +
     '</li>';
+  }
+
+  /* --------------------------------------------------- la nota de voz --
+     El boton no manda nada: abre la grabadora y lo que vuelve cae en el
+     campo de al lado, para que el mozo lo lea y lo corrija. El id del
+     campo viaja en data-voz porque las tarjetas se repintan enteras y
+     no se puede guardar una referencia al nodo.                       */
+  function botonVoz(campoId, pedidoId) {
+    if (!LP.func('f_voz') || !window.LP_VOZ || !LP_VOZ.soportado().grabar) return '';
+    return '<button type="button" class="btn-voz" data-voz="' + esc(campoId) + '"' +
+      (pedidoId ? ' data-voz-ped="' + esc(pedidoId) + '"' : '') +
+      ' aria-label="Grabar la nota">' +
+      '<span aria-hidden="true">&#127908;</span> Grabar</button>';
+  }
+
+  /* Las frases de siempre. Se pintan como HTML dentro de la tarjeta -y
+     no montando el componente de notas.js- porque esta pantalla repinta
+     la lista entera cada vez que llega un pedido: montar un componente
+     por tarjeta seria armarlo y tirarlo diez veces por minuto. Cargarlas
+     y sacarlas se hace en la comanda y en el panel tecnico, en un solo
+     lugar.                                                            */
+  function chipsFrases(campoId) {
+    if (!LP.func('f_notas_frecuentes') || !frases.length) return '';
+    return '<div class="nf-caja"><span class="nf-tit">Lo de siempre</span>' +
+      '<div class="nf-lista">' +
+      frases.map(function (t) {
+        return '<button type="button" class="nf-chip" data-frase="' + esc(t) +
+          '" data-frase-campo="' + esc(campoId) + '">' + esc(t) + '</button>';
+      }).join('') + '</div></div>';
+  }
+
+  /* El audio de lo que grabo el mozo, para poder volver a escucharlo.
+     Si la nota no llego a tener audio -no se subio, el celular no
+     grabo- no se pinta nada: el texto ya viajo adentro del pedido. */
+  function vozHTML(p) {
+    var lista = (voces[p.id] || []).filter(function (v) { return v.audio_url; });
+    if (!lista.length) return '';
+    return lista.map(function (v) {
+      return '<div class="voz-fila"><b>Lo que grab\u00e9</b>' +
+        '<audio controls preload="none" src="' + esc(v.audio_url) + '"></audio>' +
+        (v.segundos ? '<span class="seg">' + Math.round(v.segundos) + 's</span>' : '') +
+        '</div>';
+    }).join('');
   }
 
   /* Plegado cuando no hay nada dicho -que es casi siempre- y abierto en
@@ -799,9 +875,10 @@ document.addEventListener('DOMContentLoaded', function () {
             '<b>' + esc(n.autor) + ' &middot; ' + esc(LP.timeAgo(n.created_at)) + '</b>' +
             esc(n.texto) + '</div>';
         }).join('') +
-        '<div class="nota-alta">' +
+        '<div class="nota-alta" data-solo-edita>' +
           '<input type="text" data-borrador="nota-' + p.id + '" ' +
             'aria-label="Mensaje para la cocina" placeholder="Avisarle algo a la cocina...">' +
+          botonVoz('nota-' + p.id, p.id) +
           '<button type="button" class="btn btn-secondary" data-nota="' + p.id + '">Mandar</button>' +
         '</div>' +
       '</div></details>';
@@ -823,6 +900,49 @@ document.addEventListener('DOMContentLoaded', function () {
   document.addEventListener('click', function (ev) {
     var b = ev.target.closest('button');
     if (!b || !sb) return;
+
+    /* Una frase de siempre: se suma al campo de al lado y se anota en el
+       borrador, que es lo que sobrevive al repintado. */
+    if (b.dataset.frase) {
+      var campoF = document.querySelector('[data-borrador="' + b.dataset.fraseCampo + '"]');
+      if (campoF && window.LP_NOTAS) {
+        LP_NOTAS.sumarAlCampo(campoF, b.dataset.frase);
+        borradores[b.dataset.fraseCampo] = campoF.value;
+      }
+      return;
+    }
+
+    /* Grabar. Lo que vuelve NO se manda: cae en el campo y el mozo lo
+       lee antes de tocar Enviar o Mandar. */
+    if (b.dataset.voz) {
+      var clave = b.dataset.voz;
+      var pedVoz = b.dataset.vozPed ? buscar(b.dataset.vozPed) : null;
+      LP_VOZ.abrir({
+        sb: sb, autor: YO,
+        mesa: pedVoz ? pedVoz.mesa : '',
+        pedidoId: pedVoz ? pedVoz.id : null,
+        sesionId: pedVoz ? pedVoz.sesion_id : null,
+        destino: clave.indexOf('nota-') === 0 ? 'cocina' : 'comanda',
+        titulo: clave.indexOf('nota-') === 0 ? 'Avisarle algo a la cocina'
+                                            : 'Contame lo que dijo la mesa',
+        onUsar: function (texto) {
+          var campoV = document.querySelector('[data-borrador="' + clave + '"]');
+          var previo = borradores[clave] || (campoV ? campoV.value : '');
+          var junto = ((previo || '').trim()
+            ? previo.trim().replace(/[,\s]+$/, '') + '. ' : '') + texto;
+          junto = junto.slice(0, 500);
+          borradores[clave] = junto;
+          if (campoV) {
+            campoV.value = junto;
+            var det = campoV.closest('details');
+            if (det) det.open = true;
+            campoV.focus();
+          }
+          LP.toast('Nota cargada. Leela antes de mandar.', 'ok');
+        }
+      });
+      return;
+    }
 
     if (b.dataset.aprobar) {
       var id = b.dataset.aprobar;
@@ -916,6 +1036,16 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
   });
+
+  /* Las frases de siempre, una sola consulta para toda la pantalla.
+     Si no llegan, chipsFrases() no pinta nada y el mozo escribe: es
+     exactamente como andaba antes de la fase 5.                     */
+  if (LP.func('f_notas_frecuentes')) {
+    LP.notasFrecuentes(sb).then(function (l) {
+      frases = l || [];
+      if (frases.length) render();
+    });
+  }
 
   /* --------------------------------------------------------------- carga -- */
   /* ------------------------------------------------------------ sacar -- */
@@ -1161,6 +1291,15 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         var ids = data.map(function (p) { return p.id; });
+        /* Las notas de voz de estos pedidos, para poder volver a
+           escuchar lo que se grabo. Va aparte y sin bloquear: que no
+           lleguen no cambia nada de lo que se ve. */
+        if (ids.length) {
+          LP.vozDePedidos(sb, ids).then(function (m) {
+            voces = m || {};
+            if (Object.keys(voces).length) render();
+          });
+        }
         if (ids.length) {
           sb.from(LP.NOTAS_TABLE).select('*').in('pedido_id', ids)
             .order('created_at', { ascending: true })

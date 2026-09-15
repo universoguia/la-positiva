@@ -130,6 +130,11 @@
   .pill.si::before{content:"✓";margin-right:7px;font-weight:700}
   .pill.no{background:transparent;border-color:var(--border-strong);color:var(--muted-strong)}
 
+  /* El mismo cartelito, pero para el que solo mira: se lee igual y no
+     invita a tocarlo. Es hijo directo de .acciones; el de "Cargar foto"
+     vive adentro de un <label> y ese si se toca. */
+  .acciones > span.pill{cursor:default}
+
   .pill.peligro{color:var(--err-ink)}
   @media (hover:hover){
     .pill:hover{border-color:var(--accent);color:var(--ink)}
@@ -245,6 +250,11 @@
 document.addEventListener('DOMContentLoaded', function () {
   'use strict';
   var esc = LP.esc, money = LP.money;
+  /* Entran todos: la cocina marca lo que se termino todo el tiempo. Lo
+     que NO entra en todas las manos son los precios, y eso se decide
+     mas abajo con LP.puedeEditar('carta.precios'). */
+  if (LP.guardaDeSeccion('carta-fotos.html') === 'no') return;
+
   var sb = LP.client();
 
   var lista = document.getElementById('lista');
@@ -365,18 +375,27 @@ document.addEventListener('DOMContentLoaded', function () {
           precioHTML(p) +
           '<div class="acciones">' +
             /* Disponible / Agotado. Dice el estado de AHORA y al tocarlo lo
-               da vuelta; el aria-label aclara cual de las dos cosas hace. */
-            '<button type="button" class="pill ' + (noHay ? 'no' : 'si') + '" ' +
-              'aria-pressed="' + (noHay ? 'true' : 'false') + '" data-stock="' + esc(p.id) + '" ' +
-              'aria-label="' + esc(p.name) + ': ' + (noHay ? 'agotado' : 'disponible') +
-                '. Tocá para marcar que ' + (noHay ? 'hay' : 'se agotó') + '">' +
-              (noHay ? 'Agotado' : 'Disponible') + '</button>' +
-            '<label class="subir">' +
-              '<input type="file" accept="image/*" data-subir="' + esc(p.id) + '">' +
-              '<span class="pill">' + (propia ? 'Cambiar foto' : 'Cargar foto') + '</span>' +
-            '</label>' +
-            (propia ? '<button type="button" class="pill peligro" data-quitar="' + esc(p.id) + '">' +
-                      'Quitar la foto</button>' : '') +
+               da vuelta; el aria-label aclara cual de las dos cosas hace.
+
+               El que no lo puede marcar igual tiene que VERLO: la caja
+               necesita saber que un plato se termino para no mandar a
+               nadie a pedirlo. Por eso no desaparece: deja de ser boton
+               y queda como cartelito. */
+            (LP.puedeEditar('carta.agotados')
+              ? '<button type="button" class="pill ' + (noHay ? 'no' : 'si') + '" ' +
+                  'aria-pressed="' + (noHay ? 'true' : 'false') + '" data-stock="' + esc(p.id) + '" ' +
+                  'aria-label="' + esc(p.name) + ': ' + (noHay ? 'agotado' : 'disponible') +
+                    '. Tocá para marcar que ' + (noHay ? 'hay' : 'se agotó') + '">' +
+                  (noHay ? 'Agotado' : 'Disponible') + '</button>'
+              : '<span class="pill ' + (noHay ? 'no' : 'si') + '">' +
+                  (noHay ? 'Agotado' : 'Disponible') + '</span>') +
+            (!LP.puedeEditar('carta.fotos') ? '' :
+              '<label class="subir">' +
+                '<input type="file" accept="image/*" data-subir="' + esc(p.id) + '">' +
+                '<span class="pill">' + (propia ? 'Cambiar foto' : 'Cargar foto') + '</span>' +
+              '</label>' +
+              (propia ? '<button type="button" class="pill peligro" data-quitar="' + esc(p.id) + '">' +
+                        'Quitar la foto</button>' : '')) +
           '</div>' +
           '<p class="estado" role="status" aria-live="polite" data-estado="' + esc(p.id) + '"></p>' +
         '</div>' +
@@ -388,6 +407,10 @@ document.addEventListener('DOMContentLoaded', function () {
      numerico ahi mismo: sin pantalla nueva, sin decimales. */
   function precioHTML(p) {
     var cambiado = Object.prototype.hasOwnProperty.call(precios, p.id);
+    /* Los precios son plata y no son de todos los puestos. El que no los
+       puede tocar los VE -necesita saber cuanto sale un plato para
+       contestarle a la mesa- pero sin el boton de cambiarlos.        */
+    var puedeTocar = LP.puedeEditar('carta.precios');
     var vigente = cambiado ? precios[p.id] : (p.precioCarta !== undefined ? p.precioCarta : p.price);
     var carta = p.precioCarta !== undefined ? p.precioCarta : p.price;
     return '<div class="precio-linea">' +
@@ -395,9 +418,12 @@ document.addEventListener('DOMContentLoaded', function () {
         (cambiado
           ? '<span class="precio-carta">antes <s>' + money(carta) + '</s></span>'
           : '') +
-        '<button type="button" class="pill precio" data-editar-precio="' + esc(p.id) + '">' +
-          'Cambiar precio</button>' +
+        (puedeTocar
+          ? '<button type="button" class="pill precio" data-editar-precio="' + esc(p.id) + '">' +
+            'Cambiar precio</button>'
+          : '') +
       '</div>' +
+      (!puedeTocar ? '' :
       '<div class="precio-edit" data-edit="' + esc(p.id) + '" hidden>' +
         '<span class="pesos">$</span>' +
         '<input type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" ' +
@@ -415,7 +441,7 @@ document.addEventListener('DOMContentLoaded', function () {
           ? '<button type="button" class="volver-carta" data-volver-precio="' + esc(p.id) + '">' +
             'Volver a ' + money(carta) + '</button>'
           : '') +
-      '</div>';
+      '</div>');
   }
 
   function decir(platoId, texto, clase) {

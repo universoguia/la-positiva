@@ -51,6 +51,21 @@
      adentro, como pide la division de trabajo del proyecto.               */
 
   .wrap{max-width:1180px}
+
+  /* La cabecera del campo de la nota: la etiqueta a la izquierda y el
+     boton de grabar a la derecha, en la misma linea. El boton es
+     secundario a proposito: escribir sigue siendo el camino de
+     siempre y grabar es el atajo, no al reves. */
+  .nota-cabeza{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .nota-cabeza label{margin:0}
+  .btn-voz{
+    flex:none;min-height:40px;padding:0 14px;border-radius:var(--r-pill);
+    border:1px solid var(--accent);background:var(--card);color:var(--accent);
+    font:inherit;font-size:15px;font-weight:500;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn-voz:active{background:var(--bg)}
+  .btn-voz:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   /* El pie fijo con el total tapa el final de la lista: se le devuelve el
      alto en padding para que el ultimo plato se pueda tocar siempre. */
   body.con-barra .wrap{padding-bottom:calc(112px + var(--sa-b))}
@@ -483,9 +498,15 @@
 <script src="menu-data.js" defer></script>
 <script src="config.js" defer></script>
 <script src="app.js" defer></script>
+<!-- La grabadora y las frases de siempre. Va DESPUES de app.js: usa LP. -->
+<script src="notas.js" defer></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   'use strict';
+  /* El puesto primero: si esto no es de quien entro, la pantalla se
+     reemplaza por el cartel y no se pinta nada mas. */
+  if (LP.guardaDeSeccion('comanda.html') === 'no') return;
+
   var esc = LP.esc, money = LP.money;
   var sb = LP.client();
 
@@ -522,6 +543,10 @@ document.addEventListener('DOMContentLoaded', function () {
   MENU.forEach(function (d) { PLATO[d.id] = d; });
 
   var notaTexto = '';
+  /* Las notas de voz que se grabaron para ESTA comanda. Todavia no
+     tienen pedido: el pedido no existe hasta que se manda. Se les pega
+     el id despues del insert, en aprobar(). */
+  var vozIds = [];
 
   /* ------------------------------------------------------- el borrador --
      Vive en el celular. Un mozo que carga doce platos y se queda sin
@@ -1172,9 +1197,16 @@ document.addEventListener('DOMContentLoaded', function () {
       }).join('') +
       '<div class="total-fila"><span>Total</span><span>' + money(totalComanda()) + '</span></div>' +
       '<div class="campo">' +
-        '<label for="hcNota">Algo que dijo la mesa y no está en la carta</label>' +
+        '<div class="nota-cabeza">' +
+          '<label for="hcNota">Algo que dijo la mesa y no está en la carta</label>' +
+          (LP.func('f_voz') && LP_VOZ.soportado().grabar
+            ? '<button type="button" class="btn-voz" id="hcVoz">' +
+              '<span aria-hidden="true">&#127908;</span> Grabar</button>'
+            : '') +
+        '</div>' +
         '<textarea id="hcNota" placeholder="Sin sal, la carne bien cocida, alergia al maní...">' +
         esc(notaTexto) + '</textarea>' +
+        (LP.func('f_notas_frecuentes') ? '<div id="hcFrec"></div>' : '') +
       '</div>' +
       '<div class="acciones">' +
         /* Sin mesa NO hay boton de mandar. La unica salida hacia adelante es
@@ -1187,6 +1219,15 @@ document.addEventListener('DOMContentLoaded', function () {
       '</div>' +
       '<button type="button" class="btn btn-ghost btn-block" id="hcVaciar" ' +
         'style="margin-top:10px">Vaciar la comanda</button>';
+
+    /* Las frases de siempre se montan recien ahora: el contenedor lo
+       acaba de crear el innerHTML de arriba. Envuelto porque un
+       problema con las frases no puede dejar sin hoja al mozo. */
+    var cajaFrec = document.getElementById('hcFrec');
+    var campoNota = document.getElementById('hcNota');
+    if (cajaFrec && campoNota && window.LP_NOTAS) {
+      try { LP_NOTAS.montar(cajaFrec, campoNota, { sb: sb, quien: YO }); } catch (e) {}
+    }
   }
 
   hcCuerpo.addEventListener('input', function (ev) {
@@ -1196,6 +1237,26 @@ document.addEventListener('DOMContentLoaded', function () {
   hcCuerpo.addEventListener('click', function (ev) {
     var q = ev.target.closest('[data-hact]');
     if (q) { cambiarCantidad(q.dataset.id, q.dataset.hact === 'inc' ? 1 : -1); return; }
+    /* La nota de voz. Lo que vuelve NO se manda a ningun lado: cae en el
+       mismo campo de texto, el mozo lo ve y lo puede corregir antes de
+       tocar Mandar a la cocina. */
+    if (ev.target.closest('#hcVoz')) {
+      LP_VOZ.abrir({
+        sb: sb, autor: YO, mesa: mesaSel || 'Sin mesa todavía',
+        titulo: 'Contame lo que dijo la mesa',
+        destino: 'comanda',
+        onUsar: function (texto, ids) {
+          notaTexto = (notaTexto.trim()
+            ? notaTexto.trim().replace(/[,\s]+$/, '') + '. ' : '') + texto;
+          notaTexto = notaTexto.slice(0, 500);
+          vozIds = vozIds.concat(ids || []);
+          guardarBorrador();
+          pintarHoja();
+          LP.toast('Nota cargada. Leela antes de mandar.', 'ok');
+        }
+      });
+      return;
+    }
     if (ev.target.closest('#hcSeguir')) { cerrarHoja(); return; }
     if (ev.target.closest('#hcVaciar')) { vaciar(); return; }
     if (ev.target.closest('#hcMesa')) {
@@ -1220,6 +1281,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!window.confirm('¿Sacamos todo lo que cargaste de esta comanda?')) return;
     carrito = Object.create(null);
     notaTexto = '';
+    vozIds = [];
     guardarBorrador();
     pintarCarta(); pintarPie(); pintarHoja();
     LP.toast('Comanda vaciada.', 'ok');
@@ -1342,6 +1404,11 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function aprobar(pedido) {
+    /* Las notas de voz recien ahora saben a que pedido pertenecen. Va
+       suelto y sin esperar: si falla, la nota de voz queda igual en la
+       base y el texto ya viajo adentro de la comanda, que es lo que
+       hace falta para cocinar. */
+    if (vozIds.length) { LP.ligarVozAPedido(sb, vozIds, pedido.id); vozIds = []; }
     LP.aprobarPedido(sb, pedido.id, YO, notaTexto).then(function (r) {
       enviando = false;
       claveEnvio = null;
@@ -1385,6 +1452,7 @@ document.addEventListener('DOMContentLoaded', function () {
     personas = null;
     carrito = Object.create(null);
     notaTexto = '';
+    vozIds = [];
     olvidarBorrador();
     pintarMesas(); pintarGente(); pintarFalta(); pintarBarraMesa(); pintarCarta();
     if (history.state && history.state.lp === 'mesa') history.back();

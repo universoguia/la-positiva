@@ -502,3 +502,39 @@ body.con-nav .container{padding-top:var(--nav-h)}
   .opcion:hover{border-color:var(--accent);background:#fff}
   .soy:hover{border-color:var(--accent)}
 }
+
+/* ------------------------------------------------- solo mirar (fase 5) ---
+   Un puesto que puede ENTRAR a una pantalla pero no tocarla. La clase la
+   pone LP.guardaDeSeccion() en el body, y apaga todo lo marcado a mano con
+   [data-solo-edita]: los botones que cambian plata o estado.
+
+   Se marca lo que se apaga, en vez de adivinar por clase, porque una regla
+   que adivine "los botones" un dia apaga el boton de cerrar un dialogo y
+   deja a alguien encerrado en el medio de un servicio.                    */
+body.solo-mirar [data-solo-edita]{display:none!important}
+
+.cinta-mirar{
+  margin:0;padding:9px max(16px,var(--sa-l)) 9px max(16px,var(--sa-r));
+  background:var(--warn-soft);color:var(--warn);
+  border-bottom:1px solid var(--warn-border);
+  font-size:14px;line-height:1.45;text-align:center;
+}
+body.con-nav .cinta-mirar{position:sticky;top:var(--nav-h);z-index:29}
+body.dark .cinta-mirar{
+  background:rgba(180,140,60,.16);color:var(--gold);border-bottom-color:var(--dark-border);
+}
+
+/* El audio de una nota de voz, donde se muestre: cocina, mozo o la cuenta.
+   Ancho completo y alto minimo de toque: un mozo con el pulgar no le acierta
+   a la barra de un reproductor de 28px.                                   */
+.voz-fila{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin-top:8px;padding:9px 11px;
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);
+}
+.voz-fila b{
+  font-family:var(--font-cuerpo);font-size:12px;letter-spacing:.08em;
+  text-transform:uppercase;font-weight:600;color:var(--muted-strong);flex:none;
+}
+.voz-fila audio{flex:1 1 210px;min-width:0;min-height:40px}
+.voz-fila .seg{color:var(--muted);font-size:13px;flex:none}

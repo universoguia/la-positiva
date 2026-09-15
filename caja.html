@@ -325,7 +325,10 @@
         abriendo la cuenta, cuando el posnet muestra que entró.
       </p>
 
-      <a class="btn btn-secondary btn-block" id="qrIrACobrar" href="cobrar.html">
+      <!-- Con el cobro por QR apagado, cobrar.html rebota al inicio: dejar
+           el boton seria una puerta pintada en la pared. -->
+      <a class="btn btn-secondary btn-block" id="qrIrACobrar" href="cobrar.html"
+         data-si-func="f_qr_pago">
         Ir a mostrarle el QR al cliente
       </a>
     </div>
@@ -394,6 +397,11 @@
 document.addEventListener('DOMContentLoaded', function () {
   'use strict';
   var esc = LP.esc, money = LP.money;
+  /* La caja es de Cecilia y de la duenia. Un mozo que entra sin querer
+     puede confirmar un pago que no existe, y eso despues hay que
+     deshacerlo a mano. */
+  if (LP.guardaDeSeccion('caja.html') === 'no') return;
+
   var sb = LP.client();
 
   var VISIBLES_PAGADOS = 9;

@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3ece2">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Panel tecnico: prender, apagar y renombrar partes del sistema.">
+<title>La Positiva - Panel t&eacute;cnico</title>
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<script src="tema.js"></script>
+<style>
+  /* ------------------------------------------------------------------------
+     PANEL TECNICO. No es una pantalla del servicio: es la que se abre EN LA
+     REUNION, con el cliente al lado, para prender, apagar o renombrar algo
+     en el momento y que lo vea pasar.
+
+     Tres reglas que explican como esta armado:
+
+     1. CADA INTERRUPTOR DICE QUE SE APAGA, NO COMO SE LLAMA POR DENTRO.
+        "Propinas" no alcanza: hay que decir que desaparece la pantalla, el
+        alias y el bloque de la carta del comensal. El que decide es un
+        duenio de bodegon, no un programador.
+
+     2. NADA DE LO QUE SE APAGA BORRA DATOS. Apagar propinas esconde la
+        funcion; las propinas cargadas siguen ahi y vuelven enteras al
+        prenderla. Esta escrito arriba de todo porque es LA pregunta que
+        hace cualquiera antes de tocar un interruptor delante del cliente.
+
+     3. EL CAMBIO SE VE AL RECARGAR. En ESTE celular es instantaneo. En los
+        otros -el del mozo, el de la cocina- entra cuando la pantalla se
+        vuelve a abrir. Se dice con todas las letras en vez de prometer una
+        magia que no existe.                                              */
+
+  .wrap{max-width:820px;padding-top:calc(20px + var(--sa-t));padding-bottom:90px}
+  .sub{color:var(--muted);font-size:15px;margin:3px 0 0}
+
+  .aviso-tec{
+    background:var(--warn-soft);border:1px solid var(--warn-border);color:var(--warn);
+    border-radius:var(--r-md);padding:13px 15px;font-size:14px;line-height:1.55;
+    margin:16px 0 0;
+  }
+  .aviso-tec b{display:block;margin-bottom:3px;color:inherit}
+
+  h2{
+    font-family:var(--font-cuerpo);font-style:normal;
+    font-size:13px;letter-spacing:.11em;text-transform:uppercase;font-weight:600;
+    color:var(--muted-strong);margin:32px 0 4px;
+  }
+  .h2-pie{color:var(--muted);font-size:14px;line-height:1.55;margin:0 0 12px}
+
+  .grupo{display:grid;gap:10px}
+  .ficha{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--r-md);padding:13px 15px;
+  }
+
+  /* El interruptor es el mismo de admin.html: una casilla de verdad -sirve
+     con teclado y con lector de pantalla- vestida de palanca. */
+  .interruptor{display:flex;align-items:flex-start;gap:12px;cursor:pointer;min-height:var(--tap)}
+  .interruptor input{position:absolute;opacity:0;width:1px;height:1px}
+  .int-caja{
+    flex:none;width:52px;height:30px;border-radius:var(--r-pill);margin-top:2px;
+    background:var(--border);border:1px solid var(--border-strong);
+    position:relative;transition:background-color .16s,border-color .16s;
+  }
+  .int-caja::after{
+    content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;
+    border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(20,16,14,.3);
+    transition:transform .16s;
+  }
+  .interruptor input:checked + .int-caja{background:var(--ok);border-color:var(--ok)}
+  .interruptor input:checked + .int-caja::after{transform:translateX(22px)}
+  .interruptor input:focus-visible + .int-caja{outline:3px solid var(--accent);outline-offset:2px}
+  .interruptor input:disabled + .int-caja{opacity:.5}
+  .int-tex{flex:1;min-width:0;font-size:15px;line-height:1.45}
+  .int-tex b{display:block;font-weight:500;color:var(--ink)}
+  .int-tex span{display:block;font-size:13px;color:var(--muted);margin-top:3px}
+  .int-msg{font-size:13px;margin:7px 0 0;min-height:1.2em}
+  .int-msg.ok{color:var(--ok)}
+  .int-msg.err{color:var(--err-ink)}
+
+  /* --- renombrar --- */
+  .fila-nombre{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .fila-nombre .que{flex:1 1 150px;min-width:0;font-size:14px;color:var(--muted-strong)}
+  .fila-nombre input{
+    flex:2 1 190px;min-width:0;min-height:var(--tap);padding:0 12px;
+    border:1px solid var(--border-strong);border-radius:var(--r-md);
+    background:#fff;color:var(--ink);font:inherit;font-size:16px;
+  }
+  .fila-nombre input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .fila-nombre .btn{flex:none;min-height:var(--tap);padding:0 16px;font-size:15px}
+
+  /* --- diagnostico --- */
+  .chequeo{
+    display:flex;align-items:flex-start;gap:11px;padding:11px 0;
+    border-bottom:1px solid var(--border);font-size:15px;line-height:1.5;
+  }
+  .chequeo:last-child{border-bottom:none}
+  .luz{
+    flex:none;width:11px;height:11px;border-radius:50%;margin-top:6px;
+    background:var(--border-strong);
+  }
+  .luz.si{background:var(--ok)}
+  .luz.no{background:var(--err)}
+  .luz.flojo{background:var(--warn)}
+  .chequeo b{display:block;font-weight:500}
+  .chequeo span{display:block;color:var(--muted);font-size:13px;margin-top:2px;word-break:break-word}
+
+  .acciones-tec{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+  .acciones-tec .btn{flex:1 1 180px;min-height:var(--tap)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Panel t&eacute;cnico</h1>
+      <p class="sub">Prender, apagar y renombrar sin volver a programar</p>
+    </div>
+    <div class="head-right">
+      <a class="soy" href="./" data-quien hidden></a>
+      <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
+        <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
+      </span>
+      <a class="back-link" href="admin.html">Volver</a>
+    </div>
+  </header>
+
+  <p class="aviso-tec">
+    <b>Apagar no borra nada.</b>
+    Lo que se apaga se esconde: los datos quedan y vuelven enteros al prenderlo.
+    En este celular el cambio se ve al toque; en el del mozo y el de la cocina,
+    cuando vuelvan a abrir la pantalla.
+  </p>
+
+  <h2>Qu&eacute; funciones est&aacute;n prendidas</h2>
+  <p class="h2-pie">Cada una dice exactamente qu&eacute; desaparece de las pantallas.</p>
+  <div class="grupo" id="interruptores">
+    <p class="cargando">Cargando...</p>
+  </div>
+
+  <h2>C&oacute;mo se llama cada pantalla</h2>
+  <p class="h2-pie">
+    Cambia el r&oacute;tulo que ve el equipo en el men&uacute;. No mueve a nadie de puesto
+    ni cambia lo que hace la pantalla. Vac&iacute;o = el nombre de f&aacute;brica.
+  </p>
+  <div class="grupo" id="nombres">
+    <p class="cargando">Cargando...</p>
+  </div>
+
+  <h2>Las frases de siempre</h2>
+  <p class="h2-pie">
+    Los botones que el mozo toca en vez de escribir. Son de todo el local: la que
+    carga uno la usa el otro.
+  </p>
+  <div class="ficha">
+    <div class="fila-nombre">
+      <input type="text" id="fraseNueva" maxlength="40" autocomplete="off"
+             placeholder="Sin sal, bien cocida, sin cebolla..."
+             aria-label="Frase nueva">
+      <button type="button" class="btn btn-primary" id="fraseAgregar">Agregar</button>
+    </div>
+    <div id="frases" style="margin-top:10px"></div>
+    <p class="int-msg" id="frasesMsg" role="status" aria-live="polite"></p>
+  </div>
+
+  <h2>&iquest;Anda todo?</h2>
+  <p class="h2-pie">Lo que hay que mirar antes de prometerle algo al cliente.</p>
+  <div class="ficha" id="diagnostico">
+    <p class="cargando">Probando...</p>
+  </div>
+
+  <h2>Los audios guardados</h2>
+  <p class="h2-pie">
+    Las notas de voz quedan en el mismo dep&oacute;sito p&uacute;blico que las fotos de los
+    platos: cualquiera con el link las escucha. No se guardan para siempre.
+  </p>
+  <div class="ficha">
+    <p style="margin:0 0 10px;font-size:15px;line-height:1.5" id="vozCuantas">Contando...</p>
+    <div class="acciones-tec">
+      <button type="button" class="btn btn-secondary" id="borrarVoz">
+        Borrar los audios de m&aacute;s de 7 d&iacute;as</button>
+    </div>
+    <p class="int-msg" id="vozMsg" role="status" aria-live="polite"></p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+<script src="config.js" defer></script>
+<script src="app.js" defer></script>
+<script src="notas.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+
+  /* Este panel es de David y de la duenia. El candado es el mismo de todas
+     las pantallas y vale lo mismo que los otros: nada contra alguien que
+     quiera entrar, todo contra el toque sin querer. */
+  if (LP.guardaDeSeccion('tecnico.html') === 'no') return;
+
+  var esc = LP.esc;
+  var sb = LP.client();
+  var soy = LP.quienSoy();
+  var YO = (soy && soy.nombre) || 'David';
+  var $ = function (id) { return document.getElementById(id); };
+  var conn = new LP.ConnBadge($('conn'));
+  conn.set(sb ? (navigator.onLine ? 'live' : 'off') : 'retry');
+
+  /* ------------------------------------------------------ interruptores --
+     El texto de cada uno dice QUE DESAPARECE. Es lo unico que importa en una
+     reunion: el duenio pregunta "y si lo apago, que pierdo". */
+  var LLAVES = [
+    { c: 'f_voz', t: 'Notas de voz',
+      d: 'El botón de grabar al lado de la nota, en la comanda y en los pedidos. ' +
+         'Los audios ya grabados siguen guardados.' },
+    { c: 'f_notas_frecuentes', t: 'Frases de siempre',
+      d: 'Los botones de "sin sal" y "bien cocida" al lado de la nota. La lista no se borra.' },
+    { c: 'f_propinas', t: 'Propinas al mozo',
+      d: 'La pantalla de propinas, el alias de cada mozo en el panel de la dueña y el ' +
+         'bloque de propina en la carta del comensal.' },
+    { c: 'f_cubiertos', t: 'Cubiertos por mesa',
+      d: 'La línea de cubiertos deja de sumarse a las mesas nuevas, aunque quede un ' +
+         'importe cargado. Las mesas abiertas no cambian.' },
+    { c: 'f_estadisticas', t: 'Estadísticas del día',
+      d: 'El cajón "Cómo fue el día de hoy" del panel de la dueña: el plato más ' +
+         'pedido y la hora de más movimiento.' },
+    { c: 'f_fotos', t: 'Fotos en la carta',
+      d: 'Las fotos de los platos en la carta del comensal y en la comanda del mozo. ' +
+         'Las fotos cargadas quedan.' },
+    { c: 'f_carta_comensal', t: 'Que el comensal pida solo',
+      d: 'El botón de enviar de la carta del QR. El comensal sigue viendo la carta y ' +
+         'la cuenta, pero el pedido lo toma el mozo.' },
+    { c: 'f_qr_pago', t: 'Cobro con QR',
+      d: 'La pantalla de cobrar con QR y los botones que llevan a ella. Para un local ' +
+         'que cobra solo en efectivo.' },
+    { c: 'f_avisos', t: 'Avisos al celular',
+      d: 'Los avisos push y los de WhatsApp. Nada dentro del sistema deja de andar: ' +
+         'lo único que pasa es que no suena ningún teléfono.' }
+  ];
+
+  function pintarLlaves(valores) {
+    $('interruptores').innerHTML = LLAVES.map(function (l) {
+      var on = valores[l.c] !== false;
+      return '<div class="ficha">' +
+        '<label class="interruptor">' +
+          '<input type="checkbox" data-llave="' + esc(l.c) + '"' + (on ? ' checked' : '') + '>' +
+          '<span class="int-caja" aria-hidden="true"></span>' +
+          '<span class="int-tex"><b>' + esc(l.t) + '</b><span>' + esc(l.d) + '</span></span>' +
+        '</label>' +
+        '<p class="int-msg" data-msg="' + esc(l.c) + '" role="status" aria-live="polite"></p>' +
+      '</div>';
+    }).join('');
+  }
+
+  $('interruptores').addEventListener('change', function (ev) {
+    var caja = ev.target.closest('[data-llave]');
+    if (!caja) return;
+    var clave = caja.dataset.llave;
+    var quiere = caja.checked;
+    var msg = document.querySelector('[data-msg="' + clave + '"]');
+    caja.disabled = true;
+    if (msg) { msg.textContent = 'Guardando...'; msg.className = 'int-msg'; }
+
+    LP.guardarFuncion(sb, clave, quiere, YO).then(function (ok) {
+      caja.disabled = false;
+      if (!ok) {
+        /* No se guardo: el interruptor tiene que volver a decir la verdad,
+           o el duenio se va de la reunion creyendo que apago algo. */
+        caja.checked = !quiere;
+        if (msg) { msg.textContent = 'No se pudo guardar. Revisá la conexión.';
+                   msg.className = 'int-msg err'; }
+        return;
+      }
+      if (msg) {
+        msg.textContent = quiere
+          ? 'Prendido. Recargá las otras pantallas para verlo.'
+          : 'Apagado. Recargá las otras pantallas para verlo.';
+        msg.className = 'int-msg ok';
+      }
+    });
+  });
+
+  /* ---------------------------------------------------------- renombrar -- */
+  var PANTALLAS = [
+    { a: 'comanda.html',     t: 'Tomar comanda' },
+    { a: 'mozo.html',        t: 'Los pedidos de las mesas' },
+    { a: 'mesas.html',       t: 'El salón y las cuentas' },
+    { a: 'cocina.html',      t: 'Las comandas' },
+    { a: 'caja.html',        t: 'Los pagos' },
+    { a: 'cobrar.html',      t: 'Cobrar con QR' },
+    { a: 'carta-fotos.html', t: 'La carta y lo que se terminó' },
+    { a: 'qr-mesa.html',     t: 'Los QR de las mesas' },
+    { a: 'propinas.html',    t: 'Las propinas de los mozos' },
+    { a: 'diseno.html',      t: 'El diseño del local' },
+    { a: 'admin.html',       t: 'Cómo viene el salón' }
+  ];
+
+  function pintarNombres() {
+    $('nombres').innerHTML = PANTALLAS.map(function (p) {
+      var puesto = LP.nombreDePantalla(p.a, '');
+      return '<div class="ficha"><div class="fila-nombre">' +
+        '<label class="que" for="n-' + esc(p.a) + '">' + esc(p.t) + '</label>' +
+        '<input type="text" id="n-' + esc(p.a) + '" maxlength="40" autocomplete="off" ' +
+          'value="' + esc(puesto === p.t ? '' : puesto) + '" placeholder="' + esc(p.t) + '">' +
+        '<button type="button" class="btn btn-secondary" data-nombre="' + esc(p.a) + '">' +
+          'Guardar</button>' +
+        '</div><p class="int-msg" data-nmsg="' + esc(p.a) + '" role="status" aria-live="polite"></p>' +
+        '</div>';
+    }).join('');
+  }
+
+  $('nombres').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-nombre]');
+    if (!b) return;
+    var archivo = b.dataset.nombre;
+    var campo = $('n-' + archivo);
+    var msg = document.querySelector('[data-nmsg="' + archivo + '"]');
+    b.disabled = true;
+    LP.guardarNombrePantalla(sb, archivo, campo.value, YO).then(function (ok) {
+      b.disabled = false;
+      if (!msg) return;
+      msg.textContent = ok
+        ? (campo.value.trim()
+            ? 'Ahora se llama "' + campo.value.trim() + '".'
+            : 'Volvió al nombre de fábrica.')
+        : 'No se pudo guardar.';
+      msg.className = 'int-msg ' + (ok ? 'ok' : 'err');
+    });
+  });
+
+  /* ------------------------------------------------- frases de siempre -- */
+  var frases = [];
+
+  function pintarFrases() {
+    var caja = $('frases');
+    if (!frases.length) {
+      caja.innerHTML = '<p class="nf-vacio">Todavía no hay frases guardadas.</p>';
+      return;
+    }
+    caja.className = 'nf-caja';
+    caja.innerHTML = '<div class="nf-lista">' + frases.map(function (t, i) {
+      return '<button type="button" class="nf-chip" data-sacar="' + i + '" ' +
+        'aria-label="Sacar ' + esc(t) + '">' + esc(t) +
+        ' <span class="x" aria-hidden="true">&times;</span></button>';
+    }).join('') + '</div>';
+  }
+
+  function guardarFrases(nueva, dicho) {
+    var msg = $('frasesMsg');
+    msg.textContent = 'Guardando...'; msg.className = 'int-msg';
+    return LP.guardarNotasFrecuentes(sb, nueva, YO).then(function (ok) {
+      if (!ok) { msg.textContent = 'No se pudo guardar.'; msg.className = 'int-msg err'; return false; }
+      frases = ok;
+      pintarFrases();
+      msg.textContent = dicho || 'Guardado.';
+      msg.className = 'int-msg ok';
+      return true;
+    });
+  }
+
+  $('fraseAgregar').addEventListener('click', function () {
+    var campo = $('fraseNueva');
+    var t = campo.value.trim();
+    if (!t) { campo.focus(); return; }
+    guardarFrases(frases.concat([t]), '"' + t + '" quedó guardada.').then(function (ok) {
+      if (ok) { campo.value = ''; campo.focus(); }
+    });
+  });
+
+  $('fraseNueva').addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter') { ev.preventDefault(); $('fraseAgregar').click(); }
+  });
+
+  $('frases').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-sacar]');
+    if (!b) return;
+    var copia = frases.slice();
+    var fuera = copia.splice(Number(b.dataset.sacar), 1)[0];
+    guardarFrases(copia, '"' + fuera + '" ya no aparece.');
+  });
+
+  /* -------------------------------------------------------- diagnostico --
+     Lo que hay que saber ANTES de prometerle algo al cliente. Cada chequeo
+     dice que se probo y que contesto, no "ok" a secas.                    */
+  function linea(luz, titulo, detalle) {
+    return '<div class="chequeo"><span class="luz ' + luz + '" aria-hidden="true"></span>' +
+      '<span><b>' + esc(titulo) + '</b><span>' + esc(detalle) + '</span></span></div>';
+  }
+
+  function diagnosticar() {
+    var caja = $('diagnostico');
+    var partes = [];
+
+    /* 1. Este celular. Se pregunta al navegador, no se adivina. */
+    var sop = window.LP_VOZ ? LP_VOZ.soportado() : { grabar: false, dictar: false };
+    var formato = window.LP_VOZ ? (LP_VOZ.formatoElegido() || 'el que elija el navegador') : '-';
+    partes.push(linea(sop.grabar ? 'si' : 'no', 'Este celular puede grabar',
+      sop.grabar ? 'Graba en ' + formato + '.'
+                 : 'No tiene MediaRecorder o no hay micrófono. Acá la nota se escribe.'));
+    partes.push(linea(sop.dictar ? 'si' : 'flojo', 'Este celular escribe mientras hablás',
+      sop.dictar ? 'Tiene el dictado del navegador: vas a ver las palabras al hablar.'
+                 : 'Sin dictado propio. Con la clave de Gemini el texto igual sale del audio.'));
+    partes.push(linea(window.isSecureContext ? 'si' : 'no', 'Conexión segura',
+      window.isSecureContext
+        ? location.protocol + '//' + location.host
+        : 'Sin https el navegador no deja abrir el micrófono.'));
+
+    caja.innerHTML = partes.join('') +
+      linea('', 'Base de datos', 'Probando...') +
+      linea('', 'Servidor de avisos', 'Probando...') +
+      linea('', 'Resumen con inteligencia artificial', 'Probando...');
+
+    /* 2. La base. Una consulta barata de verdad, no un ping inventado. */
+    var pBase = sb
+      ? sb.from(LP.AJUSTES_TABLE).select('clave', { count: 'exact', head: true })
+          .then(function (r) {
+            return r.error
+              ? { luz: 'no', t: 'Base de datos', d: 'No contesta: ' + (r.error.message || 'error') }
+              : { luz: 'si', t: 'Base de datos',
+                  d: LP.SUPABASE_URL.replace(/^https?:\/\//, '') + ' · ' +
+                     (r.count || 0) + ' ajustes guardados' };
+          }, function (e) {
+            return { luz: 'no', t: 'Base de datos', d: String(e && e.message || e) };
+          })
+      : Promise.resolve({ luz: 'no', t: 'Base de datos', d: 'No se pudo crear el cliente.' });
+
+    /* 3. Los avisos. Se pregunta cuantos aparatos hay registrados: si son
+          cero, el aviso "anda" y no le llega a nadie, que es peor. */
+    var pAvisos = LP.contarSubs(sb, null).then(function (n) {
+      if (n === null) return { luz: 'flojo', t: 'Servidor de avisos',
+        d: 'No se pudo consultar la lista de aparatos.' };
+      if (!LP.func('f_avisos')) return { luz: 'flojo', t: 'Servidor de avisos',
+        d: 'Apagado desde este panel. Hay ' + n + ' aparato(s) registrado(s).' };
+      return { luz: n > 0 ? 'si' : 'flojo', t: 'Servidor de avisos',
+        d: n > 0 ? n + ' aparato(s) registrado(s) para recibir avisos.'
+                 : 'No hay ningún aparato registrado: los avisos no le llegan a nadie.' };
+    });
+
+    /* 4. El resumen. Se le pregunta a la propia funcion con un texto de
+          prueba de tres palabras: es la unica forma honesta de saber si la
+          clave esta cargada, y sale gratis si no lo esta. */
+    var pIA = LP.resumirVoz(sb, { transcripcion: 'prueba del panel tecnico' })
+      .then(function (r) {
+        if (r.ok) return { luz: 'si', t: 'Resumen con inteligencia artificial',
+          d: 'Activo con ' + (r.modelo || 'el modelo cargado') + '. Contestó la prueba.' };
+        if (r.motivo === 'sin-clave') return { luz: 'flojo',
+          t: 'Resumen con inteligencia artificial',
+          d: 'Todavía no activado: falta cargar GEMINI_API_KEY en los secretos de ' +
+             'Supabase. Grabar y transcribir andan igual.' };
+        return { luz: 'no', t: 'Resumen con inteligencia artificial',
+          d: r.error || 'No contestó.' };
+      });
+
+    Promise.all([pBase, pAvisos, pIA]).then(function (rs) {
+      caja.innerHTML = partes.join('') + rs.map(function (r) {
+        return linea(r.luz, r.t, r.d);
+      }).join('');
+    });
+  }
+
+  /* ------------------------------------------------------- los audios --- */
+  function contarVoz() {
+    if (!sb) { $('vozCuantas').textContent = 'Sin conexión.'; return; }
+    sb.from(LP.VOZ_TABLE).select('id', { count: 'exact', head: true }).then(function (r) {
+      $('vozCuantas').textContent = r.error
+        ? 'No se pudo contar.'
+        : (r.count || 0) === 0
+          ? 'Todavía no se grabó ninguna nota de voz.'
+          : (r.count + ' nota(s) de voz guardadas.');
+    }, function () { $('vozCuantas').textContent = 'No se pudo contar.'; });
+  }
+
+  $('borrarVoz').addEventListener('click', function () {
+    if (!window.confirm('¿Borramos los audios de más de 7 días? ' +
+                        'No se puede deshacer.')) return;
+    var b = this, msg = $('vozMsg');
+    b.disabled = true; msg.textContent = 'Borrando...'; msg.className = 'int-msg';
+    LP.borrarVozVieja(sb, 7).then(function (r) {
+      b.disabled = false;
+      msg.textContent = r.ok
+        ? (r.borradas ? 'Se borraron ' + r.borradas + '.' : 'No había nada de más de 7 días.')
+        : (r.motivo || 'No se pudo borrar.');
+      msg.className = 'int-msg ' + (r.ok ? 'ok' : 'err');
+      contarVoz();
+    });
+  });
+
+  /* ------------------------------------------------------------ carga --- */
+  pintarLlaves(LP.FUNCIONES_BASE);
+  pintarNombres();
+  diagnosticar();
+  contarVoz();
+
+  /* Los valores de verdad, de la base. Se pinta dos veces a proposito: con
+     la copia local primero, para que el panel no arranque en blanco, y con
+     lo guardado despues. */
+  LP.refrescarFunciones(sb).then(function (v) {
+    if (v) pintarLlaves(v);
+    pintarNombres();
+  });
+
+  LP.notasFrecuentes(sb).then(function (l) {
+    frases = l || [];
+    pintarFrases();
+  });
+});
+</script>
+</body>
+</html>

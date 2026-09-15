@@ -150,7 +150,11 @@
     <ul class="lista" id="confirmadas"></ul>
      </div>
 
-     <div class="col">
+     <!-- La propina es plata DEL MOZO, no del local: la carga y la confirma
+          el. El que solo mira -la caja- no tiene que ver esta columna. Sin
+          el data-solo-edita, la cinta de arriba dice "no se toca nada" con
+          el formulario andando justo abajo. -->
+     <div class="col" data-solo-edita>
     <h2 class="seccion">Cargar propina en efectivo</h2>
     <p class="sub" style="margin:-4px 0 12px">
       Para el comensal de toda la vida que no abre el QR ni transfiere.
@@ -183,6 +187,18 @@
 document.addEventListener('DOMContentLoaded', function () {
   'use strict';
   var esc = LP.esc, money = LP.money;
+  /* La propina es del mozo. La caja mira -tiene que poder decir si una
+     transferencia entro- y la cocina no tiene nada que hacer aca. */
+  if (LP.guardaDeSeccion('propinas.html') === 'no') return;
+  /* Apagadas desde el panel tecnico. La pantalla no se borra: se dice por
+     que esta vacia, que es distinto de que no cargue.                  */
+  if (!LP.func('f_propinas')) {
+    document.getElementById('cargando').innerHTML =
+      '<b>Las propinas est\u00e1n apagadas.</b><br>Se prenden desde el panel t\u00e9cnico. ' +
+      'Lo que ya estaba cargado no se borr\u00f3.';
+    return;
+  }
+
   var sb = LP.client();
   var conn = new LP.ConnBadge(document.getElementById('conn'));
   var soy = LP.quienSoy();
@@ -247,7 +263,10 @@ document.addEventListener('DOMContentLoaded', function () {
           esc(LP.timeAgo(p.created_at)) + '</div></div>' +
       '<div class="cola">' +
         '<div class="monto">' + (p.monto ? money(p.monto) : 'Sin monto') + '</div>' +
-        '<button type="button" class="btn btn-primary" data-confirmar="' + p.id + '">' +
+        /* Confirmar es decir "esta plata entro en MI cuenta": solo lo puede
+           decir el duenio de la cuenta. El que mira ve el pendiente -eso le
+           sirve- pero no lo da por cobrado. */
+        '<button type="button" data-solo-edita class="btn btn-primary" data-confirmar="' + p.id + '">' +
           'Ya la vi en mi cuenta</button>' +
       '</div></li>';
   }

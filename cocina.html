@@ -418,6 +418,10 @@
 document.addEventListener('DOMContentLoaded', function () {
   'use strict';
   var esc = LP.esc, money = LP.money;
+  /* El puesto primero. El mozo entra a mirar el pase -saber que le falta
+     a su mesa- pero no avanza comandas ajenas: eso lo hace la cocina. */
+  if (LP.guardaDeSeccion('cocina.html') === 'no') return;
+
   var sb = LP.client();
 
   /* El pedido llega aca solo despues de que el mozo lo aprobo: la cocina no
@@ -446,6 +450,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var activeTab = 'En cocina';   // en celular arranca en las comandas
   var showAllDone = false;
   var orders = [];
+  var voces = {};          // { pedido_id: [notas de voz con audio] }
   /* Las sesiones de las mesas que estan en pantalla: { id: fila }. De aca
      salen el nombre de la mesa y cuanta gente hay sentada. Si la consulta
      falla queda {} y el tablero se pinta igual, sin el "4 personas". */
@@ -577,6 +582,7 @@ document.addEventListener('DOMContentLoaded', function () {
       (o.detalle_comensal
         ? '<p class="kojo"><b>Ojo</b>' + esc(o.detalle_comensal) + '</p>'
         : '') +
+      vozHTML(o) +
       '<div class="klines">' + lines + '</div>' +
       '<p class="kerr" role="alert" data-err="' + esc(o.id) + '"></p>' +
       /* Una comanda anulada no tiene boton: no hay nada que avanzar.
@@ -587,7 +593,7 @@ document.addEventListener('DOMContentLoaded', function () {
          cocina no usa. */
       (anulada || !next
         ? ''
-        : '<button type="button" class="btn btn-block ' +
+        : '<button type="button" data-solo-edita class="btn btn-block ' +
             (CLASE_BOTON[o.estado] || 'btn-primary') +
             '" data-adv="' + esc(o.id) + '" ' +
             'data-next="' + esc(next) + '" data-desde="' + esc(o.estado) + '"' +
@@ -598,13 +604,28 @@ document.addEventListener('DOMContentLoaded', function () {
          una comanda nueva, solo vuelve a sonar su celular. */
       (anulada || o.estado !== 'Listo'
         ? ''
-        : '<button type="button" class="btn-avisar" data-avisar="' + esc(o.id) + '"' +
+        : '<button type="button" data-solo-edita class="btn-avisar" data-avisar="' + esc(o.id) + '"' +
             (avisando[o.id] ? ' disabled' : '') + '>' +
             (avisando[o.id] === 'enviando' ? 'Avisando...'
               : avisando[o.id] === 'espera' ? 'Avisado' : 'Avisarle de nuevo al mozo') +
           '</button>' +
           '<p class="ravisado">' + esc(avisados[o.id] || '') + '</p>') +
       '</div>';
+  }
+
+  /* El audio del mozo. Solo si la nota de voz llego a tener audio: si no,
+     el texto ya esta arriba en el 'Ojo' y no hay nada que agregar.
+     preload="none" a proposito: hay hasta doce rondas en pantalla y no se
+     bajan doce audios que capaz nadie escucha.                        */
+  function vozHTML(o) {
+    var lista = (voces[o.id] || []).filter(function (v) { return v.audio_url; });
+    if (!lista.length) return '';
+    return lista.map(function (v) {
+      return '<div class="voz-fila"><b>Escuchar</b>' +
+        '<audio controls preload="none" src="' + esc(v.audio_url) + '"></audio>' +
+        (v.segundos ? '<span class="seg">' + Math.round(v.segundos) + 's</span>' : '') +
+        '</div>';
+    }).join('');
   }
 
   /* La tarjeta es la MESA. Adentro van sus rondas, cada una con su estado y
@@ -966,6 +987,16 @@ document.addEventListener('DOMContentLoaded', function () {
       var ids = [];
       data.forEach(function (o) { if (o.sesion_id) ids.push(o.sesion_id); });
       render();
+
+      /* Lo que grabo el mozo, para poder ESCUCHARLO cuando la nota
+         escrita no alcanza: 'bien cocida' se entiende, 'la de la senora
+         de la ventana sin cebolla' no siempre. Va despues de pintar y
+         sin bloquear: que no llegue no atrasa una sola comanda.     */
+      LP.vozDePedidos(sb, data.map(function (o) { return o.id; }))
+        .then(function (m) {
+          voces = m || {};
+          if (Object.keys(voces).length) render();
+        });
       LP.sesionesPorId(sb, ids).then(function (mapa) {
         sesiones = mapa || {};
         render();

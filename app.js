@@ -30,6 +30,7 @@
   var NOTAS_TABLE = CFG.NOTAS_TABLE || 'la_positiva_notas';
   var PERSONAS_TABLE = CFG.PERSONAS_TABLE || 'la_positiva_personas';
   var PROPINAS_TABLE = CFG.PROPINAS_TABLE || 'la_positiva_propinas';
+  var VOZ_TABLE = CFG.VOZ_TABLE || 'la_positiva_voz';
   var BUCKET = CFG.BUCKET;
   var IMG_BASE = CFG.IMG_BASE;
 
@@ -466,6 +467,12 @@
      (reintentar no sirve) de "no hay a quien avisarle" o de un corte de red.
      'url' es la pantalla que se abre al tocar la notificacion.            */
   function avisar(sb, empleado, title, body, pedidoId, url, insistir) {
+    /* Apagados desde el panel tecnico. No es un error: es una decision del
+       local, y por eso lleva su propio codigo. */
+    if (!func('f_avisos')) {
+      return Promise.resolve({ ok: false, config: false, codigo: 'apagado',
+        motivo: 'Los avisos al celular est\u00e1n apagados.' });
+    }
     if (!sb) {
       return Promise.resolve({ ok: false, config: false, codigo: 'sin-cliente',
         motivo: 'No hay conexi\u00f3n con el sistema.' });
@@ -604,6 +611,10 @@
      { telefono } para uno suelto (el comensal). Devuelve la misma forma que
      avisar(): { ok, codigo, motivo }.                                     */
   function avisarWhatsapp(sb, opts) {
+    if (!func('f_avisos')) {
+      return Promise.resolve({ ok: false, codigo: 'apagado',
+        motivo: 'Los avisos est\u00e1n apagados.' });
+    }
     if (!sb) {
       return Promise.resolve({ ok: false, codigo: 'sin-cliente',
         motivo: 'No hay conexi\u00f3n con el sistema.' });
@@ -858,7 +869,10 @@
       { url: 'carta-fotos.html', texto: 'La carta y lo que se termin\u00f3' },
       { url: 'qr-mesa.html',     texto: 'Los QR de las mesas' },
       { url: 'propinas.html',    texto: 'Las propinas de los mozos' },
-      { url: 'diseno.html',      texto: 'El diseño del local' }
+      { url: 'diseno.html',      texto: 'El diseño del local' },
+      /* Ultimo y con el nombre de lo que es. No se esconde: la duenia tiene
+         que poder llegar sin que nadie le pase la direccion por WhatsApp. */
+      { url: 'tecnico.html',     texto: 'Panel técnico' }
     ],
     /* El mozo tiene cuatro caminos, en el orden del servicio: tomar la
        comanda EL MISMO (comanda.html: elige mesa, cuanta gente y carga los
@@ -890,7 +904,28 @@
     ]
   };
 
-  function funcionesDe(rol) { return FUNCIONES_POR_ROL[rol] || []; }
+  /* El renombre del panel tecnico se aplica ACA, en el unico lugar por el
+     que pasan todos los menus. Si la copia local esta rota, devuelve los
+     nombres de fabrica: nadie se queda sin menu por un rotulo.        */
+  /* Que pantalla depende de que interruptor. Si la funcion esta apagada, la
+     pantalla no figura en el menu de nadie: dejar el link llevaria a una
+     pantalla vacia, y eso se lee como "se rompio". */
+  var LLAVE_DE_PANTALLA = {
+    'propinas.html': 'f_propinas',
+    'cobrar.html': 'f_qr_pago'
+  };
+
+  function funcionesDe(rol) {
+    var base = FUNCIONES_POR_ROL[rol] || [];
+    try {
+      return base.filter(function (f) {
+        var llave = LLAVE_DE_PANTALLA[f.url];
+        return !llave || func(llave);
+      }).map(function (f) {
+        return { url: f.url, texto: nombreDePantalla(f.url, f.texto) };
+      });
+    } catch (e) { return base; }
+  }
 
   /* Escribe quien sos en las pantallas que tengan un [data-quien].
      Se llama sola al cargar app.js: asi ninguna pantalla se puede olvidar
@@ -2031,6 +2066,11 @@
   var CUBIERTO_ID = 'cubiertos';
 
   function importeCubierto(sb) {
+    /* El interruptor del panel tecnico gana sobre el importe: apagado es
+       apagado, aunque quede un numero cargado en la base. Se pregunta aca
+       porque este es el unico camino por el que la linea del cubierto
+       entra a un pedido.                                              */
+    if (!func('f_cubiertos')) return Promise.resolve(0);
     return ajustes(sb).then(function (m) {
       // Solo digitos: "1.500" escrito a mano en la base es 1500, no 1,5.
       var n = Math.round(Number(String(m.cubierto_por_mesa || '').replace(/[^0-9]/g, '')));
@@ -2213,6 +2253,11 @@
   /* La URL que hay que mostrar para un plato: la propia si existe, si no la
      que venia en la carta.                                                */
   function fotoDePlato(propias, plato) {
+    /* Apagadas desde el panel tecnico: no hay foto para nadie. Se decide aca
+       porque este es el unico camino por el que una pantalla consigue la
+       foto de un plato. Las fotos cargadas NO se borran: vuelven enteras al
+       prender el interruptor de nuevo. */
+    if (!func('f_fotos')) return null;
     if (propias && propias[plato.id]) return propias[plato.id];
     return plato.photo ? (IMG_BASE + plato.photo) : null;
   }
@@ -2675,6 +2720,549 @@
       });
   }
 
+
+  /* ==========================================================================
+     FASE 5 - lo que se puede prender, apagar y renombrar
+     ==========================================================================
+     Un interruptor es una fila en la_positiva_ajustes con clave 'f_algo' y
+     valor '1' o '0'. Nada mas. Se leen todos juntos al arrancar y quedan en
+     una copia local para que `func()` pueda contestar SIN esperar la red: las
+     pantallas preguntan mientras pintan, y esperar una consulta ahi seria un
+     parpadeo en cada carga.
+
+     LA REGLA DE ORO DE ESTO: ante la duda, PRENDIDO. Una copia local rota, un
+     Supabase caido o un valor raro dejan la funcion andando. Apagar algo que
+     el local usa en medio de un servicio es mucho peor que mostrar de mas un
+     boton que la duenia queria esconder.                                  */
+  var FUNCIONES_BASE = {
+    f_voz: true,              // notas de voz
+    f_notas_frecuentes: true, // los botones de notas repetidas
+    f_propinas: true,
+    f_cubiertos: true,
+    f_estadisticas: true,
+    f_fotos: true,
+    f_carta_comensal: true,   // que el comensal pida desde el QR
+    f_qr_pago: true,
+    f_avisos: true
+  };
+
+  var FUNCIONES_KEY = 'lp_funciones';
+  var funcionesCache = null;
+
+  function leerFunciones() {
+    if (funcionesCache) return funcionesCache;
+    var v = {};
+    for (var k in FUNCIONES_BASE) v[k] = FUNCIONES_BASE[k];
+    try {
+      var crudo = localStorage.getItem(FUNCIONES_KEY);
+      if (crudo) {
+        var guardado = JSON.parse(crudo);
+        for (var c in FUNCIONES_BASE) {
+          if (guardado && typeof guardado[c] === 'boolean') v[c] = guardado[c];
+        }
+      }
+    } catch (e) {}
+    funcionesCache = v;
+    return v;
+  }
+
+  /* Sincrona a proposito. Una clave que no existe devuelve true: si maniana
+     alguien pregunta por una funcion que todavia no esta en la lista, se ve,
+     no desaparece.                                                        */
+  function func(clave) {
+    var v = leerFunciones();
+    return v[clave] === undefined ? true : v[clave] !== false;
+  }
+
+  /* Esconde lo que corresponda sin que cada pantalla escriba una linea:
+       data-si-func="f_propinas"  -> se ve solo si esta prendido
+       data-no-func="f_propinas"  -> se ve solo si esta apagado
+     Se corre sola al arrancar y otra vez cuando llegan los valores de la
+     base. Las pantallas que pintan de nuevo la vuelven a llamar.         */
+  function aplicarFunciones(raiz) {
+    var doc = raiz || document;
+    var si = doc.querySelectorAll('[data-si-func]');
+    for (var i = 0; i < si.length; i++) si[i].hidden = !func(si[i].getAttribute('data-si-func'));
+    var no = doc.querySelectorAll('[data-no-func]');
+    for (var j = 0; j < no.length; j++) no[j].hidden = func(no[j].getAttribute('data-no-func'));
+  }
+
+  /* Trae los interruptores y los nombres de las pantallas de la base. Va
+     suelta y sin bloquear, igual que refrescarTema(): si falla no pasa nada,
+     queda lo de la copia local.                                           */
+  function refrescarFunciones(sb) {
+    var cliente = sb || client();
+    if (!cliente) return Promise.resolve(null);
+    return cliente.from(AJUSTES_TABLE).select('clave, valor').then(function (res) {
+      if (res.error) return null;
+      var v = {}, nombres = {};
+      for (var k in FUNCIONES_BASE) v[k] = FUNCIONES_BASE[k];
+      (res.data || []).forEach(function (a) {
+        if (a.clave && a.clave.indexOf('f_') === 0) {
+          v[a.clave] = String(a.valor) !== '0';
+        } else if (a.clave && a.clave.indexOf('nombre_pantalla_') === 0) {
+          var archivo = a.clave.slice('nombre_pantalla_'.length).replace(/_/g, '.');
+          var texto = String(a.valor || '').trim().slice(0, 40);
+          if (texto) nombres[archivo] = texto;
+        }
+      });
+      funcionesCache = v;
+      nombresCache = nombres;
+      try {
+        localStorage.setItem(FUNCIONES_KEY, JSON.stringify(v));
+        localStorage.setItem(NOMBRES_KEY, JSON.stringify(nombres));
+      } catch (e) {}
+      try { aplicarFunciones(); } catch (e) {}
+      return v;
+    }, function () { return null; });
+  }
+
+  function guardarFuncion(sb, clave, prendido, quien) {
+    return guardarAjuste(sb, clave, prendido ? '1' : '0', quien).then(function (ok) {
+      if (ok) {
+        var v = leerFunciones();
+        v[clave] = !!prendido;
+        funcionesCache = v;
+        try { localStorage.setItem(FUNCIONES_KEY, JSON.stringify(v)); } catch (e) {}
+        try { aplicarFunciones(); } catch (e) {}
+      }
+      return ok;
+    });
+  }
+
+  /* --- Renombrar las pantallas --------------------------------------------
+     El duenio pidio poder cambiar como se llama una pantalla EN LA REUNION,
+     sin volver a programar: "aca no le decimos Los pagos, le decimos Caja".
+     Es una fila mas en ajustes, con clave nombre_pantalla_caja_html.
+
+     Cambia el rotulo, NUNCA el archivo ni el permiso. Renombrar no mueve a
+     nadie de puesto.                                                      */
+  var NOMBRES_KEY = 'lp_nombres';
+  var nombresCache = null;
+
+  function nombresDePantalla() {
+    if (nombresCache) return nombresCache;
+    var m = {};
+    try {
+      var crudo = localStorage.getItem(NOMBRES_KEY);
+      if (crudo) {
+        var g = JSON.parse(crudo);
+        if (g && typeof g === 'object') m = g;
+      }
+    } catch (e) {}
+    nombresCache = m;
+    return m;
+  }
+
+  function nombreDePantalla(archivo, porDefecto) {
+    var m = nombresDePantalla();
+    var v = m && m[archivo];
+    return (typeof v === 'string' && v.trim()) ? v.trim() : porDefecto;
+  }
+
+  function guardarNombrePantalla(sb, archivo, texto, quien) {
+    var clave = 'nombre_pantalla_' + String(archivo).replace(/\./g, '_');
+    var limpio = String(texto || '').trim().slice(0, 40);
+    return guardarAjuste(sb, clave, limpio, quien).then(function (ok) {
+      if (ok) {
+        var m = nombresDePantalla();
+        if (limpio) m[archivo] = limpio; else delete m[archivo];
+        nombresCache = m;
+        try { localStorage.setItem(NOMBRES_KEY, JSON.stringify(m)); } catch (e) {}
+      }
+      return ok;
+    });
+  }
+
+  /* --- Quien entra a que --------------------------------------------------
+     ANTES DE LEER ESTO: la app NO tiene login. Se entra tocando un nombre en
+     una lista, sin clave. Cualquier candado que se ponga aca es de madera:
+     evita el error honesto -que un mozo toque los pagos sin querer- y no
+     detiene a nadie que quiera entrar como Nelly. Esta escrito en la
+     pantalla de bloqueo con todas las letras, para que nadie confunda esto
+     con seguridad.
+
+     Tres valores y nada mas:
+       'edita'  entra y puede tocar todo lo de esa pantalla
+       've'     entra, mira, y lo que cambia plata o estado esta apagado
+       'no'     no entra
+
+     'sin' es el que todavia no toco su nombre en la portada. No se lo trata
+     como intruso: se lo manda a decir quien es, que es lo unico que le
+     falta.                                                                */
+  var PERMISOS = {
+    'comanda.html':     { Duenio: 'edita', Mozo: 'edita', Caja: 'no',    Cocina: 'no' },
+    'mozo.html':        { Duenio: 'edita', Mozo: 'edita', Caja: 've',    Cocina: 'no' },
+    'mesas.html':       { Duenio: 'edita', Mozo: 'edita', Caja: 'edita', Cocina: 'no' },
+    'cocina.html':      { Duenio: 'edita', Mozo: 've',    Caja: 'no',    Cocina: 'edita' },
+    'caja.html':        { Duenio: 'edita', Mozo: 'no',    Caja: 'edita', Cocina: 'no' },
+    'cobrar.html':      { Duenio: 'edita', Mozo: 'edita', Caja: 'edita', Cocina: 'no' },
+    /* Ojo con esta fila: la carta es la UNICA pantalla donde conviven tres
+       trabajos de tres puestos distintos, y por eso NO puede ir en 've'.
+       Un 've' pinta la cinta de "no se toca nada" arriba de todo, y la
+       cocina justamente entra aca a marcar lo que se termino: leer que no
+       toque nada y dejar un plato agotado sin marcar es una mesa pidiendo
+       algo que no hay. Entran en 'edita' los que tienen algo que hacer, y
+       QUE pueden hacer lo deciden las tres reglas finas de abajo. La caja
+       es la unica que solo mira: entra para saber cuanto sale un plato. */
+    'carta-fotos.html': { Duenio: 'edita', Mozo: 'edita', Caja: 've',    Cocina: 'edita' },
+    'qr-mesa.html':     { Duenio: 'edita', Mozo: 'no',    Caja: 'edita', Cocina: 'no' },
+    'propinas.html':    { Duenio: 'edita', Mozo: 'edita', Caja: 've',    Cocina: 'no' },
+    'admin.html':       { Duenio: 'edita', Mozo: 'no',    Caja: 'no',    Cocina: 'no' },
+    'diseno.html':      { Duenio: 'edita', Mozo: 'no',    Caja: 'no',    Cocina: 'no' },
+    'tecnico.html':     { Duenio: 'edita', Mozo: 'no',    Caja: 'no',    Cocina: 'no' },
+    'alta.html':        { Duenio: 'edita', Mozo: 'edita', Caja: 'edita', Cocina: 'edita' }
+  };
+
+  /* Adentro de carta-fotos conviven dos trabajos distintos: marcar lo que se
+     termino -lo hace la cocina todo el tiempo- y tocar precios y fotos, que
+     es de la duenia. Por eso una regla por pantalla no alcanza y hay tres
+     mas finas para ese pedazo.                                            */
+  var PERMISOS_FINOS = {
+    'carta.precios':  { Duenio: 'edita', Mozo: 'no',    Caja: 'no', Cocina: 'no' },
+    'carta.fotos':    { Duenio: 'edita', Mozo: 'edita', Caja: 'no', Cocina: 'no' },
+    'carta.agotados': { Duenio: 'edita', Mozo: 'edita', Caja: 'no', Cocina: 'edita' }
+  };
+
+  function permisoDe(seccion, rol) {
+    var fila = PERMISOS[seccion] || PERMISOS_FINOS[seccion];
+    if (!fila) return 'edita';                    // pantalla sin regla: se ve
+    if (!rol) return 'sin';
+    return fila[rol] || 'no';
+  }
+
+  function puedeEditar(seccion) {
+    var yo = quienSoy();
+    return permisoDe(seccion, yo && yo.rol) === 'edita';
+  }
+
+  function puedeVer(seccion) {
+    var p = permisoDe(seccion, (quienSoy() || {}).rol);
+    return p === 'edita' || p === 've';
+  }
+
+  /* El portero de la pantalla. Se llama arriba de todo, antes de pintar.
+     Devuelve 'edita' o 've' y, si no corresponde, pinta el cartel y devuelve
+     'no' para que la pantalla se frene sola.
+
+     No hay puerta de atras a proposito: si hiciera falta una, seria mentira
+     que existe el candado.                                                */
+  function guardaDeSeccion(seccion) {
+    var yo = quienSoy();
+    var p = permisoDe(seccion, yo && yo.rol);
+    if (p === 'edita') return p;
+    if (p === 've') {
+      /* Solo mirar. La clase apaga por CSS todo lo marcado con
+         [data-solo-edita] -los botones que cambian plata o estado- y la
+         cinta de arriba dice por que, para que nadie crea que se rompio. */
+      try {
+        document.body.classList.add('solo-mirar');
+        var cinta = document.createElement('p');
+        cinta.className = 'cinta-mirar';
+        cinta.setAttribute('role', 'status');
+        cinta.textContent = 'Estás mirando. Desde tu puesto no se toca nada de esta pantalla.';
+        var nav = document.querySelector('.nav-fija');
+        if (nav && nav.parentNode) nav.parentNode.insertBefore(cinta, nav.nextSibling);
+        else document.body.insertBefore(cinta, document.body.firstChild);
+      } catch (e) {}
+      return p;
+    }
+
+    var titulo, cuerpo, boton, href;
+    if (p === 'sin') {
+      titulo = 'Decí quién sos';
+      cuerpo = 'Esta pantalla necesita saber con quién habla para dejar rastro de ' +
+               'quién hizo cada cosa. Tocá tu nombre en la portada y volvé.';
+      boton = 'Ir a decir quién soy';
+      href = './';
+    } else {
+      titulo = 'Esta pantalla no es de tu puesto';
+      cuerpo = esc((yo && yo.nombre) || 'Vos') + ' entró como <b>' +
+               esc((yo && yo.nota) || (yo && yo.rol) || 'invitado') +
+               '</b>, y esto lo maneja otro puesto. Si lo tenés que usar, pedí que ' +
+               'te cambien el puesto en la portada.';
+      boton = 'Volver a lo mío';
+      href = yo ? pantallaDe(yo.rol) : './';
+    }
+
+    try {
+      document.title = 'La Positiva - ' + titulo;
+      document.body.innerHTML =
+        '<div class="wrap" style="max-width:520px;padding-top:64px;text-align:center">' +
+          '<p style="font-size:44px;line-height:1;margin:0 0 14px" aria-hidden="true">🔒</p>' +
+          '<h1 style="margin:0 0 10px">' + esc(titulo) + '</h1>' +
+          '<p style="color:var(--muted);font-size:16px;line-height:1.6;margin:0 0 22px">' +
+            cuerpo + '</p>' +
+          '<p><a class="btn btn-primary" href="' + esc(href) + '" ' +
+            'style="min-height:48px;display:inline-flex;align-items:center;padding:0 22px">' +
+            esc(boton) + '</a></p>' +
+          '<p style="color:var(--muted);font-size:13px;line-height:1.6;margin-top:28px">' +
+            'Esto ordena el trabajo, no protege datos: al sistema se entra ' +
+            'tocando un nombre, sin contraseña.</p>' +
+        '</div>';
+    } catch (e) {}
+    return 'no';
+  }
+
+  /* --- Notas frecuentes ----------------------------------------------------
+     Lo que se repite todos los dias: "sin sal", "bien cocida", "sin cebolla".
+     Son COMPARTIDAS por todo el local y no de cada mozo, por tres razones:
+     no son de Jonathan, son del bodegon; la que carga uno le sirve al otro
+     desde el minuto cero; y como se entra tocando un nombre sin clave, "de
+     cada mozo" seria una lista por nombre escrito a mano, que es peor.
+
+     Viven en una sola fila de ajustes separadas por |. Una tabla para nueve
+     frases de dos palabras seria una tabla de mas.                        */
+  var NOTAS_BASE = ['Sin sal', 'Sin cebolla', 'Bien cocida', 'A punto', 'Jugosa',
+                    'Sin picante', 'Sin tacc', 'Para compartir', 'Sin hielo'];
+
+  function limpiarNotas(lista) {
+    var vistas = Object.create(null), out = [];
+    (lista || []).forEach(function (t) {
+      var v = String(t || '').replace(/[|\r\n]+/g, ' ').trim().slice(0, 40);
+      if (!v) return;
+      var clave = v.toLowerCase();
+      if (vistas[clave]) return;
+      vistas[clave] = true;
+      out.push(v);
+    });
+    return out.slice(0, 24);          // mas de 24 ya no se leen de un vistazo
+  }
+
+  function notasFrecuentes(sb) {
+    if (!sb) return Promise.resolve(NOTAS_BASE.slice());
+    return ajustes(sb).then(function (m) {
+      var crudo = m.notas_frecuentes;
+      if (crudo === undefined || crudo === null) return NOTAS_BASE.slice();
+      /* Una lista vacia guardada a proposito es una decision, no un error:
+         se respeta y no vuelven las de fabrica. */
+      return limpiarNotas(String(crudo).split('|'));
+    }, function () { return NOTAS_BASE.slice(); });
+  }
+
+  function guardarNotasFrecuentes(sb, lista, quien) {
+    var limpia = limpiarNotas(lista);
+    return guardarAjuste(sb, 'notas_frecuentes', limpia.join('|'), quien)
+      .then(function (ok) { return ok ? limpia : null; });
+  }
+
+  /* --- Notas de voz --------------------------------------------------------
+     Tres capas separadas y en este orden de importancia:
+
+       1. el audio           lo que realmente se dijo
+       2. la transcripcion   el texto crudo, sin tocar
+       3. el resumen         lo limpio para el cocinero
+
+     La 1 y la 2 se guardan ANTES de pedir la 3. Si Gemini no contesta, no
+     hay clave o el celular grabo un formato que no le gusta, la comanda sale
+     igual con lo que ya esta guardado. El resumen es lo unico prescindible
+     de los tres y se lo trata asi en todo el codigo.
+
+     El resumen NUNCA viaja solo a la cocina: lo revisa y lo corrige el mozo
+     antes de mandarlo. Aca no hay nada que mande nada: esto guarda y
+     devuelve, la pantalla decide.                                         */
+
+  function blobABase64(blob) {
+    return new Promise(function (resolve, reject) {
+      var fr = new FileReader();
+      fr.onerror = function () { reject(new Error('No se pudo leer el audio.')); };
+      fr.onload = function () {
+        var s = String(fr.result || '');
+        var coma = s.indexOf(',');
+        resolve(coma >= 0 ? s.slice(coma + 1) : '');
+      };
+      fr.readAsDataURL(blob);
+    });
+  }
+
+  function extensionDeAudio(tipo) {
+    var t = String(tipo || '').toLowerCase();
+    if (t.indexOf('webm') !== -1) return 'webm';
+    if (t.indexOf('ogg') !== -1) return 'ogg';
+    if (t.indexOf('mp4') !== -1 || t.indexOf('m4a') !== -1 || t.indexOf('aac') !== -1) return 'm4a';
+    if (t.indexOf('mpeg') !== -1 || t.indexOf('mp3') !== -1) return 'mp3';
+    if (t.indexOf('wav') !== -1) return 'wav';
+    return 'webm';
+  }
+
+  /* Sube el audio al mismo bucket de las fotos. Devuelve { path, url } o
+     null: que no se pueda subir NO invalida la nota, solo la deja sin audio
+     para escuchar despues.                                                */
+  function subirAudio(sb, blob) {
+    if (!sb || !blob || !blob.size) return Promise.resolve(null);
+    if (blob.size > 5 * 1024 * 1024) return Promise.resolve(null);
+    var tipo = (blob.type || 'audio/webm').split(';')[0];
+    var path = 'voz/' + Date.now() + '-' + Math.random().toString(36).slice(2, 7) +
+               '.' + extensionDeAudio(tipo);
+    return sb.storage.from(BUCKET).upload(path, blob, { contentType: tipo, upsert: false })
+      .then(function (up) {
+        if (up.error) { console.warn('[La Positiva] audio no subido', up.error); return null; }
+        var pub = sb.storage.from(BUCKET).getPublicUrl(path);
+        var url = pub && pub.data && pub.data.publicUrl;
+        return url ? { path: path, url: url, tipo: tipo } : null;
+      }, function (e) { console.warn('[La Positiva] audio no subido', e); return null; });
+  }
+
+  /* Deja la nota guardada con lo que haya. Nunca rechaza: devuelve la fila o
+     null, y el que llama sigue de largo igual.                            */
+  function guardarVoz(sb, datos) {
+    if (!sb) return Promise.resolve(null);
+    datos = datos || {};
+    return sb.from(VOZ_TABLE).insert({
+      pedido_id: datos.pedido_id || null,
+      sesion_id: datos.sesion_id || null,
+      mesa: datos.mesa ? String(datos.mesa).slice(0, 20) : null,
+      autor: datos.autor ? String(datos.autor).slice(0, 40) : null,
+      destino: datos.destino === 'cocina' ? 'cocina' : 'comanda',
+      audio_path: datos.audio_path || null,
+      audio_url: datos.audio_url || null,
+      audio_tipo: datos.audio_tipo || null,
+      segundos: numeroOnulo(datos.segundos),
+      transcripcion: datos.transcripcion ? String(datos.transcripcion).slice(0, 4000) : null,
+      transcripcion_de: datos.transcripcion_de || null,
+      resumen: datos.resumen ? String(datos.resumen).slice(0, 400) : null,
+      resumen_estado: datos.resumen_estado || 'pendiente',
+      resumen_modelo: datos.resumen_modelo || null,
+      resumen_motivo: datos.resumen_motivo ? String(datos.resumen_motivo).slice(0, 200) : null,
+      texto_usado: datos.texto_usado ? String(datos.texto_usado).slice(0, 500) : null
+    }).select().single().then(function (res) {
+      if (res.error) { console.warn('[La Positiva] nota de voz no guardada', res.error); return null; }
+      return res.data;
+    }, function (e) { console.warn('[La Positiva] nota de voz no guardada', e); return null; });
+  }
+
+  function actualizarVoz(sb, id, campos) {
+    if (!sb || !id) return Promise.resolve(false);
+    return sb.from(VOZ_TABLE).update(campos || {}).eq('id', id)
+      .then(function (res) { return !res.error; }, function () { return false; });
+  }
+
+  /* La comanda todavia no existe cuando el mozo graba: el pedido_id se pega
+     despues, cuando el insert del pedido volvio con su id. */
+  function ligarVozAPedido(sb, ids, pedidoId) {
+    var lista = (ids || []).filter(Boolean);
+    if (!sb || !lista.length || !pedidoId) return Promise.resolve(false);
+    return sb.from(VOZ_TABLE).update({ pedido_id: pedidoId }).in('id', lista)
+      .then(function (res) { return !res.error; }, function () { return false; });
+  }
+
+  function vozDePedidos(sb, ids) {
+    var lista = (ids || []).filter(Boolean);
+    if (!sb || !lista.length) return Promise.resolve({});
+    return sb.from(VOZ_TABLE).select('*').in('pedido_id', lista)
+      .order('created_at', { ascending: true })
+      .then(function (res) {
+        if (res.error) return {};
+        var m = {};
+        (res.data || []).forEach(function (v) {
+          (m[v.pedido_id] = m[v.pedido_id] || []).push(v);
+        });
+        return m;
+      }, function () { return {}; });
+  }
+
+  /* El reloj del lado del celular. La Edge Function ya se corta sola a los
+     20 segundos, pero eso NO alcanza: si el telefono pierde la senial en el
+     medio, o si leer el audio se traba, la promesa no vuelve nunca y el mozo
+     se queda mirando "armando..." para siempre, sin enterarse de que puede
+     seguir igual. Paso de verdad en una prueba, no es una precaucion teorica.
+
+     25 segundos: un poco mas que los 20 del servidor, para darle lugar a que
+     conteste el primero y diga el motivo de verdad. Vencido el plazo se
+     devuelve la forma de siempre, asi la pantalla no aprende un caso nuevo. */
+  var ESPERA_RESUMEN = 25000;
+
+  function conReloj(promesa, ms) {
+    return new Promise(function (resolve) {
+      var listo = false;
+      function terminar(r) {
+        if (listo) return;
+        listo = true;
+        clearTimeout(t);
+        resolve(r);
+      }
+      var t = setTimeout(function () {
+        terminar({ ok: false, motivo: 'error',
+          error: 'El resumen tardó demasiado. Queda el audio y lo que se escuchó.' });
+      }, ms);
+      promesa.then(terminar, function (e) {
+        console.warn('[La Positiva] resumen no pedido', e);
+        terminar({ ok: false, motivo: 'error',
+          error: humanError(e, 'No pudimos contactar al servidor del resumen.') });
+      });
+    });
+  }
+
+  /* Le pide el resumen a la Edge Function. Misma forma de respuesta que
+     avisar() y avisarWhatsapp(): { ok, motivo, ... }. 'sin-clave' NO es un
+     error: es el estado normal mientras el local no cargo la clave, y se
+     distingue para poder decirlo con esas palabras en pantalla.          */
+  function resumirVoz(sb, opts) {
+    opts = opts || {};
+    if (!sb) {
+      return Promise.resolve({ ok: false, motivo: 'sin-cliente',
+        error: 'No hay conexión con el sistema.' });
+    }
+    function pedir(audio64, mime) {
+      return sb.functions.invoke('resumir-nota', {
+        body: { audio: audio64 || '', mime: mime || '',
+                transcripcion: opts.transcripcion || '' }
+      }).then(function (res) {
+        var d = res.data || {};
+        if (res.error && !d.motivo) {
+          return { ok: false, motivo: 'error',
+            error: humanError(res.error, 'El servidor del resumen no respondió.') };
+        }
+        return d.ok
+          ? { ok: true, motivo: 'ok', transcripcion: d.transcripcion,
+              resumen: d.resumen, modelo: d.modelo, tokens: d.tokens }
+          : { ok: false, motivo: d.motivo || 'error',
+              error: d.error || 'No se pudo resumir.' };
+      }, function (e) {
+        console.warn('[La Positiva] resumen no pedido', e);
+        return { ok: false, motivo: 'error',
+          error: humanError(e, 'No pudimos contactar al servidor del resumen.') };
+      });
+    }
+
+    /* El reloj envuelve TODO, no solo el pedido: leer el audio del celular
+       tambien se puede trabar y ahi no hay red de por medio que avise. */
+    if (!opts.blob || !opts.blob.size) return conReloj(pedir('', ''), ESPERA_RESUMEN);
+    return conReloj(blobABase64(opts.blob).then(function (b64) {
+      return pedir(b64, opts.blob.type || '');
+    }, function () {
+      // Sin poder leer el audio todavia queda el texto: se intenta con eso.
+      return pedir('', '');
+    }), ESPERA_RESUMEN);
+  }
+
+  /* Limpieza a mano desde el panel tecnico. Los audios quedan en un bucket
+     PUBLICO, igual que las fotos de los platos: no se guardan para siempre
+     "por las dudas".                                                      */
+  function borrarVozVieja(sb, dias) {
+    if (!sb) return Promise.resolve({ ok: false, motivo: 'No hay conexión.' });
+    var d = Number(dias);
+    if (!isFinite(d) || d < 1) d = 7;
+    var corte = new Date(Date.now() - d * 24 * 60 * 60 * 1000).toISOString();
+    return sb.from(VOZ_TABLE).select('id, audio_path').lt('created_at', corte)
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return { ok: false, motivo: 'No se pudo leer.' }; }
+        var filas = res.data || [];
+        if (!filas.length) return { ok: true, borradas: 0 };
+        var paths = filas.map(function (f) { return f.audio_path; }).filter(Boolean);
+        var ids = filas.map(function (f) { return f.id; });
+        var limpieza = paths.length
+          ? sb.storage.from(BUCKET).remove(paths).then(null, function () { return null; })
+          : Promise.resolve(null);
+        return limpieza.then(function () {
+          return sb.from(VOZ_TABLE).delete().in('id', ids).then(function (del) {
+            if (del.error) { humanError(del.error); return { ok: false, motivo: 'No se pudo borrar.' }; }
+            return { ok: true, borradas: ids.length };
+          });
+        });
+      }, function (e) { humanError(e); return { ok: false, motivo: 'No se pudo borrar.' }; });
+  }
+
   global.LP = {
     SUPABASE_URL: SUPABASE_URL,
     SUPABASE_ANON: SUPABASE_ANON,
@@ -2756,6 +3344,31 @@
     PERSONAS_TABLE: PERSONAS_TABLE,
     personas: personas,
     PROPINAS_TABLE: PROPINAS_TABLE,
+    VOZ_TABLE: VOZ_TABLE,
+    FUNCIONES_BASE: FUNCIONES_BASE,
+    func: func,
+    aplicarFunciones: aplicarFunciones,
+    refrescarFunciones: refrescarFunciones,
+    guardarFuncion: guardarFuncion,
+    nombreDePantalla: nombreDePantalla,
+    nombresDePantalla: nombresDePantalla,
+    guardarNombrePantalla: guardarNombrePantalla,
+    PERMISOS: PERMISOS,
+    PERMISOS_FINOS: PERMISOS_FINOS,
+    permisoDe: permisoDe,
+    puedeEditar: puedeEditar,
+    puedeVer: puedeVer,
+    guardaDeSeccion: guardaDeSeccion,
+    NOTAS_BASE: NOTAS_BASE,
+    notasFrecuentes: notasFrecuentes,
+    guardarNotasFrecuentes: guardarNotasFrecuentes,
+    subirAudio: subirAudio,
+    guardarVoz: guardarVoz,
+    actualizarVoz: actualizarVoz,
+    ligarVozAPedido: ligarVozAPedido,
+    vozDePedidos: vozDePedidos,
+    resumirVoz: resumirVoz,
+    borrarVozVieja: borrarVozVieja,
     mozosActivos: mozosActivos,
     guardarAliasMozo: guardarAliasMozo,
     reportarPropina: reportarPropina,
@@ -2829,6 +3442,11 @@
      documento ya suele estar armado; el listener cubre el caso contrario. */
   function alArrancar() {
     mostrarQuienSoy();
+    /* Los interruptores se aplican con la copia local ANTES de pintar, y
+       despues se refrescan contra la base. Los dos van envueltos: que un
+       interruptor falle no puede tumbar la pantalla. */
+    try { aplicarFunciones(); } catch (e) {}
+    try { refrescarFunciones(); } catch (e) {}
     /* Envuelta aparte: si armar la barra fallara, quien sos ya se escribio y
        el resto del turno sigue andando. */
     try { navegacionFija(); } catch (e) {}

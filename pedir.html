@@ -493,7 +493,7 @@
     </div>
   </header>
 
-  <div class="tip-wrap">
+  <div class="tip-wrap" data-si-func="f_propinas">
     <div class="tip-card" id="tipCard" hidden>
       <div class="tip-txt">
         <strong>&iquest;Quer&eacute;s dejarle propina a tu mozo?</strong>
@@ -534,6 +534,13 @@
     <button type="button" class="btn btn-primary btn-block btn-grande btn-cta" id="goCheckoutBtn">
       Elegir como pagar
     </button>
+    <!-- Cuando el local NO deja que el comensal pida solo. La carta y la
+         cuenta se siguen viendo; lo unico que desaparece es el boton de
+         mandar. Lo prende y lo apaga el panel tecnico. -->
+    <p class="demo-note" id="soloMozo" hidden>
+      En este local el pedido lo toma el mozo. Arm&aacute; tu lista ac&aacute; y mostr&aacute;sela
+      cuando pase por la mesa.
+    </p>
   </div>
 </div>
 
@@ -1159,6 +1166,12 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   function enviarPedido() {
+    /* La red de atras. El boton ya no esta, pero un formulario se puede
+       mandar con Enter desde un campo: aca es donde de verdad se frena. */
+    if (!LP.func('f_carta_comensal')) {
+      LP.toast('En este local el pedido lo toma el mozo.', 'err');
+      return;
+    }
     var metodo = selectedMetodo();
     var btn = document.getElementById('payBtn');
 
@@ -1476,9 +1489,27 @@ document.addEventListener('DOMContentLoaded', function () {
   if (sb && !SIN_MESA) {
     LP.mozosActivos(sb).then(function (lista) {
       mozosLista = lista || [];
-      tipCard.hidden = !mozosLista.length;
+      tipCard.hidden = !mozosLista.length || !LP.func('f_propinas');
     });
   }
+
+  /* Que el comensal pueda pedir solo es una decision del local. Se aplica
+     cuando LLEGAN los interruptores de la base y no antes: el celular del
+     comensal no tiene copia local -es la primera vez que entra- y con
+     data-si-func el boton se veria un instante y despues desapareceria.
+
+     Nunca esconde la carta ni la cuenta: solo el boton de mandar. Un
+     comensal que no puede pedir igual tiene que poder mirar y sumar. */
+  function aplicarPedidoPropio() {
+    var deja = LP.func('f_carta_comensal');
+    var cta = document.getElementById('goCheckoutBtn');
+    var nota = document.getElementById('soloMozo');
+    if (cta) cta.hidden = !deja;
+    if (nota) nota.hidden = deja;
+    if (tipCard && !LP.func('f_propinas')) tipCard.hidden = true;
+  }
+  aplicarPedidoPropio();
+  LP.refrescarFunciones(sb).then(aplicarPedidoPropio);
 
   /* ------------------------------------------------------- seguimiento -- */
   var STEPS = ['Por aprobar', 'En cocina', 'Cocinando', 'Listo', 'Entregado'];

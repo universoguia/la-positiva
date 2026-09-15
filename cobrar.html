@@ -193,6 +193,16 @@
 document.addEventListener('DOMContentLoaded', function () {
   'use strict';
   var esc = LP.esc, money = LP.money;
+  /* Cobrar con QR lo hacen el mozo, la caja y la duenia. La cocina no. */
+  if (LP.guardaDeSeccion('cobrar.html') === 'no') return;
+  /* El cobro con QR, apagado desde el panel tecnico: un local que cobra
+     solo en efectivo no lo quiere ni ver. */
+  if (!LP.func('f_qr_pago')) {
+    LP.toast('El cobro con QR est\u00e1 apagado en este local.', 'err');
+    location.replace('./');
+    return;
+  }
+
   var sb = LP.client();
   var cont = document.getElementById('contenido');
 

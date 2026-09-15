@@ -283,6 +283,9 @@
 document.addEventListener('DOMContentLoaded', function () {
   'use strict';
   var esc = LP.esc, money = LP.money;
+  /* El salon lo manejan el mozo, la caja y la duenia. */
+  if (LP.guardaDeSeccion('mesas.html') === 'no') return;
+
   var sb = LP.client();
 
   var svg = document.getElementById('plano');
@@ -711,13 +714,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /* Sin QR, la accion que resuelve el momento no es ir a cobrar -no hay
        nada que mostrar- sino pedirselo a la caja: esa va llena. */
+    /* Con el cobro por QR apagado desde el panel tecnico, cobrar.html rebota
+       al inicio y pedir un QR es pedir algo que despues no se puede mostrar.
+       Los dos botones se van juntos; el de cerrar la mesa queda siempre, que
+       es lo que el mozo necesita si o si para liberar la mesa. */
+    var conQR = LP.func('f_qr_pago');
     var acciones = '<div class="acciones">' +
-        (debe && !qr
+        (conQR && debe && !qr
           ? '<button type="button" class="btn btn-primary" data-pedirqr="' +
               esc(m.sesion.id) + '">' +
               (pedido ? 'Volver a pedir el QR' : 'Pedirle el QR a la caja') + '</button>'
           : '') +
-        (debe ? '<a class="btn ' + (qr ? 'btn-primary' : 'btn-secondary') +
+        (conQR && debe ? '<a class="btn ' + (qr ? 'btn-primary' : 'btn-secondary') +
                 '" href="cobrar.html?sesion=' + esc(m.sesion.id) +
                 '">Cobrar con QR</a>' : '') +
         '<button type="button" class="btn ' + (debe ? 'btn-secondary' : 'btn-primary') +
