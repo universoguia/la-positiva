@@ -73,7 +73,7 @@
   }
   .mis-cosas a.principal:hover{background:var(--accent-dark);border-color:var(--accent-dark)}
   /* El duenio ve muchas: en dos columnas no se vuelve una escalera. Desde
-     360px, que es donde ocho apiladas ya dejaban "Terminar mi turno" abajo
+     360px, que es donde ocho apiladas ya dejaban "Salir" abajo
      del pliegue. */
   @media (min-width:360px){
     .mis-cosas.muchas{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
@@ -228,7 +228,12 @@
     <h2 id="yoNom"></h2>
     <p class="rol-yo" id="yoRol"></p>
     <nav class="mis-cosas" id="misCosas" aria-label="Lo que hago"></nav>
-    <div><button type="button" class="terminar" id="terminar">Terminar mi turno</button></div>
+    <!-- Dice "Salir" y no "Terminar mi turno" porque es lo unico que hace:
+         olvidar el nombre guardado en este celular y volver a las caras.
+         No cierra mesas, no cambia estados, no toca nada de la base. Volver
+         al menu ya lo resuelve la barra fija de arriba, asi que este boton
+         es solo la puerta de salida del puesto. -->
+    <div><button type="button" class="terminar" id="terminar">Salir</button></div>
   </div>
 
   <ul class="gente" id="gente">
@@ -303,7 +308,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var misCosas = document.getElementById('misCosas');
 
   /* Dibuja la puerta segun si el telefono ya sabe quien sos. Se llama al
-     entrar y cada vez que eso cambia (al terminar el turno).            */
+     entrar y cada vez que eso cambia (al salir).                        */
   function pintarPuerta() {
     var yo = LP.quienSoy();
     if (!yo) {
@@ -326,9 +331,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }).join('');
   }
 
-  /* Terminar el turno: se olvida el nombre y vuelven las seis caras, en la
+  /* Salir: se olvida el nombre y vuelven las seis caras, en la
      misma pantalla. Sin confirmacion: si lo toco sin querer, vuelve a tocar
-     su nombre y listo.                                                   */
+     su nombre y listo. No hay nada mas atras de esto -ni mesas que cerrar ni
+     estados que cambiar-, por eso el boton puede llamarse "Salir" sin
+     mentir.                                                              */
   document.getElementById('terminar').addEventListener('click', function () {
     LP.salir();
     previo = null;

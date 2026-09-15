@@ -30,13 +30,17 @@
   }
   .controles .btn{min-height:var(--tap);padding:0 20px;font-size:15px}
   .controles .cuantas{font-size:14px;color:var(--muted-strong)}
+  .controles .tip{
+    flex:1 1 100%;margin:2px 0 0;font-size:13px;line-height:1.5;color:var(--muted);
+  }
+  .controles .tip b{color:var(--muted-strong);font-weight:600}
 
   /* Las piezas apiladas en pantalla, una debajo de la otra, con su boton
      propio para reimprimir una sola cuando se mancha o se despega. */
   /* En pantalla: una debajo de la otra en el celular, y en la notebook
      varias por fila. Con doce mesas eran 8.200px de scroll para mirarlas y
      para llegar al boton de volver del pie. Al imprimir no cambia nada: el
-     bloque @media print de abajo vuelve a poner una por hoja. */
+     bloque @media print de abajo arma la hoja de doce piezas de 5 x 5 cm. */
   .piezas{
     display:grid;grid-template-columns:minmax(0,420px);
     justify-content:center;gap:22px;
@@ -68,7 +72,10 @@
     font-size:15px;letter-spacing:.16em;text-transform:uppercase;
     font-weight:600;color:var(--accent);margin:0 0 22px;
   }
-  .pieza .codigo{width:100%;max-width:236px;margin:0 auto 20px}
+  /* 272 y no 236: desde que el codigo trae adentro su zona muda de 4 modulos,
+     el dibujo ocupa menos del cuadro. Se agranda el cuadro para que en
+     pantalla el QR se siga viendo del mismo tamanio que antes. */
+  .pieza .codigo{width:100%;max-width:272px;margin:0 auto 20px}
   .pieza .codigo svg{width:100%;height:auto;display:block}
   @media (max-width:359px){.pieza{padding:30px 22px 26px}}
   /* El negro de la marca: la regla le gana al fill="black" de la libreria. */
@@ -94,29 +101,66 @@
 
 
   /* ------------------------------------------------------- impresion ---
-     Solo sale la pieza. Nada de controles, avisos ni navegacion.        */
+     Solo sale la pieza. Nada de controles, avisos ni navegacion.
+
+     DOCE POR HOJA, de 5x5 cm cada una. Antes salia UNA por hoja, de 12 cm:
+     con doce mesas eran doce hojas para algo que entra en una. La medida
+     la eligio el duenio ("5 por 5"), y es la de la PIEZA, no una grilla de
+     25 codigos.
+
+     La cuenta que sostiene el tamanio, para el que venga despues:
+     la URL de una mesa (https://.../pedir.html?mesa=5) da un QR version 6,
+     de 41x41 modulos. Con el margen obligatorio de 4 modulos por lado son
+     49 de punta a punta. El cuadro del codigo mide 32 mm, asi que cada
+     modulo queda en 32/49 = 0,65 mm.
+     Se probo decodificando de verdad (jsQR, el mismo lector que usa la app):
+     el codigo se lee mientras la camara le dedique 1,7 pixeles por modulo.
+     Con eso, 0,65 mm de modulo se lee hasta unos 45 cm de distancia, y la
+     gente escanea la mesa a 15-25 cm. Queda el doble de margen. En papel,
+     una laser de 600 ppp dibuja ese modulo con 15 puntos: sobra.
+     El peor caso medido -una mesa llamada "Barra de arriba"- da un QR de
+     49x49 (57 con margen) y el modulo baja a 0,56 mm: sigue sobrando.
+     Ojo: NO achicar .codigo por debajo de 24 mm sin rehacer esta cuenta.  */
   @media print{
-    @page{margin:14mm}
+    @page{margin:10mm}
     body{background:#fff}
-    .no-imprimir{display:none !important}
+    body.con-nav .wrap{padding-top:0}
+    /* La barra fija de la fase 3 vive FUERA de .no-imprimir (la arma app.js
+       como primer hijo del body), asi que sin esta linea se imprimia. */
+    .no-imprimir,.nav-fija,.cinta-mirar{display:none !important}
     .wrap{max-width:none;padding:0}
-    .piezas{display:block}
-    .sobre{max-width:none;margin:0}
-    /* Linea de corte punteada: la intro dice "recorta" y no habia por donde. */
-    .pieza{
-      border:1px dashed var(--border-strong);border-radius:0;box-shadow:none;
-      padding:12mm 10mm;max-width:120mm;margin:0 auto;
+
+    /* Bloques en linea y no grid: el grid partido entre hojas se porta
+       distinto en cada impresora, y esto entra en cualquiera.
+       180 mm = 3 columnas de 60. 264 mm = 4 filas de 66. En A4 con 10 mm
+       de margen (190 x 277 utiles) entran exactamente 3 x 4 = 12, y la
+       quinta fila no llega: el corte de hoja sale solo.                 */
+    .piezas{display:block;width:180mm;margin:0 auto;font-size:0;text-align:left}
+    .sobre{
+      display:inline-block;vertical-align:top;width:60mm;height:66mm;
+      max-width:none;margin:0;padding:0;font-size:initial;
       break-inside:avoid;page-break-inside:avoid;
     }
-    /* Una mesa por hoja: se recorta y se deja sobre la mesa. La ultima no
-       lleva salto, si no sale una hoja en blanco al final. */
-    .sobre{break-after:page;page-break-after:always}
-    .sobre:last-child{break-after:auto;page-break-after:auto}
-    .pieza .codigo{max-width:62mm}
+    /* Linea de corte punteada: la intro dice "recorta" y no habia por donde.
+       Los 5 mm que sobran de cada celda son para la tijera. */
+    .pieza{
+      width:50mm;height:50mm;box-sizing:border-box;
+      border:1px dashed var(--border-strong);border-radius:0;box-shadow:none;
+      padding:2mm;margin:8mm auto 0;max-width:none;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      break-inside:avoid;page-break-inside:avoid;
+    }
+    /* A 5 cm no entra todo. Se va lo decorativo y se queda lo que hace
+       falta para saber que mesa es y para que sirve el codigo. */
+    .pieza .marca,.pieza .chico{display:none}
+    .pieza h2{font-size:8pt;line-height:1.15;margin:0}
+    .pieza .mesa{font-size:7pt;line-height:1.15;letter-spacing:.12em;margin:.8mm 0 1.2mm}
+    .pieza .codigo{width:32mm;max-width:32mm;margin:0}
+    .pieza .pedi{font-size:6.5pt;line-height:1.2;margin:1.4mm 0 0}
 
     /* Reimprimir una sola: se esconden las demas mientras dura la impresion. */
     .una-sola .sobre{display:none}
-    .una-sola .sobre.elegida{display:block;break-after:auto;page-break-after:auto}
+    .una-sola .sobre.elegida{display:inline-block}
   }
 </style>
 </head>
@@ -127,8 +171,9 @@
       <div>
         <h1>QR de las mesas</h1>
         <p class="sub">Ya est&aacute;n los c&oacute;digos de todas las mesas del local. Imprim&iacute;,
-           recort&aacute; y dej&aacute; uno sobre cada mesa. Cada c&oacute;digo lleva a la
-           carta con esa mesa ya cargada.</p>
+           recort&aacute; por la l&iacute;nea punteada y dej&aacute; uno sobre cada mesa. Cada
+           c&oacute;digo lleva a la carta con esa mesa ya cargada. Salen doce por hoja,
+           de 5 x 5 cm cada uno.</p>
       </div>
       <div class="head-right">
         <a class="back-link" href="./" id="volver">Volver al inicio</a>
@@ -140,6 +185,12 @@
     <div class="controles">
       <button type="button" class="btn btn-primary" id="imprimir" disabled>Imprimir todas</button>
       <span class="cuantas" id="cuantas" role="status" aria-live="polite"></span>
+      <!-- Si la impresora "ajusta al area de impresion" achica la hoja y los
+           5 cm dejan de ser 5 cm. No rompe el codigo, pero el cartelito sale
+           mas chico de lo pedido. Por eso se avisa al lado del boton. -->
+      <p class="tip">En el cuadro de impresi&oacute;n eleg&iacute; <b>A4</b> y tama&ntilde;o
+         <b>100 %</b> (o &laquo;Tama&ntilde;o real&raquo;). Si dice &laquo;Ajustar al
+         &aacute;rea de impresi&oacute;n&raquo;, las piezas salen m&aacute;s chicas que 5 x 5 cm.</p>
     </div>
   </div>
 
@@ -213,7 +264,16 @@ document.addEventListener('DOMContentLoaded', function () {
       var qr = qrcode(0, 'H');
       qr.addData(destino);
       qr.make();
-      var html = qr.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
+      /* La "zona muda" que pide la norma del QR: cuatro modulos de blanco
+         alrededor. Estaba en 0 y funcionaba de casualidad, porque la pieza
+         era enorme y el blanco lo ponia el cuadro. A 5 cm, con doce piezas
+         en la misma hoja, ese blanco tiene que venir adentro del codigo o
+         el lector engancha el borde de al lado.
+         OJO: para esta libreria el margen va en las MISMAS unidades que
+         cellSize, no en modulos. Cuatro modulos son 4 x cellSize = 24.
+         Poner 4 a secas da 0,67 de modulo y no alcanza. */
+      var CELDA = 6;
+      var html = qr.createSvgTag({ cellSize: CELDA, margin: 4 * CELDA, scalable: true });
       var tmp = document.createElement('div');
       tmp.innerHTML = html;
       var svg = tmp.querySelector('svg');
@@ -262,9 +322,11 @@ document.addEventListener('DOMContentLoaded', function () {
     btnImprimir.disabled = false;
     cajaDestino.hidden = false;
     caja.innerHTML = numeros.map(piezaHTML).join('');
+    var hojas = Math.ceil(numeros.length / 12);
     cuantas.textContent = numeros.length === 1
-      ? 'Hay 1 mesa cargada'
-      : 'Hay ' + numeros.length + ' mesas cargadas, una por hoja';
+      ? 'Hay 1 mesa cargada, entra en 1 hoja'
+      : 'Hay ' + numeros.length + ' mesas cargadas, entran en ' +
+        (hojas === 1 ? '1 hoja' : hojas + ' hojas') + ' (doce por hoja)';
     cajaDestino.innerHTML = '<b>A donde llevan los codigos</b>' +
       esc(urlDeMesa('N')) + ' , cambiando la N por el número de cada mesa.';
   }
