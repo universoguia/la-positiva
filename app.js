@@ -3550,6 +3550,10 @@
     mesasDelLocal: mesasDelLocal,
     planoDelSalon: planoDelSalon,
     abrirMesa: abrirMesa,
+    /* Lo usaba solo planoDelSalon(); ahora tambien el panel de la duenia y la
+       solapa Cobrar del mozo, para que las tres pantallas cuenten "para
+       limpiar" con el mismo criterio y no con tres copias del mismo if. */
+    estadoReal: estadoReal,
     estadoDeMesa: estadoDeMesa,
     guardarComensales: guardarComensales,
     reservarMesa: reservarMesa,

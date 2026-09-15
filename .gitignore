@@ -7,3 +7,8 @@ node_modules/
 .env.local
 config.js
 VAPID-NUEVAS.txt
+
+# Respaldos de la base: traen montos, nombres del equipo y horarios reales.
+# Y este repo se sirve tal cual en Vercel, asi que un JSON suelto aca queda
+# publico en la web. Van fuera del proyecto.
+respaldo-*.json

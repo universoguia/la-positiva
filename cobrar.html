@@ -682,9 +682,64 @@ document.addEventListener('DOMContentLoaded', function () {
         '</div>' +
       '</div>' +
       '<div class="acciones"><button type="button" class="btn btn-primary btn-block" id="otraPersonaBtn">' +
-        'Cobrar a otra persona</button></div>';
+        'Cobrar a otra persona</button></div>' +
+      /* El ultimo paso del circuito, cuando ya no queda nada por cobrar.
+         Se decide con una consulta y no de memoria: en una mesa dividida
+         este pago puede ser el tercero de cinco, y ahi liberar seria un
+         error. Arranca oculto y aparece solo si la cuenta quedo en cero. */
+      '<div class="acciones" id="zonaLiberar" hidden>' +
+        '<button type="button" class="btn btn-ok btn-block" id="liberarBtn">' +
+          'Mesa limpia, liberar</button>' +
+      '</div>';
 
     document.getElementById('otraPersonaBtn').addEventListener('click', cargar);
+    ofrecerLiberar();
+  }
+
+  /* --------------------------------------------- liberar la mesa ---------
+     El pago se acaba de cerrar: lo que sigue es "listo, la mesa quedo libre".
+     Antes habia que salir de aca, entrar a Gestionar mesas, buscar la mesa y
+     recien ahi aparecia el boton -y en un servicio eso no pasa: la mesa
+     quedaba tomada en el sistema toda la noche.
+
+     No escribe logica nueva: llama al MISMO LP.cerrarSesion que mesas.html,
+     y usa el mismo texto para que sea un solo gesto con un solo nombre. */
+  function ofrecerLiberar() {
+    var zona = document.getElementById('zonaLiberar');
+    if (!zona || !SESION || !sb) return;
+
+    LP.cuentaDeSesion(sb, SESION).then(function (cta) {
+      /* Solo si la mesa no debe nada Y no le queda comida en curso. Con algo
+         en el fuego, cerrar dejaria esos pedidos colgando de una cuenta
+         cerrada: ese caso se resuelve en el salon, con la cuenta a la vista. */
+      if (!cta || cta.debe > 0 || cta.enCurso > 0) return;
+      zona.hidden = false;
+      document.getElementById('liberarBtn').addEventListener('click', liberarMesa);
+    });
+  }
+
+  function liberarMesa() {
+    var btn = document.getElementById('liberarBtn');
+    if (!btn || btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = 'Liberando...';
+
+    LP.cerrarSesion(sb, SESION, YO).then(function (hecho) {
+      if (hecho && hecho.bloqueado) {
+        btn.disabled = false; btn.textContent = 'Mesa limpia, liberar';
+        LP.toast('Esta mesa todavía tiene ' + hecho.enCurso +
+          (hecho.enCurso === 1 ? ' pedido sin terminar' : ' pedidos sin terminar') +
+          '. Cerrala desde Gestionar mesas.', 'err');
+        return;
+      }
+      if (!hecho) {
+        btn.disabled = false; btn.textContent = 'Mesa limpia, liberar';
+        LP.toast('No pudimos liberarla. Puede que ya la haya cerrado otro.', 'err');
+        return;
+      }
+      btn.textContent = 'Mesa liberada';
+      LP.toast('Mesa liberada. Ya se puede sentar a otra gente.', 'ok');
+    });
   }
 
   /* --------------------------------------------------- modo pantalla --- */

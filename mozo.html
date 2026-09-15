@@ -116,6 +116,9 @@
   .mesa.m-aprobar{border-left-color:var(--gold)}
   .mesa.m-curso{border-left-color:var(--cook)}
   .mesa.m-cobrar{border-left-color:var(--warn)}
+  /* Ya pago: verde, como en el plano del salon. No es trabajo urgente,
+     es el ultimo paso del circuito. */
+  .mesa.m-limpiar{border-left-color:var(--ok)}
   .mesa.urge{border-left-color:var(--err);box-shadow:0 0 0 2px rgba(154,47,28,.28)}
   .mesa-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
   .mesa-nom{
@@ -515,12 +518,21 @@ document.addEventListener('DOMContentLoaded', function () {
     return null;
   }
 
-  /* Las mesas que ya comieron y todavia no pagaron. Sale del mismo resumen
-     que usa el salon: 'enCurso' cuenta lo que todavia no se entrego, asi que
-     en cero quiere decir que la comida ya salio toda.                     */
+  /* Las mesas que ya comieron: las que todavia no pagaron Y las que ya pagaron
+     y solo falta liberarlas. Sale del mismo resumen que usa el salon:
+     'enCurso' cuenta lo que todavia no se entrego, asi que en cero quiere
+     decir que la comida ya salio toda.
+
+     Las pagadas entran aca a proposito. El circuito terminaba sin cerrarse:
+     despues de cobrar, el mozo tenia que salir de esta pantalla, entrar a
+     "Gestionar mesas", tocar la mesa y ahi recien encontrar el boton. En un
+     servicio eso no pasa, y la mesa quedaba sucia en el sistema toda la
+     noche. El ultimo paso va donde el mozo ya esta parado.               */
   function mesasParaCobrar() {
     return (cuentas || []).filter(function (c) {
-      return c.debe > 0 && c.enCurso === 0 && c.rondas > 0;
+      if (c.enCurso !== 0 || c.rondas === 0) return false;
+      if (c.debe > 0) return true;
+      return LP.estadoReal(c) === 'Limpieza';
     });
   }
 
@@ -595,7 +607,7 @@ document.addEventListener('DOMContentLoaded', function () {
     listos: 'Nada listo para llevar todavía.',
     aprobar: 'No hay pedidos esperando. Cuando una mesa pida, aparece acá.',
     curso: 'Nada en curso.',
-    cobrar: 'Ninguna mesa terminó de comer con la cuenta sin pagar.'
+    cobrar: 'Ninguna mesa para cobrar ni para liberar.'
   };
 
   elSolapas.addEventListener('click', function (ev) {
@@ -773,6 +785,10 @@ document.addEventListener('DOMContentLoaded', function () {
     var pedido = LP.hayPedidoDeQR(c.sesion);
     var gente = c.sesion.comensales ? Number(c.sesion.comensales) : 0;
 
+    /* Ya pago todo: no hay nada que cobrar y la tarjeta cambia de trabajo.
+       Un solo boton y el mismo texto que el salon: "Mesa limpia, liberar". */
+    if (c.debe <= 0) return cajaLimpiar(c, gente);
+
     var linea = qr
       ? '<p class="qr-estado listo">QR de esta mesa cargado ' +
         esc(LP.timeAgo(qr.created_at)) +
@@ -813,6 +829,31 @@ document.addEventListener('DOMContentLoaded', function () {
           '<a class="btn ' + (qr ? 'btn-primary' : 'btn-secondary') +
             '" href="cobrar.html?sesion=' + esc(c.sesion.id) + '">Cobrar con QR</a>' +
         '</div>') +
+    '</li>';
+  }
+
+  /* La mesa que ya pago y solo falta liberar. Cierra el circuito acá mismo:
+     no escribe logica nueva de cierre, llama al LP.cerrarSesion que ya usa
+     mesas.html. El texto es el mismo en las dos pantallas: un solo gesto con
+     un solo nombre. */
+  function cajaLimpiar(c, gente) {
+    return '<li class="mesa m-limpiar" data-mesa="s' + esc(c.sesion.id) + '">' +
+      '<div class="mesa-top"><div>' +
+        '<div class="mesa-nom">' + esc(c.mesa) +
+          (gente ? '<span class="gente">' + gente +
+                   (gente === 1 ? ' persona' : ' personas') + '</span>' : '') +
+        '</div>' +
+        '<div class="mesa-meta">' + c.rondas +
+          (c.rondas === 1 ? ' ronda' : ' rondas') + ' &middot; pag&oacute; ' +
+          money(c.pagado) + ' &middot; abierta ' +
+          esc(LP.timeAgo(c.sesion.abierta_en)) + '</div>' +
+      '</div><span class="chip limpiar">Para limpiar</span></div>' +
+      '<p class="qr-estado listo">Ya pag&oacute; todo. Cuando la levantes, ' +
+        'liber&aacute;la para poder sentar a otra gente.</p>' +
+      '<div class="acciones">' +
+        '<button type="button" class="btn btn-primary" data-liberar="' +
+          esc(c.sesion.id) + '">Mesa limpia, liberar</button>' +
+      '</div>' +
     '</li>';
   }
 
@@ -1015,6 +1056,44 @@ document.addEventListener('DOMContentLoaded', function () {
           ? 'Listo: la caja sabe que ' + cuenta.mesa + ' necesita el QR.'
           : 'Quedó anotado para la caja, pero el aviso al celular no salió.',
           av.ok ? 'ok' : 'err');
+        cargar(true);
+      });
+      return;
+    }
+
+    /* Liberar la mesa ya pagada, sin salir de acá. Llama al MISMO
+       LP.cerrarSesion que usa mesas.html: no hay logica de cierre nueva.
+       Acá no puede haber saldo (la tarjeta sólo aparece con debe = 0), asi
+       que no hace falta el confirm de "la cerrás con deuda". Si igual queda
+       algo en curso, cerrarSesion lo bloquea y ese caso se resuelve en el
+       salon, que es donde se ve la cuenta entera. */
+    if (b.dataset.liberar) {
+      var idL = b.dataset.liberar;
+      if (ocupado['lib' + idL]) return;
+      var cL = null;
+      (cuentas || []).forEach(function (c) {
+        if (c.sesion && String(c.sesion.id) === String(idL)) cL = c;
+      });
+      if (!cL) { LP.toast('Esa mesa ya no está abierta.', 'err'); cargar(true); return; }
+      ocupado['lib' + idL] = true;
+      b.disabled = true; b.textContent = 'Liberando...';
+      LP.cerrarSesion(sb, idL, YO).then(function (hecho) {
+        delete ocupado['lib' + idL];
+        if (hecho && hecho.bloqueado) {
+          b.disabled = false; b.textContent = 'Mesa limpia, liberar';
+          LP.toast(cL.mesa + ' todavía tiene ' + hecho.enCurso +
+            (hecho.enCurso === 1 ? ' pedido sin terminar' : ' pedidos sin terminar') +
+            '. Cerrala desde Gestionar mesas.', 'err');
+          cargar(true);
+          return;
+        }
+        if (!hecho) {
+          b.disabled = false; b.textContent = 'Mesa limpia, liberar';
+          LP.toast('No pudimos liberarla. Puede que ya la haya cerrado otro.', 'err');
+          cargar(true);
+          return;
+        }
+        LP.toast(cL.mesa + ' liberada. Ya podés sentar a otra gente.', 'ok');
         cargar(true);
       });
       return;
