@@ -23,21 +23,47 @@
   .wrap{max-width:900px;padding-top:calc(26px + var(--sa-t))}
   @media (min-width:1180px){.wrap{max-width:1320px}}
 
-  /* --------------------------------------------------------- filtros --- */
+  /* --------------------------------------------------------- filtros ---
+     Dos alturas, y en este orden: arriba el buscador y el "que mostrar";
+     abajo las categorias en una fila ancha. Antes las categorias eran un
+     desplegable angosto a la derecha del buscador, donde las veinte entraban
+     apretadas y habia que abrirlo para ver cuales habia.
+
+     Se pega debajo de la barra de navegacion, no arriba de todo: el boton de
+     volver esta siempre ahi. */
   .filtros{
-    position:sticky;top:0;z-index:20;background:var(--bg);
-    padding:calc(12px + var(--sa-t)) 0 12px;margin-bottom:14px;   /* cubre el notch al pegarse */
-    display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+    position:sticky;top:var(--nav-h);z-index:20;background:var(--bg);
+    padding:12px 0;margin-bottom:14px;
+    display:flex;flex-direction:column;gap:10px;
     border-bottom:1px solid var(--border);
   }
+  .filtros-arriba{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .filtros input,.filtros select{
     min-height:var(--tap);padding:9px 12px;font-size:16px;
     border:1px solid var(--border-strong);border-radius:var(--r-md);
     background:var(--card);color:var(--ink);font-family:inherit;
   }
-  .filtros input{flex:1 1 190px;min-width:0}
-  .filtros select{flex:1 1 140px;min-width:0}
+  .filtros input{flex:1 1 220px;min-width:0}
+  .filtros select{flex:0 1 200px;min-width:0}
   .filtros input:focus,.filtros select:focus{outline:2px solid var(--accent);outline-offset:1px}
+
+  /* La fila ancha de categorias. Se desplaza de costado y cada una respira:
+     44px de alto y aire adentro, para tocarlas con el pulgar. */
+  .cats{
+    display:flex;gap:8px;overflow-x:auto;padding:1px 0 3px;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;
+  }
+  .cats::-webkit-scrollbar{display:none}
+  .cat-b{
+    flex:none;min-height:var(--tap);padding:0 17px;border-radius:var(--r-pill);
+    background:var(--card);border:1px solid var(--border-strong);
+    color:var(--muted-strong);font-size:15px;white-space:nowrap;
+    font-family:inherit;cursor:pointer;
+  }
+  .cat-b[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+  @media (hover:hover){.cat-b:hover{border-color:var(--accent);color:var(--ink)}}
+  .cat-b[aria-pressed="true"]:hover{color:#fff}
+
   .cuenta{font-size:14px;color:var(--muted);margin:0 0 12px}
 
   /* --------------------------------------------------------- listado --- */
@@ -55,6 +81,12 @@
   .miniatura{
     position:relative;flex:none;width:86px;height:86px;border-radius:var(--r-md);
     overflow:hidden;background:var(--bg);border:1px solid var(--border);
+  }
+  /* En el celular la foto cede ancho: al lado van el precio y el boton de
+     cambiarlo, y esos dos tienen que entrar en el mismo renglon. */
+  @media (max-width:420px){
+    .plato{gap:10px;padding:11px}
+    .miniatura{width:72px;height:72px}
   }
   .miniatura img{width:100%;height:100%;object-fit:cover;display:block}
   .miniatura .sinfoto{
@@ -79,19 +111,29 @@
     overflow:hidden;clip-path:inset(50%);white-space:nowrap;
   }
   .subir{position:relative;display:inline-flex}
-  /* Una sola pildora para todo lo que se toca en la tarjeta: interruptor
-     Hay / Se termino (con estado .no), Cambiar precio, Cargar foto y Quitar
-     (.peligro). Antes eran cuatro estilos en la misma fila. */
+  /* Una sola pildora para todo lo que se toca en la tarjeta: el interruptor
+     Disponible / Agotado, Cargar foto y Quitar (.peligro).
+     "Cambiar precio" tiene su propio estilo mas abajo: es plata. */
   .pill{
     display:inline-flex;align-items:center;justify-content:center;
     min-height:var(--tap);padding:0 15px;border-radius:var(--r-pill);
     font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;
     border:1px solid var(--border-strong);background:transparent;color:var(--muted-strong);
   }
-  .pill.no{background:var(--err-bg);border-color:var(--err-border);color:var(--err-ink)}
+
+  /* Disponible / Agotado. El estado se lee sin pensar: lo que HAY va en
+     verde y marcado con un tilde; lo que se termino queda transparente,
+     sin relleno, como algo apagado. */
+  .pill.si{
+    background:var(--ok-soft);border-color:var(--ok-border);color:var(--ok);font-weight:600;
+  }
+  .pill.si::before{content:"✓";margin-right:7px;font-weight:700}
+  .pill.no{background:transparent;border-color:var(--border-strong);color:var(--muted-strong)}
+
   .pill.peligro{color:var(--err-ink)}
   @media (hover:hover){
     .pill:hover{border-color:var(--accent);color:var(--ink)}
+    .pill.si:hover{border-color:var(--ok);color:var(--ok)}
     .pill.peligro:hover{background:var(--err-bg);border-color:var(--err-border)}
   }
   .subir input:disabled + span{opacity:.7;cursor:progress}
@@ -107,36 +149,54 @@
      va primero y se lee sin pensar. */
   /* El precio, grande y a la vista: es lo que mas se cambia de esta
      pantalla despues de apagar platos. Un solo boton lo abre a editar. */
-  .precio-linea{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin:3px 0 0}
+  .precio-linea{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:5px 0 0}
   .precio-num{font-size:19px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
   .precio-carta{font-size:12px;color:var(--muted)}
   .precio-edit .preview{flex-basis:100%}
   .precio-carta s{color:var(--muted)}
+
+  /* Cambiar precio en rojo y Guardar en verde, los dos grandes. Son las dos
+     acciones de plata de esta pantalla y tienen que verse de lejos y no
+     confundirse entre si. Antes guardar era naranja -el mismo color que
+     todos los demas botones de la app- y cancelar un enlace chiquito. */
+  .pill.precio{
+    min-height:46px;padding:0 15px;font-size:15px;font-weight:600;
+    background:var(--err-bg);border-color:var(--err-border);color:var(--err-ink);
+  }
+  @media (hover:hover){
+    .pill.precio:hover{border-color:var(--err);color:var(--err-ink);background:#fbdcd6}
+  }
+
   .precio-edit{
-    display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:8px;
-    padding:10px;border:1px dashed var(--border-strong);border-radius:var(--r-md);
+    display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;
+    padding:12px;border:1px dashed var(--border-strong);border-radius:var(--r-md);
     background:var(--bg);
   }
   .precio-edit[hidden]{display:none}
-  .precio-edit .pesos{font-size:16px;color:var(--muted-strong)}
+  .precio-edit .pesos{font-size:17px;color:var(--muted-strong)}
   .precio-edit input{
-    width:auto;flex:1 1 90px;min-width:0;max-width:140px;
-    min-height:var(--tap);padding:0 12px;font-size:18px;
+    width:auto;flex:1 1 100px;min-width:0;max-width:150px;
+    min-height:46px;padding:0 12px;font-size:19px;
     border:1px solid var(--border-strong);border-radius:var(--r-md);
     background:#fff;color:var(--ink);font-family:inherit;
     font-variant-numeric:tabular-nums;
   }
   .precio-edit input:focus{outline:2px solid var(--accent);outline-offset:1px}
-  .precio-edit .btn{flex:none;min-height:var(--tap);padding:0 16px;font-size:15px}
+  .precio-edit .btn{flex:none;min-height:46px;padding:0 20px;font-size:16px;font-weight:600}
   .volver-carta{
-    background:none;border:0;padding:0;min-height:var(--tap);
+    background:none;border:0;padding:0 4px;min-height:var(--tap);
     color:var(--muted-strong);text-decoration:underline;font-size:13px;
     cursor:pointer;font-family:inherit;
   }
 
 
-  .plato.agotado .miniatura{filter:grayscale(1);opacity:.6}
-  .plato.agotado .datos b{color:var(--muted)}
+  /* Agotado: apagado pero LEGIBLE. Es justo el plato que hay que encontrar
+     para volver a prenderlo, asi que el texto se queda en --muted-strong
+     (6.85:1) y no se le baja la opacidad a la tarjeta entera. */
+  .plato.agotado{background:var(--bg);border-style:dashed}
+  .plato.agotado .miniatura{filter:grayscale(1);opacity:.55}
+  .plato.agotado .datos b,.plato.agotado .precio-num{color:var(--muted-strong)}
+  .plato.agotado .cat{color:var(--muted)}
 
   .vacio{padding:30px 10px;text-align:center;color:var(--muted)}
 
@@ -147,7 +207,7 @@
   <header class="top">
     <div>
       <h1>La carta</h1>
-      <p class="sub">Marc&aacute; lo que se termin&oacute;, cambi&aacute; precios y sac&aacute; las fotos. Se ve en la mesa al instante.</p>
+      <p class="sub">Marc&aacute; lo que est&aacute; agotado, cambi&aacute; precios y sac&aacute; las fotos. Se ve en la mesa al instante.</p>
     </div>
     <div class="head-right">
       <a class="soy" href="./" data-quien hidden></a>
@@ -156,16 +216,20 @@
   </header>
 
   <div class="filtros">
-    <input type="search" id="buscar" placeholder="Buscar un plato" aria-label="Buscar un plato">
-    <select id="categoria" aria-label="Filtrar por categor&iacute;a"></select>
-    <select id="soloSin" aria-label="Mostrar">
-      <option value="">Todos los platos</option>
-      <option value="propias">Con foto propia</option>
-      <option value="sin">Sin foto propia</option>
-      <option value="agotados">Los que se terminaron</option>
-    </select>
+    <div class="filtros-arriba">
+      <input type="search" id="buscar" placeholder="Buscar un plato" aria-label="Buscar un plato">
+      <select id="soloSin" aria-label="Mostrar">
+        <option value="">Todos los platos</option>
+        <option value="propias">Con foto propia</option>
+        <option value="sin">Sin foto propia</option>
+        <option value="agotados">Los agotados</option>
+      </select>
+    </div>
+    <!-- Las categorias abajo, en una fila ancha. Antes eran un desplegable
+         angosto al lado del buscador. -->
+    <div class="cats" id="cats" role="group" aria-label="Categor&iacute;as de la carta"></div>
   </div>
-  <p class="cuenta" id="cuenta"></p>
+  <p class="cuenta" id="cuenta" role="status" aria-live="polite"></p>
 
   <ul class="platos" id="lista"></ul>
   <div class="vacio" id="vacio" hidden>No hay platos que coincidan con la búsqueda.</div>
@@ -187,8 +251,9 @@ document.addEventListener('DOMContentLoaded', function () {
   var vacio = document.getElementById('vacio');
   var cuenta = document.getElementById('cuenta');
   var inBuscar = document.getElementById('buscar');
-  var selCat = document.getElementById('categoria');
+  var elCats = document.getElementById('cats');
   var selSin = document.getElementById('soloSin');
+  var catActiva = '';                    // '' = todas las categorias
 
   var propias = {};          // { plato_id: url } de las cargadas por el local
   var agotados = {};         // { plato_id: true } de los que hoy no hay
@@ -199,8 +264,25 @@ document.addEventListener('DOMContentLoaded', function () {
   /* -------------------------------------------------------- categorias -- */
   var cats = [];
   MENU.forEach(function (p) { if (cats.indexOf(p.cat) === -1) cats.push(p.cat); });
-  selCat.innerHTML = '<option value="">Todas las categor\u00edas</option>' +
-    cats.map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('');
+
+  /* Una pastilla por categoria, en la fila ancha de abajo de los filtros.
+     El '' del principio es "Todas". */
+  function pintarCats() {
+    elCats.innerHTML = [''].concat(cats).map(function (c) {
+      return '<button type="button" class="cat-b" data-cat="' + esc(c) + '" ' +
+        'aria-pressed="' + (c === catActiva ? 'true' : 'false') + '">' +
+        (c ? esc(c) : 'Todas') + '</button>';
+    }).join('');
+  }
+
+  elCats.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-cat]');
+    if (!b) return;
+    catActiva = b.dataset.cat;
+    pintarCats();
+    pintar();
+    try { b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); } catch (e) {}
+  });
 
   /* ---------------------------------------------------------- filtrado -- */
   function normalizar(t) {
@@ -210,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function filtrados() {
     var q = normalizar(inBuscar.value.trim());
-    var cat = selCat.value;
+    var cat = catActiva;
     var modo = selSin.value;
     return MENU.filter(function (p) {
       if (cat && p.cat !== cat) return false;
@@ -229,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var sinStock = MENU.filter(function (p) { return agotados[p.id]; }).length;
     cuenta.textContent = items.length + ' de ' + MENU.length + ' platos · ' +
                          conPropia + ' con foto propia' +
-                         (sinStock ? ' · ' + sinStock + ' que se terminaron' : '');
+                         (sinStock ? ' · ' + sinStock + ' agotados' : '');
   }
 
   function pintar() {
@@ -241,7 +323,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!items.length) {
       var q = normalizar(inBuscar.value);
       vacio.textContent = q ? 'No hay platos que coincidan con la b\u00fasqueda.'
-        : (selSin.value === 'agotados' ? 'Ning\u00fan plato se termin\u00f3 hoy.'
+        : (selSin.value === 'agotados' ? 'Ning\u00fan plato est\u00e1 agotado hoy.'
         : (selSin.value === 'sin' ? 'Todos los platos tienen foto propia.'
         : (selSin.value === 'propias' ? 'Todav\u00eda no hay platos con foto propia.'
         : 'No hay platos en esta categor\u00eda.')));
@@ -282,9 +364,13 @@ document.addEventListener('DOMContentLoaded', function () {
           '<div class="cat">' + esc(p.cat) + (p.note ? ' · ' + esc(p.note) : '') + '</div>' +
           precioHTML(p) +
           '<div class="acciones">' +
-            '<button type="button" class="pill' + (noHay ? ' no' : '') + '" ' +
-              'aria-pressed="' + (noHay ? 'true' : 'false') + '" data-stock="' + esc(p.id) + '">' +
-              (noHay ? 'Se terminó' : 'Hay') + '</button>' +
+            /* Disponible / Agotado. Dice el estado de AHORA y al tocarlo lo
+               da vuelta; el aria-label aclara cual de las dos cosas hace. */
+            '<button type="button" class="pill ' + (noHay ? 'no' : 'si') + '" ' +
+              'aria-pressed="' + (noHay ? 'true' : 'false') + '" data-stock="' + esc(p.id) + '" ' +
+              'aria-label="' + esc(p.name) + ': ' + (noHay ? 'agotado' : 'disponible') +
+                '. Tocá para marcar que ' + (noHay ? 'hay' : 'se agotó') + '">' +
+              (noHay ? 'Agotado' : 'Disponible') + '</button>' +
             '<label class="subir">' +
               '<input type="file" accept="image/*" data-subir="' + esc(p.id) + '">' +
               '<span class="pill">' + (propia ? 'Cambiar foto' : 'Cargar foto') + '</span>' +
@@ -309,7 +395,7 @@ document.addEventListener('DOMContentLoaded', function () {
         (cambiado
           ? '<span class="precio-carta">antes <s>' + money(carta) + '</s></span>'
           : '') +
-        '<button type="button" class="pill" data-editar-precio="' + esc(p.id) + '">' +
+        '<button type="button" class="pill precio" data-editar-precio="' + esc(p.id) + '">' +
           'Cambiar precio</button>' +
       '</div>' +
       '<div class="precio-edit" data-edit="' + esc(p.id) + '" hidden>' +
@@ -317,9 +403,9 @@ document.addEventListener('DOMContentLoaded', function () {
         '<input type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" ' +
           'aria-label="Precio nuevo de ' + esc(p.name) + '" ' +
           'value="' + esc(String(Math.round(vigente))) + '" data-precio-input="' + esc(p.id) + '">' +
-        '<button type="button" class="btn btn-primary" data-guardar-precio="' + esc(p.id) + '">' +
+        '<button type="button" class="btn btn-ok" data-guardar-precio="' + esc(p.id) + '">' +
           'Guardar</button>' +
-        '<button type="button" class="volver-carta" data-cancelar-precio="' + esc(p.id) + '">' +
+        '<button type="button" class="btn btn-secondary" data-cancelar-precio="' + esc(p.id) + '">' +
           'Cancelar</button>' +
         /* Lo que va a quedar, ya formateado, mientras escribe: un cero de mas
            o de menos se ve ANTES de tocar Guardar. */
@@ -484,14 +570,15 @@ document.addEventListener('DOMContentLoaded', function () {
     accion.then(function (ok) {
       b.disabled = false;
       if (!ok) {
-        b.textContent = apagar ? 'Hay' : 'Se terminó';
+        // Vuelve a decir lo que sigue siendo cierto: no cambio nada.
+        b.textContent = apagar ? 'Disponible' : 'Agotado';
         decir(platoId, 'No pudimos cambiarlo. Probá de nuevo.', 'err');
         return;
       }
       if (apagar) agotados[platoId] = true; else delete agotados[platoId];
       repintarUno(platoId);
-      LP.toast(apagar ? plato.name + ': se termin\u00f3 por hoy.'
-                      : plato.name + ': vuelve a la carta.', 'ok');
+      LP.toast(apagar ? plato.name + ': agotado por hoy.'
+                      : plato.name + ': vuelve a estar disponible.', 'ok');
     });
   });
 
@@ -512,7 +599,6 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   inBuscar.addEventListener('input', pintar);
-  selCat.addEventListener('change', pintar);
   selSin.addEventListener('change', pintar);
 
   /* ------------------------------------------------------------ inicio -- */
@@ -523,6 +609,7 @@ document.addEventListener('DOMContentLoaded', function () {
     return;
   }
 
+  pintarCats();
   pintar();                                  // dibuja ya, con las fotos de la carta
   LP.fotosDePlatos(sb).then(function (mapa) {
     propias = mapa || {};

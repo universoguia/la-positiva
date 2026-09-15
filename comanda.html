@@ -25,25 +25,32 @@
      parado al lado de la mesa, con el celular en una mano y la libreta en la
      otra. Todo lo que hay aca esta puesto para eso.
 
-     Tres decisiones que explican el resto:
+     Cuatro decisiones que explican el resto:
 
-     1. DOS PASOS, NO UNO. Primero la mesa y cuanta gente; despues la carta.
-        Si estuviera todo junto, la carta -156 platos- empujaria la eleccion
-        de mesa fuera de la pantalla, y elegir mal la mesa es el error mas
-        caro de todos: el plato sale a la mesa equivocada.
+     1. PRIMERO LOS PLATOS, DESPUES LA MESA. Antes era al reves y estaba mal.
+        Con el salon lleno lo urgente es anotar lo que la mesa acaba de decir,
+        antes de olvidarlo; el numero de mesa el mozo lo tiene delante de los
+        ojos y lo puede completar diez segundos despues. Por eso el orden es
+        que pedis -> cuantos son -> que mesa, y la mesa es obligatoria recien
+        al mandar a la cocina, nunca antes.
 
-     2. LA CARTA VA EN LISTA, NO EN FICHAS CON FOTO. La foto es para el
-        comensal que no sabe que es una provoleta. El mozo sabe: necesita
-        encontrar el nombre y sumarlo, y en fichas entran cuatro platos por
-        pantalla contra los quince de la lista.
+     2. LA CARTA VA EN LISTA, NO EN FICHAS CON FOTO GRANDE. El mozo sabe que
+        es una provoleta: necesita encontrar el nombre y sumarlo, y en fichas
+        entran cuatro platos por pantalla contra los quince de la lista. La
+        foto esta igual, pero chica y al costado, para MOSTRARSELA AL
+        COMENSAL, que es para lo unico que sirve aca.
 
      3. LA FILA ENTERA SUMA UNO. No hay que apuntarle a un boton chico: se
         toca el plato y se agrega. Es un gesto solo, con el pulgar, sin mirar.
 
+     4. DESLIZAR LA FILA ABRE LA FOTO Y NO AGREGA NADA. El gesto de WhatsApp.
+        Es la regla mas importante de las fotos: mostrarle el plato al
+        comensal no puede cambiarle el pedido ni por accidente.
+
      El archivo NO toca styles.css: todo lo propio de esta pantalla vive aca
      adentro, como pide la division de trabajo del proyecto.               */
 
-  .wrap{max-width:1180px;padding-top:calc(18px + var(--sa-t))}
+  .wrap{max-width:1180px}
   /* El pie fijo con el total tapa el final de la lista: se le devuelve el
      alto en padding para que el ultimo plato se pueda tocar siempre. */
   body.con-barra .wrap{padding-bottom:calc(112px + var(--sa-b))}
@@ -60,78 +67,9 @@
     background:var(--gold);color:var(--ink);font-size:13px;font-weight:700;flex:none;
   }
 
-  /* --------------------------------------------------------- paso 1: mesa --
-     Las doce mesas entran juntas: en el celular son tres columnas, en la
-     tablet del salon seis. Sin scroll para elegir, que es el punto. */
-  .mesas{
-    display:grid;gap:8px;margin:0;padding:0;list-style:none;
-    grid-template-columns:repeat(auto-fill,minmax(98px,1fr));
-  }
-  .mesa{
-    width:100%;min-height:78px;padding:9px 8px;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-    background:var(--dark-card);border:1px solid var(--dark-border);border-radius:var(--r-md);
-    color:#fff;text-align:center;
-    transition:border-color .16s,background-color .16s,transform .08s;
-  }
-  .mesa:hover{background:var(--dark-card-hover);border-color:var(--gold)}
-  .mesa:active{transform:scale(.98)}
-  .mesa[aria-pressed="true"]{
-    border-color:var(--accent);background:var(--accent);
-    box-shadow:0 0 0 2px rgba(180,71,42,.35);
-  }
-  .mesa .num{font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);font-size:23px;line-height:1.05}
-  .mesa .est{font-size:12px;color:var(--dark-muted);line-height:1.25}
-  .mesa[aria-pressed="true"] .est{color:#ffe6dc}
-  .mesa .est.ocupada{color:var(--gold)}
-  .mesa[aria-pressed="true"] .est.ocupada{color:#fff}
-
-  /* ----------------------------------------------------- paso 1: gente -- */
-  .gente-fila{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-  .npers{
-    min-width:var(--tap);min-height:var(--tap);padding:0 14px;border-radius:var(--r-pill);
-    background:var(--dark-card);border:1px solid var(--dark-border);color:#fff;font-size:17px;
-  }
-  .npers:hover{border-color:var(--gold)}
-  .npers[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:600}
-  .npers.mas{font-size:15px;padding:0 16px}
-  .gente-otra{display:flex;align-items:center;gap:8px;margin-top:10px}
-  .gente-otra[hidden]{display:none}
-  .gente-otra input{
-    width:92px;min-height:var(--tap);padding:8px 12px;font-size:17px;text-align:center;
-    border:1px solid var(--dark-border);border-radius:var(--r-md);
-    background:var(--dark-card);color:#fff;
-  }
-  .gente-otra label{color:var(--dark-muted);font-size:14px}
-
-  .listo-fila{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap}
-  .listo-fila .btn{flex:1 1 240px}
-
-  /* ------------------------------------------------- paso 2: la cabecera --
-     Queda pegada arriba: el mozo tiene que poder ver EN QUE MESA esta
-     cargando sin volver a subir. Es el dato que no se puede equivocar. */
-  .barra-mesa{
-    position:sticky;top:0;z-index:4;margin:0 0 10px;
-    padding:9px 0 10px;background:var(--ink);
-    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-  }
-  .barra-mesa .quien-mesa{
-    display:inline-flex;align-items:center;gap:8px;
-    font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);
-    font-size:23px;color:#fff;line-height:1;
-  }
-  .barra-mesa .pers{
-    font-family:var(--font-cuerpo);font-style:normal;font-size:13px;
-    color:var(--ink);background:var(--gold);border-radius:var(--r-pill);
-    padding:4px 10px;font-weight:600;
-  }
-  .btn-cambiar{
-    margin-left:auto;min-height:var(--tap);padding:0 14px;border-radius:var(--r-pill);
-    background:transparent;border:1px solid var(--dark-border);color:var(--dark-ink);font-size:15px;
-  }
-  .btn-cambiar:hover{border-color:var(--gold);color:#fff}
-
-  /* ------------------------------------------------- paso 2: buscador --- */
+  /* --------------------------------------------------- paso 1: buscador --
+     Pegado debajo de la barra de navegacion: el mozo tiene que poder buscar
+     un plato sin volver a subir la lista de 156. */
   .buscar{position:relative;margin:0 0 10px}
   .buscar input{
     width:100%;min-height:50px;padding:10px 44px 10px 14px;font-size:16px;
@@ -158,7 +96,36 @@
   }
   .cat-b[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:600}
 
-  /* ---------------------------------------------------- paso 2: la carta --
+  /* ------------------------------------------------- paso 1: el estado --
+     Que mesa lleva la comanda, si es que ya se eligio. En el flujo nuevo lo
+     normal es que todavia NO haya mesa, y decirlo en voz alta es justamente
+     lo que evita que se mande sin ella. */
+  .barra-mesa{
+    position:sticky;top:var(--nav-h);z-index:4;margin:0 0 10px;
+    padding:9px 0 10px;background:var(--ink);
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  }
+  .barra-mesa .quien-mesa{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);
+    font-size:23px;color:#fff;line-height:1;
+  }
+  .barra-mesa .quien-mesa.sin{
+    font-family:var(--font-cuerpo);font-style:normal;
+    font-size:15px;color:var(--dark-muted);
+  }
+  .barra-mesa .pers{
+    font-family:var(--font-cuerpo);font-style:normal;font-size:13px;
+    color:var(--ink);background:var(--gold);border-radius:var(--r-pill);
+    padding:4px 10px;font-weight:600;
+  }
+  .btn-cambiar{
+    margin-left:auto;min-height:var(--tap);padding:0 14px;border-radius:var(--r-pill);
+    background:transparent;border:1px solid var(--dark-border);color:var(--dark-ink);font-size:15px;
+  }
+  .btn-cambiar:hover{border-color:var(--gold);color:#fff}
+
+  /* ---------------------------------------------------- paso 1: la carta --
      En pantalla ancha va en dos columnas: en la tablet del salon sobraba
      medio metro de mesa vacia a la derecha y la lista obligaba a bajar el
      doble. */
@@ -169,25 +136,69 @@
     font-size:12px;letter-spacing:.1em;text-transform:uppercase;
     margin:2px 0 8px;font-weight:600;
   }
+
   .plato{
-    display:flex;align-items:stretch;gap:8px;
+    position:relative;overflow:hidden;
     background:var(--dark-card);border:1px solid var(--dark-border);
-    border-radius:var(--r-md);overflow:hidden;
+    border-radius:var(--r-md);
   }
   .plato.tiene{border-color:var(--gold)}
   .plato.agotado{opacity:.5}
+
+  /* Lo que se mueve al deslizar. Detras queda el cartel de la foto. */
+  .pl-desliz{
+    position:relative;z-index:1;display:flex;align-items:stretch;
+    flex-wrap:wrap;gap:8px;background:var(--dark-card);
+    transition:transform .18s ease;touch-action:pan-y;
+  }
+  .plato.arrastrando .pl-desliz{transition:none}
+  .pl-hint{
+    position:absolute;top:0;right:0;bottom:0;width:96px;z-index:0;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    background:var(--dark-panel);color:var(--gold);font-size:13px;
+    opacity:0;pointer-events:none;
+  }
+
   .pl-main{
-    flex:1;min-width:0;display:flex;align-items:center;gap:10px;
-    padding:10px 4px 10px 13px;min-height:56px;text-align:left;color:#fff;
+    flex:1 1 200px;min-width:0;display:flex;align-items:center;gap:8px;
+    padding:9px 4px 9px 12px;min-height:56px;text-align:left;color:#fff;
   }
   .pl-main:hover{background:var(--dark-card-hover)}
   .pl-tex{flex:1;min-width:0}
   .pl-tex b{display:block;font-size:16px;font-weight:500;line-height:1.25}
-  .pl-tex i{display:block;font-style:normal;font-size:13px;color:var(--dark-muted);line-height:1.3}
-  .pl-pre{flex:none;font-size:15px;color:var(--dark-ink);font-variant-numeric:tabular-nums}
-  .pl-act{display:flex;align-items:center;gap:2px;padding:6px 8px 6px 2px}
+  /* La aclaracion se corta en un renglon. Con la miniatura y el boton de
+     foto en la misma fila, dejarla crecer llevaba la fila a 95px de alto y
+     la lista pasaba de quince platos por pantalla a seis: justo lo que esta
+     pantalla evita. Entera se lee en la foto grande. */
+  .pl-tex i{
+    display:block;font-style:normal;font-size:13px;color:var(--dark-muted);line-height:1.3;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+
+  /* La miniatura, justo a la izquierda del precio. Es para mostrarsela al
+     comensal, no para decorar: por eso se ve aunque la fila este agotada. */
+  .pl-foto{
+    position:relative;flex:none;width:38px;height:38px;border-radius:9px;
+    overflow:hidden;background:var(--dark-panel);border:1px solid var(--dark-border);
+  }
+  .pl-foto img{
+    position:relative;z-index:1;width:100%;height:100%;object-fit:cover;display:block;
+  }
+  .pl-foto .ini{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);
+    font-size:18px;color:var(--dark-muted);
+  }
+  .pl-pre{
+    flex:none;font-size:14px;color:var(--dark-ink);
+    font-variant-numeric:tabular-nums;white-space:nowrap;
+  }
+
+  .pl-act{display:flex;align-items:center;gap:2px;padding:6px 6px 6px 0}
   .pl-act .icon-btn{background:var(--dark-panel);border-color:var(--dark-border);color:#fff}
   .pl-act .icon-btn:hover{background:var(--dark-card-hover);border-color:var(--gold)}
+  .pl-act .ver-foto{color:var(--gold)}
+  .pl-act .ver-foto svg{display:block}
   .pl-q{
     min-width:28px;text-align:center;font-size:17px;font-weight:600;color:var(--gold);
     font-variant-numeric:tabular-nums;
@@ -197,10 +208,73 @@
     display:flex;align-items:center;
   }
 
+  /* En el celular, la fila que YA tiene algo cargado suma dos botones mas
+     (menos y mas) y no entra en un renglon sin dejar el nombre del plato en
+     30px. Esa sola fila pasa los botones abajo; las otras 150 siguen
+     midiendo un renglon, que es lo que hace rapida a la lista. */
+  @media (max-width:559px){
+    .plato.tiene .pl-main{flex:1 1 100%}
+    .plato.tiene .pl-act{
+      flex:1 1 100%;justify-content:flex-end;
+      padding:0 8px 8px;gap:4px;
+    }
+  }
+
   .nada{
     color:var(--dark-muted);text-align:center;padding:26px 16px;font-size:15px;
     border:1px dashed var(--dark-border);border-radius:var(--r-md);grid-column:1/-1;
   }
+
+  /* --------------------------------------------------------- paso 2: gente --
+     Las doce mesas entran juntas: en el celular son tres columnas, en la
+     tablet del salon seis. Sin scroll para elegir, que es el punto. */
+  .gente-fila{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .npers{
+    min-width:var(--tap);min-height:var(--tap);padding:0 14px;border-radius:var(--r-pill);
+    background:var(--dark-card);border:1px solid var(--dark-border);color:#fff;font-size:17px;
+  }
+  .npers:hover{border-color:var(--gold)}
+  .npers[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:600}
+  .npers.mas{font-size:15px;padding:0 16px}
+  .gente-otra{display:flex;align-items:center;gap:8px;margin-top:10px}
+  .gente-otra[hidden]{display:none}
+  .gente-otra input{
+    width:92px;min-height:var(--tap);padding:8px 12px;font-size:17px;text-align:center;
+    border:1px solid var(--dark-border);border-radius:var(--r-md);
+    background:var(--dark-card);color:#fff;
+  }
+  .gente-otra label{color:var(--dark-muted);font-size:14px}
+
+  .mesas{
+    display:grid;gap:8px;margin:0;padding:0;list-style:none;
+    grid-template-columns:repeat(auto-fill,minmax(98px,1fr));
+  }
+  .mesa{
+    width:100%;min-height:78px;padding:9px 8px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    background:var(--dark-card);border:1px solid var(--dark-border);border-radius:var(--r-md);
+    color:#fff;text-align:center;
+    transition:border-color .16s,background-color .16s,transform .08s;
+  }
+  .mesa:hover{background:var(--dark-card-hover);border-color:var(--gold)}
+  .mesa:active{transform:scale(.98)}
+  .mesa[aria-pressed="true"]{
+    border-color:var(--accent);background:var(--accent);
+    box-shadow:0 0 0 2px rgba(180,71,42,.35);
+  }
+  .mesa .num{font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);font-size:23px;line-height:1.05}
+  .mesa .est{font-size:12px;color:var(--dark-muted);line-height:1.25}
+  .mesa[aria-pressed="true"] .est{color:#ffe6dc}
+  .mesa .est.ocupada{color:var(--gold)}
+  .mesa[aria-pressed="true"] .est.ocupada{color:#fff}
+
+  /* Que dato falta. Se toca dos veces para deseleccionar, asi que este
+     renglon es el que contesta "y ahora que me falta". */
+  .falta{
+    margin:16px 0 0;padding:11px 13px;border-radius:var(--r-md);font-size:14px;line-height:1.5;
+    background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn-border);
+  }
+  .falta.listo{background:var(--ok-soft);color:var(--ok);border-color:var(--ok-border)}
 
   /* --------------------------------------------------------- pie fijo ---- */
   .pie{
@@ -211,10 +285,16 @@
   }
   .pie[hidden]{display:none}
   .pie-in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:12px}
-  .pie-dato{flex:1;min-width:0;color:#fff;line-height:1.25}
-  .pie-dato b{display:block;font-size:19px;font-variant-numeric:tabular-nums}
-  .pie-dato span{font-size:13px;color:var(--dark-muted)}
-  .pie .btn{flex:none;min-height:52px;padding:0 22px;font-size:17px}
+  /* El total es el boton que abre la comanda: es el area mas grande del pie
+     y no le roba ancho al boton que sigue el flujo. */
+  .pie-ver{
+    flex:1;min-width:0;min-height:var(--tap);padding:0;
+    color:#fff;line-height:1.25;text-align:left;
+  }
+  .pie-ver b{display:block;font-size:19px;font-variant-numeric:tabular-nums}
+  .pie-ver span{font-size:13px;color:var(--dark-muted)}
+  .pie-ver:hover span{color:var(--gold)}
+  .pie .btn{flex:none;min-height:52px;padding:0 20px;font-size:17px}
 
   /* -------------------------------------------------------- la comanda --- */
   .lin{
@@ -249,6 +329,25 @@
   }
   .aviso[hidden]{display:none}
 
+  /* ------------------------------------------------------- la foto grande --
+     Ojo con esta hoja: NO tiene un solo boton que toque el pedido, y es a
+     proposito. Se abre para mostrarle el plato al comensal; al cerrarla la
+     comanda tiene que estar exactamente igual que antes de abrirla. */
+  .visor-panel{background:var(--ink);color:#fff;max-width:720px}
+  .visor-panel .sheet-head h2{color:#fff}
+  .visor-panel .close-x{background:var(--dark-card);border-color:var(--dark-border);color:#fff}
+  .visor-caja{
+    border-radius:var(--r-md);overflow:hidden;background:var(--dark-panel);
+    border:1px solid var(--dark-border);
+  }
+  .visor-caja img{
+    display:block;width:100%;max-height:62svh;object-fit:contain;background:#000;
+  }
+  .visor-pie{
+    margin:11px 0 14px;color:var(--dark-ink);font-size:15px;line-height:1.45;
+  }
+  .visor-pie b{color:#fff;font-variant-numeric:tabular-nums}
+
   /* --------------------------------------------------------- se mando ---- */
   .hecho{text-align:center;padding:10px 0 4px}
   .hecho .tilde{
@@ -260,24 +359,22 @@
   .hecho p{margin:0 0 4px;color:var(--muted);font-size:15px;line-height:1.5}
 
   /* Celular: las doce mesas, los numeros de gente y el boton tienen que
-     entrar en la primera pantalla. Sin esto sobraban 35px y el mozo tenia
-     que hacer scroll para tocar "Cargar los platos", que es lo unico que se
-     hace en este paso. Los botones NO se achican: se achican los huecos. */
+     entrar en la primera pantalla del paso 2. Los botones NO se achican: se
+     achican los huecos. */
   @media (max-width:420px){
     h2.seccion{margin:13px 0 8px}
     .mesas{gap:7px;grid-template-columns:repeat(auto-fill,minmax(88px,1fr))}
     .mesa{min-height:68px;padding:7px 6px}
     .mesa .num{font-size:21px}
-    .listo-fila{margin-top:14px}
   }
 
-  /* En pantalla ancha el paso 1 aprovecha el ancho: mesas a la izquierda,
-     la gente y el boton a la derecha, sin bajar. */
+  /* En pantalla ancha el paso 2 aprovecha el ancho: la gente arriba a la
+     izquierda y las mesas al lado, sin bajar. */
   @media (min-width:900px){
-    .paso1-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr);gap:26px;align-items:start}
-    .paso1-grid h2.seccion:first-of-type{margin-top:6px}
-    .paso1-der h2.seccion{margin-top:6px}
-    .listo-fila{margin-top:16px}
+    .paso2-grid{display:grid;grid-template-columns:minmax(260px,1fr) minmax(0,1.6fr);gap:26px;align-items:start}
+    .paso2-grid h2.seccion:first-of-type{margin-top:6px}
+    .paso2-der h2.seccion{margin-top:6px}
+    .falta{grid-column:1/-1;margin-top:8px}
   }
 </style>
 </head>
@@ -286,7 +383,7 @@
   <header class="top">
     <div>
       <h1>Tomar comanda</h1>
-      <p class="sub" id="sub">Eleg&iacute; la mesa, dec&iacute; cu&aacute;ntos son y carg&aacute; lo que piden</p>
+      <p class="sub" id="sub">Anot&aacute; lo que piden. La mesa se elige despu&eacute;s.</p>
     </div>
     <div class="head-right">
       <a class="soy" href="./" data-quien hidden></a>
@@ -294,46 +391,20 @@
         <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
       </span>
       <a class="btn btn-secondary btn-head" href="mozo.html">Los pedidos</a>
-      <!-- Volver SIEMPRE visible. En el paso 2 vuelve al paso anterior
-           (elegir la mesa), no a la portada: saltar al inicio desde la mitad
-           de una comanda es perder la comanda. -->
+      <!-- Los dos "volver" que app.js sube a la barra fija de arriba.
+           NO son lo mismo y por eso son dos: desde la carta se vuelve a la
+           portada, pero desde "personas y mesa" se vuelve A LOS PLATOS.
+           Saltar al inicio desde la mitad de una comanda es perderla. -->
       <a class="back-link" href="./" id="volverInicio">Volver al inicio</a>
-      <button type="button" class="back-link" id="volverPaso1" hidden>&#8592; Volver a elegir la mesa</button>
+      <button type="button" class="back-link" id="volverPaso1" hidden>Volver a los platos</button>
     </div>
   </header>
 
-  <!-- ===================================================== PASO 1: mesa === -->
-  <section id="paso1" class="paso1-grid">
-    <div>
-      <h2 class="seccion"><span class="paso">1</span>&iquest;Qu&eacute; mesa?</h2>
-      <ul class="mesas" id="mesas">
-        <li class="nada">Cargando las mesas...</li>
-      </ul>
-    </div>
-    <div class="paso1-der">
-      <h2 class="seccion"><span class="paso">2</span>&iquest;Cu&aacute;ntas personas?</h2>
-      <div class="gente-fila" id="gente"></div>
-      <div class="gente-otra" id="genteOtra" hidden>
-        <label for="genteInput">Son</label>
-        <input type="number" id="genteInput" min="1" max="99" inputmode="numeric" value="9"
-               aria-label="Cu&aacute;ntas personas hay en la mesa">
-        <label for="genteInput">personas</label>
-      </div>
-
-      <div class="listo-fila">
-        <button type="button" class="btn btn-primary btn-grande" id="irCarta" disabled>
-          Eleg&iacute; una mesa
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <!-- ==================================================== PASO 2: carta === -->
-  <section id="paso2" hidden>
+  <!-- ==================================================== PASO 1: platos == -->
+  <section id="paso1">
     <div class="barra-mesa">
-      <span class="quien-mesa"><span id="chipMesa">Mesa</span>
-        <span class="pers" id="chipPers">2</span></span>
-      <button type="button" class="btn-cambiar" id="cambiarMesa">Cambiar mesa</button>
+      <span class="quien-mesa sin" id="chipMesa">Todav&iacute;a sin mesa</span>
+      <button type="button" class="btn-cambiar" id="cambiarMesa">Personas y mesa</button>
     </div>
 
     <p class="aviso" id="avisoAgotados" hidden></p>
@@ -348,16 +419,38 @@
     <p class="cat-tit" id="catTit"></p>
     <ul class="carta" id="carta"></ul>
   </section>
+
+  <!-- =========================================== PASO 2: personas y mesa == -->
+  <section id="paso2" class="paso2-grid" hidden>
+    <div>
+      <h2 class="seccion"><span class="paso">1</span>&iquest;Cu&aacute;ntas personas?</h2>
+      <div class="gente-fila" id="gente"></div>
+      <div class="gente-otra" id="genteOtra" hidden>
+        <label for="genteInput">Son</label>
+        <input type="number" id="genteInput" min="1" max="99" inputmode="numeric" value="9"
+               aria-label="Cu&aacute;ntas personas hay en la mesa">
+        <label for="genteInput">personas</label>
+      </div>
+    </div>
+    <div class="paso2-der">
+      <h2 class="seccion"><span class="paso">2</span>&iquest;Qu&eacute; mesa?</h2>
+      <ul class="mesas" id="mesas">
+        <li class="nada">Cargando las mesas...</li>
+      </ul>
+    </div>
+    <p class="falta" id="falta" role="status" aria-live="polite"></p>
+  </section>
 </div>
 
-<!-- Pie fijo con lo que va cargado. Solo aparece cuando hay algo. -->
+<!-- Pie fijo con lo que va cargado. El total abre la comanda; el boton de al
+     lado sigue el flujo (continuar en los platos, mandar en la mesa). -->
 <div class="pie" id="pie" hidden>
   <div class="pie-in">
-    <div class="pie-dato">
+    <button type="button" class="pie-ver" id="verComanda">
       <b id="pieTotal">$0</b>
       <span id="pieCuenta">nada cargado</span>
-    </div>
-    <button type="button" class="btn btn-primary" id="verComanda">Ver la comanda</button>
+    </button>
+    <button type="button" class="btn btn-primary" id="pieAccion">Continuar</button>
   </div>
 </div>
 
@@ -372,6 +465,20 @@
   </div>
 </div>
 
+<!-- ====================================================== la foto grande ==
+     Para mostrarle el plato al comensal. Adentro NO hay ni un boton que
+     sume, reste o vacie: abrir la foto no puede tocar el pedido. -->
+<div class="sheet" id="visorFoto" hidden role="dialog" aria-modal="true" aria-labelledby="vfTit">
+  <div class="sheet-panel visor-panel">
+    <div class="sheet-head">
+      <h2 id="vfTit">Foto del plato</h2>
+      <button type="button" class="close-x" id="vfX" aria-label="Cerrar la foto">&#10005;</button>
+    </div>
+    <div class="visor-caja"><img id="vfImg" src="" alt=""></div>
+    <p class="visor-pie" id="vfPie"></p>
+    <button type="button" class="btn btn-secondary btn-block" id="vfCerrar">Listo</button>
+  </div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
 <script src="menu-data.js" defer></script>
 <script src="config.js" defer></script>
@@ -391,12 +498,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
   var conn = new LP.ConnBadge(document.getElementById('conn'));
 
-  /* --------------------------------------------------------- el estado -- */
+  /* --------------------------------------------------------- el estado --
+     mesaSel y personas arrancan en null a proposito: "nada elegido" tiene
+     que ser un estado de verdad, porque tocar dos veces la misma opcion la
+     deselecciona y hay que poder volver a no tener nada. */
   var mesaSel = null;        // 'Mesa 7'
-  var personas = 2;
+  var personas = null;       // null = todavia no dijo cuantos son
   var plano = null;          // lo que devuelve LP.planoDelSalon
   var carrito = Object.create(null);   // id -> qty
   var agotados = {};
+  var fotosPropias = {};     // { plato_id: url } de las que cargo el local
   var query = '';
   var catActiva = null;
   var enviando = false;
@@ -410,15 +521,19 @@ document.addEventListener('DOMContentLoaded', function () {
   var PLATO = Object.create(null);
   MENU.forEach(function (d) { PLATO[d.id] = d; });
 
-  /* El borrador vive en el celular. Un mozo que carga doce platos y se queda
-     sin bateria, o al que el navegador le descarta la pestania mientras
-     atiende otra mesa, no puede perder la comanda: al volver esta igual. */
+  var notaTexto = '';
+
+  /* ------------------------------------------------------- el borrador --
+     Vive en el celular. Un mozo que carga doce platos y se queda sin
+     bateria, o al que el navegador le descarta la pestania mientras atiende
+     otra mesa, no puede perder la comanda: al volver esta igual.       */
   var BORRADOR = 'lp_comanda_borrador';
+  var BORRADOR_V = 3;        // 3 = el del flujo platos -> personas -> mesa
 
   function guardarBorrador() {
     try {
       localStorage.setItem(BORRADOR, JSON.stringify({
-        mesa: mesaSel, personas: personas, items: carrito,
+        v: BORRADOR_V, mesa: mesaSel, personas: personas, items: carrito,
         nota: notaTexto, en: Date.now()
       }));
     } catch (e) {}
@@ -426,16 +541,62 @@ document.addEventListener('DOMContentLoaded', function () {
   function olvidarBorrador() {
     try { localStorage.removeItem(BORRADOR); } catch (e) {}
   }
-  function leerBorrador() {
-    try {
-      var b = JSON.parse(localStorage.getItem(BORRADOR) || 'null');
-      // Mas de 8 horas es de otro servicio: no se retoma.
-      if (!b || !b.mesa || (Date.now() - (b.en || 0)) > 8 * 3600 * 1000) return null;
-      return b;
-    } catch (e) { return null; }
-  }
 
-  var notaTexto = '';
+  /* Lee el borrador y lo devuelve YA en la forma de hoy, o null.
+
+     El borrador viejo (el de antes de invertir el flujo) SIEMPRE traia
+     mesa, porque la mesa se elegia primero y sin ella no se guardaba nada.
+     El de ahora puede no tenerla: se anotan los platos y la mesa se pone al
+     final. Por eso la condicion de "sirve" dejo de ser "tiene mesa" y paso
+     a ser "tiene algo que recuperar", y un borrador viejo entra igual, con
+     su mesa puesta.
+
+     Todo lo que entra se revisa dato por dato: platos que ya no estan en la
+     carta, cantidades que no son numeros, una mesa que no es texto. Un
+     borrador a medio escribir no puede dejar en blanco la pantalla de un
+     mozo que tenia media comanda cargada.                              */
+  function leerBorrador() {
+    var crudo = null;
+    try { crudo = localStorage.getItem(BORRADOR); } catch (e) { return null; }
+    if (!crudo) return null;
+
+    try {
+      var b = JSON.parse(crudo);
+      if (!b || typeof b !== 'object') { olvidarBorrador(); return null; }
+
+      // Mas de 8 horas es de otro servicio: no se retoma.
+      var en = Number(b.en);
+      if (!isFinite(en) || (Date.now() - en) > 8 * 3600 * 1000) { olvidarBorrador(); return null; }
+
+      var items = Object.create(null);
+      var cuantos = 0;
+      var origen = (b.items && typeof b.items === 'object') ? b.items : {};
+      Object.keys(origen).forEach(function (id) {
+        if (!PLATO[id]) return;                    // ya no esta en la carta
+        var q = Math.round(Number(origen[id]));
+        if (!isFinite(q) || q < 1) return;
+        items[id] = Math.min(99, q);
+        cuantos += items[id];
+      });
+
+      var mesa = (typeof b.mesa === 'string' && b.mesa) ? b.mesa : null;
+
+      var pers = null;
+      var p = Math.round(Number(b.personas));
+      if (isFinite(p) && p >= 1) pers = Math.min(99, p);
+
+      if (!mesa && !cuantos) { olvidarBorrador(); return null; }
+
+      return {
+        mesa: mesa, personas: pers, items: items, cuantos: cuantos,
+        nota: (typeof b.nota === 'string') ? b.nota.slice(0, 2000) : ''
+      };
+    } catch (e) {
+      // Ilegible: se tira y la pantalla arranca limpia. Nunca rota.
+      olvidarBorrador();
+      return null;
+    }
+  }
 
   /* Una clave por comanda: identifica ESTA comanda aunque se mande dos veces.
      Es la misma defensa que usa la carta del comensal contra el duplicado. */
@@ -447,47 +608,56 @@ document.addEventListener('DOMContentLoaded', function () {
     return claveEnvio;
   }
 
-  /* ---------------------------------------------------------- los pasos -- */
+  /* ---------------------------------------------------------- los pasos --
+     1 = los platos (la pantalla de entrada). 2 = personas y mesa.      */
   var elP1 = document.getElementById('paso1');
   var elP2 = document.getElementById('paso2');
   var volverInicio = document.getElementById('volverInicio');
   var volverPaso1 = document.getElementById('volverPaso1');
+  var scrollCarta = 0;
 
   function irAPaso(n) {
+    // Se guarda donde estaba mirando la carta: volver de la mesa y aparecer
+    // arriba de todo obliga a buscar de nuevo el plato que iba a agregar.
+    if (n === 2 && !elP1.hidden) scrollCarta = window.pageYOffset || 0;
+
     elP1.hidden = n !== 1;
     elP2.hidden = n !== 2;
     volverInicio.hidden = n !== 1;
     volverPaso1.hidden = n !== 2;
     document.getElementById('sub').textContent = n === 1
-      ? 'Elegí la mesa, decí cuántos son y cargá lo que piden'
-      : 'Tocá el plato para sumarlo. Cuando termines, mandalo a la cocina.';
-    if (n === 2) { pintarBarraMesa(); pintarCarta(); }
+      ? 'Anotá lo que piden. La mesa se elige después.'
+      : 'Decí cuántos son y en qué mesa. Sin mesa no se manda.';
+    LP.navDonde(n === 1 ? 'Tomar comanda' : 'Personas y mesa');
+
+    if (n === 1) { pintarBarraMesa(); pintarCarta(); }
+    else { pintarMesas(); pintarGente(); pintarFalta(); }
     pintarPie();
-    window.scrollTo(0, 0);
+    window.scrollTo(0, n === 1 ? scrollCarta : 0);
   }
 
-  /* El boton de atras del celular tambien vuelve al paso 1. Sin esto, el
-     mozo tocaba atras para corregir la mesa y se iba de la pantalla con la
-     comanda a medio cargar. */
-  function entrarACarta() {
-    try { history.pushState({ lp: 'carta' }, ''); } catch (e) {}
+  /* El boton de atras del celular vuelve al paso anterior, no se va de la
+     pantalla con la comanda a medio cargar. */
+  function entrarAMesa() {
+    try { history.pushState({ lp: 'mesa' }, ''); } catch (e) {}
     irAPaso(2);
   }
   window.addEventListener('popstate', function () {
-    if (LP.isDialogOpen(hoja)) { cerrarHoja(); return; }
+    if (LP.isDialogOpen(visor)) { LP.closeDialog(visor); return; }
+    if (LP.isDialogOpen(hoja)) { LP.closeDialog(hoja); return; }
     if (!elP2.hidden) irAPaso(1);
   });
 
   volverPaso1.addEventListener('click', function () {
     // Si hay estado de historia propio, se vuelve por ahi (asi no queda basura).
-    if (history.state && history.state.lp === 'carta') { history.back(); return; }
+    if (history.state && history.state.lp === 'mesa') { history.back(); return; }
     irAPaso(1);
   });
   document.getElementById('cambiarMesa').addEventListener('click', function () {
-    volverPaso1.click();
+    if (elP2.hidden) entrarAMesa();
   });
 
-  /* ------------------------------------------------------ paso 1: mesas -- */
+  /* ------------------------------------------------------ paso 2: mesas -- */
   var elMesas = document.getElementById('mesas');
 
   function pintarMesas() {
@@ -508,8 +678,11 @@ document.addEventListener('DOMContentLoaded', function () {
         : (t.estado === 'Ocupada' && t.cuenta && t.cuenta.rondas
             ? t.cuenta.rondas + (t.cuenta.rondas === 1 ? ' ronda' : ' rondas')
             : t.estado);
+      var elegida = mesaSel === t.etiqueta;
       return '<li><button type="button" class="mesa" data-mesa="' + esc(t.etiqueta) + '" ' +
-          'aria-pressed="' + (mesaSel === t.etiqueta ? 'true' : 'false') + '">' +
+          'aria-pressed="' + (elegida ? 'true' : 'false') + '" ' +
+          'aria-label="' + esc(t.etiqueta) + ', ' + esc(sub) +
+          (elegida ? '. Elegida: tocá de nuevo para soltarla' : '') + '">' +
           '<span class="num">' + esc(t.mesa.numero) + '</span>' +
           '<span class="est' + (ocupada ? ' ocupada' : '') + '">' + esc(sub) + '</span>' +
         '</button></li>';
@@ -523,17 +696,24 @@ document.addEventListener('DOMContentLoaded', function () {
     elegirMesa(b.dataset.mesa);
   });
 
+  /* Tocar la mesa que YA estaba elegida la suelta. Antes no habia manera de
+     deshacer: una vez tocada, quedaba una mesa elegida si o si. */
   function elegirMesa(etiqueta) {
-    mesaSel = etiqueta;
-    // Si la mesa ya tiene gente anotada, ese numero manda: lo cargo alguien
-    // que la vio. El mozo lo puede cambiar igual.
-    var t = buscarEnPlano(etiqueta);
-    if (t && t.cuenta && t.cuenta.sesion && t.cuenta.sesion.comensales) {
-      personas = Number(t.cuenta.sesion.comensales);
+    if (mesaSel === etiqueta) {
+      mesaSel = null;
+    } else {
+      mesaSel = etiqueta;
+      // Si la mesa ya tiene gente anotada, ese numero manda: lo cargo alguien
+      // que la vio. El mozo lo puede cambiar igual.
+      var t = buscarEnPlano(etiqueta);
+      if (t && t.cuenta && t.cuenta.sesion && t.cuenta.sesion.comensales) {
+        personas = Number(t.cuenta.sesion.comensales) || personas;
+        pintarGente();
+      }
     }
     pintarMesas();
-    pintarGente();
-    pintarListo();
+    pintarFalta();
+    pintarPie();
     guardarBorrador();
   }
 
@@ -545,10 +725,12 @@ document.addEventListener('DOMContentLoaded', function () {
     return null;
   }
 
-  /* ------------------------------------------------------ paso 1: gente -- */
+  /* ------------------------------------------------------ paso 2: gente -- */
   var elGente = document.getElementById('gente');
   var elOtra = document.getElementById('genteOtra');
   var elOtraInput = document.getElementById('genteInput');
+
+  function esMuchos() { return personas !== null && personas > 8; }
 
   function pintarGente() {
     var html = '';
@@ -557,50 +739,71 @@ document.addEventListener('DOMContentLoaded', function () {
         'aria-pressed="' + (personas === n ? 'true' : 'false') + '">' + n + '</button>';
     }
     html += '<button type="button" class="npers mas" data-n="mas" ' +
-      'aria-pressed="' + (personas > 8 ? 'true' : 'false') + '">9 o m&aacute;s</button>';
+      'aria-pressed="' + (esMuchos() ? 'true' : 'false') + '">9 o m&aacute;s</button>';
     elGente.innerHTML = html;
-    elOtra.hidden = personas <= 8;
-    if (personas > 8) elOtraInput.value = personas;
+    elOtra.hidden = !esMuchos();
+    if (esMuchos()) elOtraInput.value = personas;
   }
 
+  // Igual que las mesas: tocar de nuevo el numero elegido lo suelta.
   elGente.addEventListener('click', function (ev) {
     var b = ev.target.closest('[data-n]');
     if (!b) return;
     if (b.dataset.n === 'mas') {
-      personas = Math.max(9, Number(elOtraInput.value) || 9);
-      pintarGente();
-      elOtraInput.focus();
+      if (esMuchos()) {
+        personas = null;
+        pintarGente();
+      } else {
+        personas = Math.max(9, Math.min(99, Number(elOtraInput.value) || 9));
+        pintarGente();
+        elOtraInput.focus();
+      }
     } else {
-      personas = Number(b.dataset.n);
+      var n = Number(b.dataset.n);
+      personas = (personas === n) ? null : n;
       pintarGente();
     }
-    pintarListo();
+    pintarFalta();
+    pintarPie();
     guardarBorrador();
   });
 
   elOtraInput.addEventListener('input', function () {
     var n = Math.round(Number(elOtraInput.value));
     if (isFinite(n) && n >= 1) { personas = Math.min(99, n); guardarBorrador(); }
-    pintarListo();
+    pintarFalta();
+    pintarPie();
   });
 
-  /* ------------------------------------------------------ paso 1: listo -- */
-  var btnIr = document.getElementById('irCarta');
+  /* ------------------------------------------------------ paso 2: falta --
+     El renglon que contesta "y ahora que me falta". Existe justamente
+     porque se puede deseleccionar: hay que poder quedarse sin nada elegido
+     y que la pantalla lo diga en voz alta.
 
-  function pintarListo() {
-    btnIr.disabled = !mesaSel;
-    btnIr.textContent = mesaSel
-      ? 'Cargar los platos de ' + mesaSel + ' (' + personas +
-        (personas === 1 ? ' persona)' : ' personas)')
-      : 'Elegí una mesa';
+     La mesa es lo unico que FRENA. Cuantos son es un dato al lado (va a la
+     cuenta de la mesa, no a la comanda): si el mozo no lo sabe, la comanda
+     igual tiene que poder salir.                                        */
+  var elFalta = document.getElementById('falta');
+
+  function pintarFalta() {
+    var gente = personas === null
+      ? null
+      : personas + (personas === 1 ? ' persona' : ' personas');
+
+    if (!mesaSel) {
+      elFalta.className = 'falta';
+      elFalta.textContent = gente
+        ? 'Falta la mesa. Sin mesa la comanda no se puede mandar a la cocina.'
+        : 'Falta la mesa, y decir cuántos son. Sin mesa la comanda no se puede mandar.';
+      return;
+    }
+    elFalta.className = 'falta listo';
+    elFalta.textContent = gente
+      ? 'Listo para mandar: ' + mesaSel + ', ' + gente + '.'
+      : 'Listo para mandar: ' + mesaSel + '. No dijiste cuántos son, pero se puede mandar igual.';
   }
 
-  btnIr.addEventListener('click', function () {
-    if (!mesaSel) return;
-    entrarACarta();
-  });
-
-  /* ------------------------------------------------------ paso 2: carta -- */
+  /* ------------------------------------------------------ paso 1: carta -- */
   var elCats = document.getElementById('cats');
   var elCarta = document.getElementById('carta');
   var elCatTit = document.getElementById('catTit');
@@ -608,9 +811,16 @@ document.addEventListener('DOMContentLoaded', function () {
   var elLimpiar = document.getElementById('limpiarBusq');
 
   function pintarBarraMesa() {
-    document.getElementById('chipMesa').textContent = mesaSel || 'Mesa';
-    document.getElementById('chipPers').textContent =
-      personas + (personas === 1 ? ' persona' : ' personas');
+    var chip = document.getElementById('chipMesa');
+    if (!mesaSel) {
+      chip.className = 'quien-mesa sin';
+      chip.textContent = 'Todavía sin mesa';
+      return;
+    }
+    chip.className = 'quien-mesa';
+    chip.innerHTML = esc(mesaSel) +
+      (personas === null ? '' :
+        ' <span class="pers">' + personas + (personas === 1 ? ' persona' : ' personas') + '</span>');
   }
 
   function pintarCats() {
@@ -653,28 +863,49 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  // El icono de la foto. Va en SVG y no como emoji: el emoji de camara se
+  // dibuja distinto en cada telefono y en algunos no se ve.
+  var ICONO_FOTO =
+    '<svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">' +
+      '<rect x="3" y="5.5" width="18" height="13" rx="2.6"/>' +
+      '<circle cx="12" cy="12" r="3.1"/></svg>';
+
   function filaHTML(d) {
     var q = carrito[d.id] || 0;
     var noHay = !!agotados[d.id];
+    var url = LP.fotoDePlato(fotosPropias, d);
+    var ini = esc((d.name || '?').trim().charAt(0).toUpperCase());
+
     return '<li class="plato' + (q ? ' tiene' : '') + (noHay ? ' agotado' : '') +
         '" data-fila="' + esc(d.id) + '">' +
-      '<button type="button" class="pl-main" data-act="inc" data-id="' + esc(d.id) + '"' +
-        (noHay ? ' disabled' : '') + ' aria-label="Agregar ' + esc(d.name) + '">' +
-        '<span class="pl-tex"><b>' + esc(d.name) + '</b>' +
-          (d.note ? '<i>' + esc(d.note) + '</i>' : '') +
-          (query ? '<i>' + esc(d.cat) + '</i>' : '') +
-        '</span>' +
-        '<span class="pl-pre">' + money(d.price) + '</span>' +
-      '</button>' +
-      (noHay
-        ? '<span class="pl-no">Se termin&oacute;</span>'
-        : '<span class="pl-act">' +
-            (q ? '<button type="button" class="icon-btn" data-act="dec" data-id="' + esc(d.id) + '" ' +
-                   'aria-label="Sacar uno de ' + esc(d.name) + '">&#8722;</button>' +
-                 '<span class="pl-q">' + q + '</span>' : '') +
-            '<button type="button" class="icon-btn" data-act="inc" data-id="' + esc(d.id) + '" ' +
-              'aria-label="Agregar otro ' + esc(d.name) + '">&#43;</button>' +
-          '</span>') +
+      (url ? '<span class="pl-hint" aria-hidden="true">' + ICONO_FOTO + 'Foto</span>' : '') +
+      '<div class="pl-desliz">' +
+        '<button type="button" class="pl-main" data-act="inc" data-id="' + esc(d.id) + '"' +
+          (noHay ? ' disabled' : '') + ' aria-label="Agregar ' + esc(d.name) + '">' +
+          '<span class="pl-tex"><b>' + esc(d.name) + '</b>' +
+            (d.note ? '<i>' + esc(d.note) + '</i>' : '') +
+            (query ? '<i>' + esc(d.cat) + '</i>' : '') +
+          '</span>' +
+          /* La miniatura, justo a la izquierda del precio. */
+          '<span class="pl-foto">' +
+            '<span class="ini" aria-hidden="true">' + ini + '</span>' +
+            (url ? '<img src="' + esc(url) + '" alt="" loading="lazy" decoding="async">' : '') +
+          '</span>' +
+          '<span class="pl-pre">' + money(d.price) + '</span>' +
+        '</button>' +
+        (noHay
+          ? '<span class="pl-no">Agotado</span>'
+          : '<span class="pl-act">' +
+              (url ? '<button type="button" class="icon-btn ver-foto" data-foto="' + esc(d.id) + '" ' +
+                       'aria-label="Ver la foto de ' + esc(d.name) + '">' + ICONO_FOTO + '</button>' : '') +
+              (q ? '<button type="button" class="icon-btn" data-act="dec" data-id="' + esc(d.id) + '" ' +
+                     'aria-label="Sacar uno de ' + esc(d.name) + '">&#8722;</button>' +
+                   '<span class="pl-q">' + q + '</span>' : '') +
+              '<button type="button" class="icon-btn" data-act="inc" data-id="' + esc(d.id) + '" ' +
+                'aria-label="Agregar otro ' + esc(d.name) + '">&#43;</button>' +
+            '</span>') +
+      '</div>' +
     '</li>';
   }
 
@@ -705,7 +936,22 @@ document.addEventListener('DOMContentLoaded', function () {
     fila.parentNode.replaceChild(cont.firstChild, fila);
   }
 
+  /* Si la foto no carga (el otro deploy caido, sin internet) queda la
+     inicial que ya esta debajo. "error" no burbujea: fase de captura. */
+  elCarta.addEventListener('error', function (ev) {
+    var img = ev.target;
+    if (img && img.tagName === 'IMG' && img.parentNode) img.parentNode.removeChild(img);
+  }, true);
+
   elCarta.addEventListener('click', function (ev) {
+    /* El click que el navegador dispara al terminar un deslizamiento se
+       descarta ACA. Es la regla mas importante de las fotos: mostrar el
+       plato NO puede agregarlo al pedido. */
+    if (frenarClick) { ev.preventDefault(); ev.stopPropagation(); return; }
+
+    var f = ev.target.closest('[data-foto]');
+    if (f) { abrirFoto(f.dataset.foto); return; }
+
     var b = ev.target.closest('[data-act]');
     if (!b || b.disabled) return;
     cambiarCantidad(b.dataset.id, b.dataset.act === 'inc' ? 1 : -1);
@@ -722,8 +968,108 @@ document.addEventListener('DOMContentLoaded', function () {
     if (LP.isDialogOpen(hoja)) pintarHoja();
   }
 
+  /* ------------------------------------------------- deslizar para la foto --
+     El gesto de WhatsApp: se corre la fila hacia la izquierda y aparece la
+     foto grande. Tres cuidados:
+
+     1. Solo si el gesto es claramente HORIZONTAL. Si no, es scroll de la
+        lista y hay que soltarlo enseguida o la carta no se puede recorrer.
+     2. touch-action:pan-y en la fila deja el scroll vertical en manos del
+        navegador y nos deja a nosotros el horizontal.
+     3. Al soltar se frena el click de rebote. Sin esto, deslizar para
+        mostrarle el plato al comensal le agregaba el plato al pedido.   */
+  var UMBRAL = 56;           // cuanto hay que correr para que abra la foto
+  var TOPE = 96;             // hasta donde se deja correr la fila
+  var desl = null;
+  var frenarClick = false;
+
+  function soltarFila(d) {
+    if (!d) return;
+    d.fila.classList.remove('arrastrando');
+    d.caja.style.transform = '';
+    var h = d.fila.querySelector('.pl-hint');
+    if (h) h.style.opacity = '';
+  }
+
+  elCarta.addEventListener('touchstart', function (ev) {
+    desl = null;
+    if (ev.touches.length !== 1) return;
+    var fila = ev.target.closest('[data-fila]');
+    if (!fila || !fila.querySelector('.pl-hint')) return;   // sin foto no hay gesto
+    var caja = fila.querySelector('.pl-desliz');
+    if (!caja) return;
+    desl = {
+      fila: fila, caja: caja, dx: 0, activo: false,
+      x: ev.touches[0].clientX, y: ev.touches[0].clientY
+    };
+  }, { passive: true });
+
+  elCarta.addEventListener('touchmove', function (ev) {
+    if (!desl || ev.touches.length !== 1) return;
+    var dx = ev.touches[0].clientX - desl.x;
+    var dy = ev.touches[0].clientY - desl.y;
+
+    if (!desl.activo) {
+      if (Math.abs(dy) > Math.abs(dx) || Math.abs(dx) < 12) {
+        // Es scroll: se suelta la fila y no se vuelve a tomar hasta el
+        // proximo toque.
+        if (Math.abs(dy) > 10) { soltarFila(desl); desl = null; }
+        return;
+      }
+      desl.activo = true;
+      desl.fila.classList.add('arrastrando');
+    }
+
+    if (ev.cancelable) ev.preventDefault();
+    desl.dx = Math.max(-TOPE, Math.min(0, dx));
+    desl.caja.style.transform = 'translateX(' + desl.dx + 'px)';
+    var h = desl.fila.querySelector('.pl-hint');
+    if (h) h.style.opacity = String(Math.min(1, Math.abs(desl.dx) / UMBRAL));
+  }, { passive: false });
+
+  function finDelGesto(abrir) {
+    if (!desl) return;
+    var d = desl;
+    desl = null;
+    soltarFila(d);
+    if (!d.activo) return;
+    frenarClick = true;
+    setTimeout(function () { frenarClick = false; }, 420);
+    if (abrir && Math.abs(d.dx) >= UMBRAL) abrirFoto(d.fila.dataset.fila);
+  }
+
+  elCarta.addEventListener('touchend', function () { finDelGesto(true); });
+  elCarta.addEventListener('touchcancel', function () { finDelGesto(false); });
+
+  /* ------------------------------------------------------- la foto grande --
+     Se abre para mostrarle el plato al comensal. NO toca el carrito ni por
+     accidente: esta funcion y la hoja que abre no escriben una sola vez en
+     `carrito`, y al cerrarla no se repinta nada de la comanda porque no
+     cambio nada.                                                         */
+  var visor = document.getElementById('visorFoto');
+
+  function abrirFoto(id) {
+    var d = PLATO[id];
+    if (!d) return;
+    var url = LP.fotoDePlato(fotosPropias, d);
+    if (!url) { LP.toast('Este plato todavía no tiene foto.', 'err'); return; }
+
+    document.getElementById('vfTit').textContent = d.name;
+    var pie = document.getElementById('vfPie');
+    pie.innerHTML = (d.note ? esc(d.note) + ' · ' : '') + '<b>' + money(d.price) + '</b>';
+    var img = document.getElementById('vfImg');
+    img.src = url;
+    img.alt = 'Foto de ' + d.name;
+    LP.openDialog(visor);
+  }
+  function cerrarVisor() { LP.closeDialog(visor); }
+  document.getElementById('vfX').addEventListener('click', cerrarVisor);
+  document.getElementById('vfCerrar').addEventListener('click', cerrarVisor);
+  visor.addEventListener('click', function (ev) { if (ev.target === visor) cerrarVisor(); });
+
   /* ------------------------------------------------------------- el pie -- */
   var pie = document.getElementById('pie');
+  var pieAccion = document.getElementById('pieAccion');
 
   function lineasDelCarrito() {
     var out = [];
@@ -746,15 +1092,39 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function pintarPie() {
     var n = cuantos();
-    var mostrar = !elP2.hidden && n > 0;
+    var enMesa = !elP2.hidden;
+    // En el paso de la mesa el pie se ve siempre: ahi vive "Mandar".
+    var mostrar = n > 0 || enMesa;
     pie.hidden = !mostrar;
     document.body.classList.toggle('con-barra', mostrar);
     if (!mostrar) return;
+
     document.getElementById('pieTotal').textContent = money(totalComanda());
     document.getElementById('pieCuenta').textContent =
-      (n === 1 ? '1 plato' : n + ' platos') + ' · ' + (mesaSel || '');
+      (n === 1 ? '1 plato' : n + ' platos') +
+      (mesaSel ? ' · ' + mesaSel : '') + ' · ver la comanda';
+
+    if (enviando) return;                 // no le pises el "Mandando..."
+
+    if (!enMesa) {
+      pieAccion.textContent = 'Continuar';
+      pieAccion.disabled = false;
+    } else if (!n) {
+      pieAccion.textContent = 'La comanda está vacía';
+      pieAccion.disabled = true;
+    } else if (!mesaSel) {
+      pieAccion.textContent = 'Elegí la mesa';
+      pieAccion.disabled = true;
+    } else {
+      pieAccion.textContent = 'Mandar a la cocina';
+      pieAccion.disabled = false;
+    }
   }
 
+  pieAccion.addEventListener('click', function () {
+    if (elP2.hidden) { entrarAMesa(); return; }
+    mandar(pieAccion);
+  });
   document.getElementById('verComanda').addEventListener('click', abrirHoja);
 
   /* -------------------------------------------------------- la comanda --- */
@@ -772,14 +1142,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function pintarHoja() {
     var lineas = lineasDelCarrito();
-    hcTit.textContent = 'La comanda de ' + (mesaSel || 'la mesa');
+    hcTit.textContent = mesaSel ? 'La comanda de ' + mesaSel : 'La comanda';
     if (!lineas.length) {
       hcCuerpo.innerHTML = '<p class="estado-vacio">Todavía no cargaste nada.</p>';
       return;
     }
+
+    var donde = mesaSel
+      ? esc(mesaSel) + (personas === null ? ' · sin decir cuántos son'
+          : ' · ' + personas + (personas === 1 ? ' persona' : ' personas'))
+      : 'Sin mesa todavía';
+
     hcCuerpo.innerHTML =
       '<p class="hs-sub" style="color:var(--muted);margin:0 0 6px;font-size:14px">' +
-        esc(personas + (personas === 1 ? ' persona' : ' personas')) + ' en la mesa</p>' +
+        donde + '</p>' +
       lineas.map(function (l) {
         return '<div class="lin">' +
           '<div class="lin-act">' +
@@ -801,7 +1177,12 @@ document.addEventListener('DOMContentLoaded', function () {
         esc(notaTexto) + '</textarea>' +
       '</div>' +
       '<div class="acciones">' +
-        '<button type="button" class="btn btn-primary" id="hcEnviar">Mandar a la cocina</button>' +
+        /* Sin mesa NO hay boton de mandar. La unica salida hacia adelante es
+           ir a elegirla: asi no existe el camino que deja una comanda
+           huerfana en la cocina. */
+        (mesaSel
+          ? '<button type="button" class="btn btn-primary" id="hcEnviar">Mandar a la cocina</button>'
+          : '<button type="button" class="btn btn-primary" id="hcMesa">Elegir personas y mesa</button>') +
         '<button type="button" class="btn btn-secondary" id="hcSeguir">Seguir cargando</button>' +
       '</div>' +
       '<button type="button" class="btn btn-ghost btn-block" id="hcVaciar" ' +
@@ -817,9 +1198,21 @@ document.addEventListener('DOMContentLoaded', function () {
     if (q) { cambiarCantidad(q.dataset.id, q.dataset.hact === 'inc' ? 1 : -1); return; }
     if (ev.target.closest('#hcSeguir')) { cerrarHoja(); return; }
     if (ev.target.closest('#hcVaciar')) { vaciar(); return; }
-    if (ev.target.closest('#hcEnviar')) { mandar(); return; }
+    if (ev.target.closest('#hcMesa')) {
+      cerrarHoja();
+      if (elP2.hidden) entrarAMesa();
+      return;
+    }
+    if (ev.target.closest('#hcEnviar')) { mandar(ev.target.closest('#hcEnviar')); return; }
     if (ev.target.closest('#hcOtra')) { otraComanda(); return; }
-    if (ev.target.closest('#hcCerrar')) { cerrarHoja(); return; }
+    /* "Seguir cargando en Mesa X": vuelve a los platos con la mesa puesta.
+       Quedarse en el paso de la mesa con la comanda ya enviada no sirve
+       para nada. */
+    if (ev.target.closest('#hcCerrar')) {
+      cerrarHoja();
+      if (!elP2.hidden) volverPaso1.click();
+      return;
+    }
   });
 
   function vaciar() {
@@ -841,15 +1234,31 @@ document.addEventListener('DOMContentLoaded', function () {
      Si el insert entra y la aprobacion falla, la comanda NO se pierde: queda
      'Por aprobar' en la pantalla de los pedidos, que es donde el mozo la ve
      y la manda con un toque.                                             */
-  function mandar() {
+  function liberar(btn, texto) {
+    enviando = false;
+    if (btn) { btn.disabled = false; btn.textContent = texto; }
+    pintarPie();
+  }
+
+  function mandar(btn) {
     if (enviando) return;
     var lineas = lineasDelCarrito();
     if (!lineas.length) { LP.toast('La comanda está vacía.', 'err'); return; }
-    if (!mesaSel) { LP.toast('Falta elegir la mesa.', 'err'); irAPaso(1); return; }
+
+    /* LA MESA ES OBLIGATORIA y se controla ACA, que es el unico lugar por
+       el que pasan todos los envios. Una comanda sin mesa llega a la cocina
+       y nadie sabe a que mesa sale el plato: es el error mas caro de todos.
+       Los botones ya no dejan llegar hasta aca sin mesa; esto es la red. */
+    if (!mesaSel) {
+      LP.toast('Falta elegir la mesa.', 'err');
+      cerrarHoja();
+      if (elP2.hidden) entrarAMesa(); else irAPaso(2);
+      return;
+    }
     if (!sb) { LP.toast('No hay conexión con el sistema.', 'err'); return; }
 
     enviando = true;
-    var btn = document.getElementById('hcEnviar');
+    var textoBtn = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = 'Mandando...'; }
 
     /* Ultima defensa contra lo que se termino: entre que el mozo empezo a
@@ -857,20 +1266,19 @@ document.addEventListener('DOMContentLoaded', function () {
     LP.agotadosEnElCarrito(sb, lineas.map(function (l) { return { id: l.id }; }))
       .then(function (faltan) {
         if (faltan.length) {
-          enviando = false;
-          if (btn) { btn.disabled = false; btn.textContent = 'Mandar a la cocina'; }
+          liberar(btn, textoBtn);
           LP.toast((faltan.length === 1 ? 'Se terminó: ' : 'Se terminaron: ') +
                    faltan.join(', ') + '. Sacalo de la comanda.', 'err');
           LP.platosAgotados(sb).then(function (m) {
-            agotados = m || {}; pintarCarta(); pintarHoja();
+            agotados = m || {}; pintarCarta(); if (LP.isDialogOpen(hoja)) pintarHoja();
           });
           return;
         }
-        seguir(lineas, btn);
+        seguir(lineas, btn, textoBtn);
       });
   }
 
-  function seguir(lineas, btn) {
+  function seguir(lineas, btn, textoBtn) {
     var payload = {
       mesa: mesaSel,
       modo: 'Salón',
@@ -894,7 +1302,8 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       payload.sesion_id = ses.id;
       // Cuanta gente hay. Que falle no frena la comanda: es un dato al lado.
-      LP.guardarComensales(sb, ses.id, personas);
+      // Si el mozo no lo dijo, no se pisa lo que ya hubiera anotado.
+      if (personas !== null) LP.guardarComensales(sb, ses.id, personas);
       return LP.cubiertoParaSesion(sb, ses.id).then(function (linea) {
         if (linea) {
           payload.lines.push(linea);
@@ -918,16 +1327,14 @@ document.addEventListener('DOMContentLoaded', function () {
           return insertar();
         }
         if (res.error || !res.data) {
-          enviando = false;
-          if (btn) { btn.disabled = false; btn.textContent = 'Mandar a la cocina'; }
+          liberar(btn, textoBtn);
           LP.humanError(res.error);
           LP.toast('No pudimos mandar la comanda. Probá de nuevo.', 'err');
           return;
         }
         aprobar(res.data);
       }, function (e) {
-        enviando = false;
-        if (btn) { btn.disabled = false; btn.textContent = 'Mandar a la cocina'; }
+        liberar(btn, textoBtn);
         LP.humanError(e);
         LP.toast('No pudimos mandar la comanda. Probá de nuevo.', 'err');
       });
@@ -942,7 +1349,12 @@ document.addEventListener('DOMContentLoaded', function () {
       notaTexto = '';
       olvidarBorrador();
       pintarCarta(); pintarPie();
+      /* Primero se escribe el resultado y DESPUES se abre: al reves, la hoja
+         se abriria con el contenido viejo y el foco quedaria en un boton
+         que desaparece medio segundo despues. La hoja puede estar cerrada
+         porque ahora tambien se manda desde el pie. */
       pantallaHecho(pedido, r.ok);
+      if (!LP.isDialogOpen(hoja)) LP.openDialog(hoja);
     });
   }
 
@@ -970,12 +1382,12 @@ document.addEventListener('DOMContentLoaded', function () {
   function otraComanda() {
     cerrarHoja();
     mesaSel = null;
-    personas = 2;
+    personas = null;
     carrito = Object.create(null);
     notaTexto = '';
     olvidarBorrador();
-    pintarMesas(); pintarGente(); pintarListo(); pintarCarta();
-    if (history.state && history.state.lp === 'carta') history.back();
+    pintarMesas(); pintarGente(); pintarFalta(); pintarBarraMesa(); pintarCarta();
+    if (history.state && history.state.lp === 'mesa') history.back();
     else irAPaso(1);
     cargarPlano();
   }
@@ -987,7 +1399,7 @@ document.addEventListener('DOMContentLoaded', function () {
       plano = p;
       conn.set(p === null ? (navigator.onLine ? 'retry' : 'off') : (navigator.onLine ? 'live' : 'off'));
       pintarMesas();
-      pintarListo();
+      pintarFalta();
     });
   }
 
@@ -1025,6 +1437,14 @@ document.addEventListener('DOMContentLoaded', function () {
       pintarCarta();
     });
 
+    /* Las fotos que cargo el local. Es la MISMA fuente que usan la carta del
+       comensal y la pantalla de la carta: LP.fotoDePlato decide sola si
+       corresponde la propia o la que venia en menu-data.js. */
+    LP.fotosDePlatos(sb).then(function (m) {
+      fotosPropias = m || {};
+      pintarCarta();
+    });
+
     /* En vivo: si la cocina apaga un plato mientras el mozo esta cargando,
        la carta de su celular se entera sin recargar.
 
@@ -1053,30 +1473,51 @@ document.addEventListener('DOMContentLoaded', function () {
               pintarCarta(); pintarPie();
               if (LP.isDialogOpen(hoja)) pintarHoja();
             });
+          })
+      .on('postgres_changes', { event: '*', schema: 'public', table: LP.FOTOS_TABLE },
+          function () {
+            LP.fotosDePlatos(sb).then(function (m) {
+              fotosPropias = m || {}; pintarCarta();
+            });
           });
     canal.subscribe();
     LP.onCleanup(function () { try { sb.removeChannel(canal); } catch (e) {} });
   }
 
-  /* --------------------------------------------------------- el arranque - */
+  /* --------------------------------------------------------- el arranque -
+     La pantalla de entrada es LA CARTA. Antes era elegir la mesa; se dio
+     vuelta porque con el salon lleno lo que no puede esperar es anotar lo
+     que la mesa acaba de decir.                                         */
   pintarCats();
   pintarGente();
-  pintarListo();
   pintarCarta();
+  pintarBarraMesa();
+  LP.navDonde('Tomar comanda');
 
-  var b = leerBorrador();
-  if (b) {
-    mesaSel = b.mesa;
-    personas = Number(b.personas) || 2;
-    carrito = b.items || Object.create(null);
-    notaTexto = b.nota || '';
-    pintarGente(); pintarListo(); pintarCarta();
-    if (cuantos()) {
-      entrarACarta();
-      LP.toast('Retomamos la comanda de ' + mesaSel + '.', 'ok');
+  /* Retomar lo que habia quedado a medias. Todo el bloque va en try: si el
+     borrador viniera roto, el mozo se queda sin lo anotado -que ya estaba
+     perdido igual- pero NUNCA con una pantalla en blanco. */
+  try {
+    var guardado = leerBorrador();
+    if (guardado) {
+      mesaSel = guardado.mesa;
+      personas = guardado.personas;
+      carrito = guardado.items;
+      notaTexto = guardado.nota;
+      pintarGente(); pintarCarta(); pintarBarraMesa(); pintarFalta();
+      guardarBorrador();          // lo reescribe ya en la forma de hoy
+      if (guardado.cuantos) {
+        LP.toast('Retomamos la comanda' + (mesaSel ? ' de ' + mesaSel : '') + '.', 'ok');
+      }
     }
+  } catch (e) {
+    olvidarBorrador();
+    carrito = Object.create(null);
+    mesaSel = null; personas = null; notaTexto = '';
+    pintarGente(); pintarCarta(); pintarBarraMesa();
   }
 
+  pintarPie();
   arrancar();
 });
 </script>

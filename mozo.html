@@ -56,9 +56,11 @@
      cocinando, que es al reves de lo que el mozo necesita ver. Ahora lo
      listo tiene su solapa, va primera y va en verde; el resto pasa a
      segundo plano. */
+  /* Se pega JUSTO DEBAJO de la barra de navegacion fija, no arriba de todo:
+     si no, las solapas se metian atras del boton de volver. */
   .solapas{
     display:flex;gap:8px;flex-wrap:wrap;
-    position:sticky;top:0;z-index:20;background:var(--ink);
+    position:sticky;top:var(--nav-h);z-index:20;background:var(--ink);
     padding:10px 0;margin:4px 0 12px;
   }
   @media (max-width:559px){

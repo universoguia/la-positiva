@@ -107,6 +107,11 @@
   --sa-r:env(safe-area-inset-right,0px);
   --sa-b:env(safe-area-inset-bottom,0px);
   --sa-l:env(safe-area-inset-left,0px);
+
+  /* Alto de la barra de navegacion fija. Vale 0 en las pantallas que NO la
+     tienen (la portada, la carta del comensal): asi cualquier cosa pegada
+     arriba puede escribir top:var(--nav-h) sin preguntar si hay barra. */
+  --nav-h:0px;
 }
 
 /* --------------------------------------------------------------- reset -- */
@@ -294,6 +299,46 @@ header.top .sub{color:var(--muted);font-size:15px;margin:3px 0 0}
 body.dark .back-link{
   background:var(--dark-card);border-color:var(--dark-border);color:var(--dark-ink);
 }
+
+/* ------------------------------------------------- la navegacion fija --
+   El boton de volver arriba a la izquierda y, a su derecha, en que pantalla
+   estas. En TODAS las pantallas de trabajo y siempre a la vista: antes habia
+   que scrollear hasta arriba de todo (o hasta el fondo) para encontrarlo.
+
+   No la arma cada pantalla a mano: la arma LP.navegacionFija() en app.js
+   agarrando el .back-link que ya existia en la cabecera. Por eso una
+   pantalla sin .back-link -la portada, la carta del comensal- no la tiene,
+   que es lo correcto: de la portada no se vuelve a ningun lado.
+
+   Es una barra de ancho completo y no una pastilla suelta a proposito: al
+   ocupar su propio alto no tapa ningun titulo ni ningun control, que es la
+   unica manera de que no moleste en un celular en la mano.              */
+body.con-nav{--nav-h:calc(54px + var(--sa-t))}
+@media (max-width:420px){body.con-nav{--nav-h:calc(50px + var(--sa-t))}}
+
+.nav-fija{
+  position:fixed;top:0;left:0;right:0;z-index:50;
+  height:var(--nav-h);padding:var(--sa-t) max(12px,var(--sa-r)) 0 max(12px,var(--sa-l));
+  display:flex;align-items:center;gap:11px;
+  background:var(--bg);border-bottom:1px solid var(--border);
+}
+body.dark .nav-fija{background:var(--ink);border-bottom-color:var(--dark-border)}
+/* Dentro de la barra el boton no lleva el margen de pie que tiene suelto. */
+.nav-fija .back-link{margin-top:0;flex:none}
+
+/* En que pantalla estas. Se trunca en vez de empujar al boton: el boton de
+   volver no se puede achicar ni salir de la pantalla nunca. */
+.nav-donde{
+  flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:15px;font-weight:500;color:var(--muted-strong);line-height:1.2;
+}
+body.dark .nav-donde{color:var(--dark-ink)}
+
+/* El hueco que deja la barra. Va con mas especificidad que el .wrap que
+   redefine cada pantalla en su propio <style>, asi no hay que tocar las
+   doce. */
+body.con-nav .wrap{padding-top:calc(var(--nav-h) + 14px)}
+body.con-nav .container{padding-top:var(--nav-h)}
 
 /* Las cifras de un vistazo (el salon, el encargado): grilla con bordes de
    1px, dos por fila en el celular y cuatro de 560px en adelante. Estaba en

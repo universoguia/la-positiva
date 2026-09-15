@@ -131,6 +131,33 @@
   .finanzas[open] summary::before{transform:rotate(90deg)}
   .finanzas .ajuste{margin-top:12px}
 
+  /* El interruptor de si el comensal ve el renglon del cubierto desglosado.
+     Es una casilla de verdad (se puede tocar con el teclado y la lee un
+     lector de pantalla) vestida de interruptor. */
+  .ajuste-sub{
+    margin-top:14px;padding-top:14px;border-top:1px solid var(--border);
+  }
+  .interruptor{
+    display:flex;align-items:flex-start;gap:12px;cursor:pointer;min-height:var(--tap);
+  }
+  .interruptor input{position:absolute;opacity:0;width:1px;height:1px}
+  .int-caja{
+    flex:none;width:52px;height:30px;border-radius:var(--r-pill);margin-top:2px;
+    background:var(--border);border:1px solid var(--border-strong);
+    position:relative;transition:background-color .16s,border-color .16s;
+  }
+  .int-caja::after{
+    content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;
+    border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(20,16,14,.3);
+    transition:transform .16s;
+  }
+  .interruptor input:checked + .int-caja{background:var(--ok);border-color:var(--ok)}
+  .interruptor input:checked + .int-caja::after{transform:translateX(22px)}
+  .interruptor input:focus-visible + .int-caja{outline:3px solid var(--accent);outline-offset:2px}
+  .int-tex{flex:1;min-width:0;font-size:15px;line-height:1.45}
+  .int-tex b{display:block;font-weight:500;color:var(--ink)}
+  .int-tex span{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+
   /* ------------------------------------------------------------ alias -- */
   .mozos{display:grid;gap:10px}
   .mozo-fila{
@@ -211,6 +238,21 @@
         <button type="button" class="btn btn-primary" id="cubiertoGuardar">Guardar</button>
       </div>
       <p class="ajuste-msg" id="cubiertoMsg" role="status" aria-live="polite"></p>
+
+      <!-- Mostrar o no el renglon. No cambia lo que se cobra: cobrar, se
+           cobra siempre. Lo unico que cambia es si el comensal lo ve
+           desglosado o incluido en el total con la nota al lado. -->
+      <div class="ajuste-sub">
+        <label class="interruptor">
+          <input type="checkbox" id="cubiertoDesglose" checked>
+          <span class="int-caja" aria-hidden="true"></span>
+          <span class="int-tex">
+            <b>Mostrarle el rengl&oacute;n al comensal</b>
+            <span id="cubiertoDesgloseAyuda">Cargando...</span>
+          </span>
+        </label>
+        <p class="ajuste-msg" id="cubiertoDesgloseMsg" role="status" aria-live="polite"></p>
+      </div>
     </div>
   </details>
 
@@ -409,16 +451,61 @@ document.addEventListener('DOMContentLoaded', function () {
   var input = document.getElementById('cubierto');
   var btn = document.getElementById('cubiertoGuardar');
   var msg = document.getElementById('cubiertoMsg');
+  var tilde = document.getElementById('cubiertoDesglose');
+  var tildeAyuda = document.getElementById('cubiertoDesgloseAyuda');
+  var tildeMsg = document.getElementById('cubiertoDesgloseMsg');
   var soy = LP.quienSoy();
   var YO = (soy && soy.nombre) || 'Encargado';
 
   function decir(t, clase) { msg.textContent = t || ''; msg.className = 'ajuste-msg' + (clase ? ' ' + clase : ''); }
 
-  if (!sb) { input.disabled = true; btn.disabled = true; return; }
+  if (!sb) {
+    input.disabled = true; btn.disabled = true; tilde.disabled = true;
+    tildeAyuda.textContent = 'Sin conexi\u00f3n con el sistema.';
+    return;
+  }
+
+  /* Lo que dice el interruptor segun como este. Se escribe en un solo lugar
+     para que no se contradiga con lo que despues ve el comensal. */
+  function pintarAyuda() {
+    tildeAyuda.textContent = tilde.checked
+      ? 'Lo ve desglosado: un rengl\u00f3n "Cubiertos" con su importe.'
+      : 'No ve el rengl\u00f3n. Se cobran igual, incluidos en el total, ' +
+        'con la aclaraci\u00f3n "el total incluye el servicio de mesa".';
+  }
+
+  function decirTilde(t, clase) {
+    tildeMsg.textContent = t || '';
+    tildeMsg.className = 'ajuste-msg' + (clase ? ' ' + clase : '');
+  }
 
   LP.ajustes(sb).then(function (m) {
     var n = Number(String(m.cubierto_por_mesa || '').replace(/[^0-9]/g, ''));   // igual que importeCubierto
     input.value = isFinite(n) && n > 0 ? String(n) : '0';
+  });
+
+  LP.desgloseDeCubiertos(sb).then(function (v) {
+    tilde.checked = v;
+    pintarAyuda();
+  });
+
+  tilde.addEventListener('change', function () {
+    var quiere = tilde.checked;
+    tilde.disabled = true;
+    pintarAyuda();
+    decirTilde('Guardando...', '');
+    LP.guardarAjuste(sb, 'cubierto_desglosado', quiere ? '1' : '0', YO).then(function (ok) {
+      tilde.disabled = false;
+      if (!ok) {
+        // No se guardo: el interruptor tiene que volver a decir la verdad.
+        tilde.checked = !quiere;
+        pintarAyuda();
+        decirTilde('No pudimos guardarlo. Prob\u00e1 de nuevo.', 'err');
+        return;
+      }
+      decirTilde(quiere ? 'Listo: el comensal ve el rengl\u00f3n.'
+                        : 'Listo: no ve el rengl\u00f3n. Se sigue cobrando igual.', 'ok');
+    });
   });
 
   btn.addEventListener('click', function () {

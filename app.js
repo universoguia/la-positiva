@@ -907,6 +907,65 @@
     }
   }
 
+  /* --- La navegacion fija -------------------------------------------------
+     El boton de volver arriba a la izquierda y el nombre de la pantalla a su
+     derecha, siempre visibles. El duenio lo pidio dos veces: "siempre,
+     siempre, siempre".
+
+     Se arma desde aca y no en cada HTML por una razon concreta: son doce
+     pantallas y el .back-link de cada una ya tiene su href, su id y sus
+     listeners propios (comanda.html tiene DOS y los alterna). Moviendo el
+     nodo que ya existe -mover no pierde los listeners- no hay que tocar ni
+     una linea de la logica de ninguna pantalla.
+
+     Si la pantalla no tiene ningun .back-link no se arma nada: de la portada
+     y de la carta del comensal no se vuelve a ningun lado.              */
+  function navegacionFija() {
+    if (!document.body || document.querySelector('.nav-fija')) return;
+
+    /* El de la cabecera manda. Recien si no hay se levanta el suelto del pie
+       (alta.html y mesas.html lo tienen solo abajo). */
+    var zona = document.querySelector('.head-right') || document.querySelector('header.top');
+    var links = zona ? zona.querySelectorAll('.back-link') : [];
+    if (!links.length) {
+      var suelto = document.querySelector('.back-link');
+      links = suelto ? [suelto] : [];
+    }
+    if (!links.length) return;
+
+    var barra = document.createElement('div');
+    barra.className = 'nav-fija';
+    // Se copia la lista antes de mover: querySelectorAll es viva en algunos
+    // casos y mover nodos mientras se recorre saltea la mitad.
+    var mover = Array.prototype.slice.call(links);
+    for (var i = 0; i < mover.length; i++) barra.appendChild(mover[i]);
+
+    var donde = document.createElement('span');
+    donde.className = 'nav-donde';
+    donde.id = 'navDonde';
+    var h1 = document.querySelector('header.top h1') || document.querySelector('h1');
+    donde.textContent = (h1 && h1.textContent ? h1.textContent : '').trim();
+    barra.appendChild(donde);
+
+    document.body.insertBefore(barra, document.body.firstChild);
+    document.body.classList.add('con-nav');
+
+    /* Los "Volver al inicio" repetidos al fondo de la pagina (carta-fotos y
+       qr-mesa tienen uno arriba y otro abajo) ya no hacen falta: existian
+       justo porque el de arriba se iba con el scroll. */
+    var sobran = document.querySelectorAll('.back-link');
+    for (var k = 0; k < sobran.length; k++) {
+      if (!barra.contains(sobran[k])) sobran[k].hidden = true;
+    }
+  }
+
+  /* Cambia el nombre de la pantalla en la barra. Lo usa un flujo de varios
+     pasos para decir en cual esta parado (la comanda). */
+  function navDonde(texto) {
+    var el = document.getElementById('navDonde');
+    if (el) el.textContent = texto || '';
+  }
+
   /* El rol al que le llegan los avisos. Duenio y Caja comparten los del
      encargado: en un local de este tamanio son la misma persona mirando. */
   var ROL_DE_AVISOS = {
@@ -1995,6 +2054,40 @@
     });
   }
 
+  /* --- Mostrar o no el renglon del cubierto --------------------------------
+     OJO CON ESTO, que es facil de leer al reves: el cubierto se cobra
+     SIEMPRE y SIEMPRE esta adentro del total. Este ajuste no mueve un peso
+     de lo que se cobra ni toca cubiertoParaSesion(): lo unico que decide es
+     si el comensal ve el renglon "Cubiertos $1.500" desglosado, o si lo ve
+     incluido en el total.
+
+     Y cuando esta apagado, el total NO puede quedar sin explicacion: la suma
+     de los renglones que se ven da menos que el total, y un total que no
+     cierra con lo que esta arriba es peor que mostrar la linea. Por eso
+     apagarlo trae siempre NOTA_SERVICIO al lado del total, que es la misma
+     frase en todas las pantallas donde el comensal ve plata.
+
+     De fabrica esta PRENDIDO: se desglosa, que es como venia funcionando. */
+  var NOTA_SERVICIO = 'El total incluye el servicio de mesa.';
+
+  function desgloseDeCubiertos(sb) {
+    return ajustes(sb).then(function (m) {
+      // Solo un '0' guardado a proposito lo apaga. Ante cualquier duda -sin
+      // red, ajuste vacio, valor raro- se desglosa, que es lo mas claro.
+      var v = m.cubierto_desglosado;
+      return String(v === undefined || v === null ? '1' : v) !== '0';
+    }, function () { return true; });
+  }
+
+  /* Si este pedido lleva la linea del cubierto y todavia se cobra. */
+  function tieneCubierto(pedido) {
+    var hay = false;
+    lineasDe(pedido).forEach(function (l) {
+      if (l.cubierto && !lineaSacada(l)) hay = true;
+    });
+    return hay;
+  }
+
   /* --- Precios editables ---------------------------------------------------
      Una capa sobre menu-data.js, igual que las fotos propias y los agotados:
      la tabla guarda SOLO los platos cuyo precio se cambio respecto de la
@@ -2640,6 +2733,9 @@
     nombreLocal: nombreLocal,
     importeCubierto: importeCubierto,
     cubiertoParaSesion: cubiertoParaSesion,
+    desgloseDeCubiertos: desgloseDeCubiertos,
+    tieneCubierto: tieneCubierto,
+    NOTA_SERVICIO: NOTA_SERVICIO,
     preciosDePlatos: preciosDePlatos,
     guardarPrecio: guardarPrecio,
     quitarPrecio: quitarPrecio,
@@ -2673,6 +2769,8 @@
     FUNCIONES_POR_ROL: FUNCIONES_POR_ROL,
     funcionesDe: funcionesDe,
     mostrarQuienSoy: mostrarQuienSoy,
+    navegacionFija: navegacionFija,
+    navDonde: navDonde,
     rolDeAvisos: rolDeAvisos,
     mantenerDespierta: mantenerDespierta,
     pantallaSiempreEncendida: pantallaSiempreEncendida,
@@ -2729,10 +2827,17 @@
      pedirlo: se hace desde aca, una vez, para todas. Si la pantalla no
      tiene donde ponerlo, no pasa nada. app.js va con defer, asi que el
      documento ya suele estar armado; el listener cubre el caso contrario. */
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', mostrarQuienSoy);
-  } else {
+  function alArrancar() {
     mostrarQuienSoy();
+    /* Envuelta aparte: si armar la barra fallara, quien sos ya se escribio y
+       el resto del turno sigue andando. */
+    try { navegacionFija(); } catch (e) {}
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', alArrancar);
+  } else {
+    alArrancar();
   }
 
   /* El tema, igual: ninguna pantalla se tiene que acordar de pedirlo. Se

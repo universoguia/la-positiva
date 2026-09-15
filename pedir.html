@@ -318,6 +318,14 @@
   .totals .lbl{font-size:17px;color:var(--muted-strong)}
   .totals .val{font-size:30px;font-weight:600;font-variant-numeric:tabular-nums}
 
+  /* La nota del servicio de mesa. Va pegada al total y se lee: no es letra
+     chica. Aparece solo cuando el renglón de cubiertos no se desglosa, y
+     existe para que el total nunca quede sin explicación. */
+  .nota-servicio{
+    margin:6px 0 0;font-size:13px;color:var(--muted-strong);line-height:1.45;
+  }
+  .nota-servicio[hidden]{display:none}
+
   /* --------------------------------------------------------- checkout -- */
   /* Un total enorme y una sola accion, al estilo de las apps de pago. */
   .pay-total{
@@ -522,6 +530,7 @@
     </div>
     <div id="cartLines"></div>
     <div class="totals"><span class="lbl">Total</span><span class="val" id="cartSheetTotal">$0</span></div>
+    <p class="nota-servicio" id="notaServicioCarrito" hidden></p>
     <button type="button" class="btn btn-primary btn-block btn-grande btn-cta" id="goCheckoutBtn">
       Elegir como pagar
     </button>
@@ -541,6 +550,7 @@
         <div class="lbl">Total a pagar</div>
         <div class="val" id="checkoutTotal">$0</div>
       </div>
+      <p class="nota-servicio" id="notaServicioPago" hidden></p>
 
       <fieldset>
         <legend class="visually-hidden">Elegí como pagar</legend>
@@ -949,8 +959,13 @@ document.addEventListener('DOMContentLoaded', function () {
           '<span class="line-total">' + money(l.item.price * l.qty) + '</span>' +
         '</div></div>';
     }).join('');
-    /* Fila fija, sin mas/menos: no se elige, se informa. */
-    if (html && cubiertoPendiente > 0) {
+    /* Fila fija, sin mas/menos: no se elige, se informa.
+
+       Si el local eligio NO desglosarlo, el renglon no se dibuja, pero el
+       cubierto sigue estando adentro de totalAPagar(): se cobra igual. Lo
+       que aparece entonces es la nota de abajo, para que la suma de lo que
+       se ve y el total nunca se contradigan. */
+    if (html && cubiertoPendiente > 0 && desglosarCubierto) {
       html += '<div class="line">' +
         '<div class="line-name">Cubiertos' +
           '<div class="line-sub">Una vez por mesa</div></div>' +
@@ -960,7 +975,22 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('cartLines').innerHTML =
       html || '<div class="state"><p>Todavía no agregaste nada.</p></div>';
     document.getElementById('cartSheetTotal').textContent = money(totalAPagar());
+    pintarNotaServicio();
     document.getElementById('goCheckoutBtn').disabled = vals.length === 0;
+  }
+
+  /* La nota que explica el total cuando el cubierto no se desglosa. Se
+     escribe en los dos lugares donde el comensal ve el total antes de
+     pagar: el carrito y la pantalla de pago. Si el cubierto se desglosa, o
+     si este pedido no lleva cubierto, no dice nada. */
+  function pintarNotaServicio() {
+    var hace = !desglosarCubierto && cubiertoPendiente > 0;
+    ['notaServicioCarrito', 'notaServicioPago'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.hidden = !hace;
+      el.textContent = hace ? LP.NOTA_SERVICIO : '';
+    });
   }
 
   document.getElementById('cartLines').addEventListener('click', function (ev) {
@@ -986,6 +1016,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!cartCount()) return;
     LP.closeDialog(cartSheet);
     document.getElementById('checkoutTotal').textContent = money(totalAPagar());
+    pintarNotaServicio();
     renderPayFields();
     if (SIN_MESA) {
       document.getElementById('formErr').textContent =
@@ -1583,11 +1614,16 @@ document.addEventListener('DOMContentLoaded', function () {
         ' &middot; ' + esc(pago) + '</p>' +
       avisoSacado +
       avisoQR +
-      /* Si el pedido lleva la linea de cubiertos, se dice de donde salio:
-         nadie tiene que preguntarle al mozo que es ese renglon. */
+      /* Si el pedido lleva la linea de cubiertos se dice de donde salio:
+         nadie tiene que preguntarle al mozo que es ese renglon. Si el local
+         eligio no desglosarlo, se dice igual que el total lo incluye -con
+         la misma frase de siempre-, porque el importe esta adentro de este
+         total y callarlo seria esconderlo. */
       '<p class="order-no total">Total ' + money(LP.cobrable(order)) +
-        (LP.lineasDe(order).some(function (l) { return l.cubierto && !l.anulada; })
-          ? ' (incluye cubiertos, una sola vez por mesa)' : '') + '</p>' +
+        (LP.tieneCubierto(order)
+          ? (desglosarCubierto ? ' (incluye cubiertos, una sola vez por mesa)'
+                               : ' · ' + LP.NOTA_SERVICIO)
+          : '') + '</p>' +
       '<div class="track">' + steps + '</div>' +
       '<button type="button" class="btn btn-secondary btn-block" id="keepBrowsing">' +
         'Seguir mirando la carta</button>';
@@ -1672,6 +1708,11 @@ document.addEventListener('DOMContentLoaded', function () {
      hace el envio). Si la mesa no tiene sesion abierta, es la primera ronda
      y el cubierto entra; si tiene, entra solo si todavia no hay ninguna
      ronda que se cobre.                                                */
+  /* Si el comensal ve el renglon del cubierto desglosado o incluido en el
+     total. Arranca en true -desglosado, como venia- y solo lo apaga el
+     ajuste del local: si la consulta falla, se desglosa, que es lo claro. */
+  var desglosarCubierto = true;
+
   var cubiertoPendiente = 0;
   function decidirCubierto() {
     if (!sb || !cubiertoPorMesa || SIN_MESA) { cubiertoPendiente = 0; return Promise.resolve(0); }
@@ -1697,6 +1738,11 @@ document.addEventListener('DOMContentLoaded', function () {
       renderCartBar();
     });
     LP.importeCubierto(sb).then(function (n) { cubiertoPorMesa = n; });
+    LP.desgloseDeCubiertos(sb).then(function (v) {
+      desglosarCubierto = v;
+      if (LP.isDialogOpen(cartSheet)) renderCartLines();
+      else pintarNotaServicio();
+    });
 
     var canalPrecios = sb.channel('precios-' + Date.now())
       .on('postgres_changes', { event: '*', schema: 'public', table: LP.PRECIOS_TABLE },

@@ -204,6 +204,18 @@ document.addEventListener('DOMContentLoaded', function () {
   var soy = LP.quienSoy();
   var YO = (soy && soy.nombre) || 'Cobro';
 
+  /* Si el local desglosa el renglon del cubierto o lo deja incluido en el
+     total. Arranca en true -desglosado, como venia- y solo lo apaga el
+     ajuste. No cambia NADA de lo que se cobra: cobrable() suma siempre las
+     mismas lineas. Lo unico que decide es si al lado de la cifra va la
+     aclaracion de que el total incluye el servicio de mesa. */
+  var desglosarCubierto = true;
+  LP.desgloseDeCubiertos(sb).then(function (v) {
+    if (v === desglosarCubierto) return;
+    desglosarCubierto = v;
+    if (qr) pintar();                  // ya estaba dibujado: se repinta
+  });
+
   /* Con que mesa se abrio. Viene de mesas.html: cobrar.html?sesion=12.
      Sin esto la pantalla mostraba los impagos de todo el local mezclados y
      era facil marcar pagada la mesa equivocada.                         */
@@ -263,9 +275,18 @@ document.addEventListener('DOMContentLoaded', function () {
          evita que el cliente pague dos veces con dos QR. */
       if (pendientes.length > 1) {
         var suma = 0;
-        pendientes.forEach(function (p) { suma += LP.cobrable(p); });
+        var conCubierto = false;
+        pendientes.forEach(function (p) {
+          suma += LP.cobrable(p);
+          if (LP.tieneCubierto(p)) conCubierto = true;
+        });
+        /* "Toda la mesa" no tiene lineas propias -es la suma de las rondas-,
+           asi que se anota aparte si alguna de ellas trae el cubierto. Sin
+           esto, al cobrar la mesa entera el total lo incluia y la
+           aclaracion no aparecia. */
         pendientes.unshift({ id: 'mesa', mesa: pendientes[0].mesa, lines: [], total: suma,
                              estado: pendientes[0].estado, pagado: false,
+                             _conCubierto: conCubierto,
                              _ids: pendientes.map(function (p) { return p.id; }) });
       }
       if (pendientes.length) elegido = pendientes[0];
@@ -439,6 +460,13 @@ document.addEventListener('DOMContentLoaded', function () {
               (LP.lineasDe(elegido).some(LP.lineaSacada)
                 ? '<div class="quien">Sin ' + esc(LP.lineasDe(elegido).filter(LP.lineaSacada)
                     .map(function (l) { return l.qty + '\u00d7 ' + l.name; }).join(', ')) + '</div>'
+                : '') +
+              /* El comensal esta mirando esta pantalla cuando le acercan el
+                 QR: es el momento en que ve el importe final. Si el local
+                 eligio no desglosar el cubierto, la aclaracion va aca, al
+                 lado de la cifra, y no escondida en ningun lado. */
+              (!desglosarCubierto && (elegido._conCubierto || LP.tieneCubierto(elegido))
+                ? '<div class="quien">' + esc(LP.NOTA_SERVICIO) + '</div>'
                 : '')
             : '<div class="sin">El cliente escribe el monto</div>') +
         '</div>' +

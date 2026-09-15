@@ -36,18 +36,43 @@
   .wrap{max-width:760px;padding-top:calc(26px + var(--sa-t))}
   .tablero > div{min-width:0}
 
-  /* EN EL CELULAR la vista previa va ARRIBA y clavada. Si fuera al final,
-     tocar "Arena" al fondo de la lista no se veria sin scrollear: se elegiria
-     a ciegas, que es justo lo que este editor vino a evitar. Va acotada a 40
-     de alto y con scroll propio, asi siempre queda pantalla para los
-     controles y para la barra de Guardar. */
+  /* EN EL CELULAR la pantalla se parte en dos y NADA de lo de arriba se
+     mueve: la vista previa queda clavada en la mitad de arriba y lo unico
+     que se desplaza es la lista de controles, en la mitad de abajo. Asi el
+     boton de volver, el titulo, la previa y la barra de Guardar estan
+     siempre a la vista. Antes scrolleaba la pagina entera y para volver
+     habia que subir hasta arriba de todo.
+
+     Se arma con una columna flexible de alto fijo -sin numeros magicos-:
+     la cabecera y la previa no crecen, los controles se comen el resto y se
+     desplazan solos. */
   .tablero{display:flex;flex-direction:column}
   .lado-previa{
-    order:-1;position:sticky;top:0;z-index:15;
+    order:-1;position:sticky;top:var(--nav-h);z-index:15;
     background:var(--bg);padding-bottom:12px;margin-bottom:6px;
   }
   .lado-previa h2{margin-top:0;padding-top:6px}
   .lado-previa #preview{max-height:40svh;overflow-y:auto;overscroll-behavior:contain}
+
+  @media (max-width:999px){
+    body.con-nav .wrap{
+      height:100svh;padding-bottom:0;
+      display:flex;flex-direction:column;
+      overflow:hidden;              /* la pagina no scrollea: scrollea la lista */
+    }
+    header.top{flex:none}
+    .tablero{flex:1;min-height:0}
+    .lado-previa{
+      flex:none;position:static;top:auto;
+      border-bottom:1px solid var(--border);
+    }
+    .lado-previa #preview{max-height:34svh}
+    #controles{
+      flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+      -webkit-overflow-scrolling:touch;padding-bottom:6px;
+    }
+    .barra{flex:none;position:static;margin-top:10px}
+  }
 
   /* EN ESCRITORIO entran las dos cosas de una: controles a la izquierda,
      previa a la derecha, quieta mientras se scrollea la lista. */
