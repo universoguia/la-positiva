@@ -13,6 +13,11 @@
 <link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
+<!-- El tema (nombre, color, letra y forma) que se edita en diseno.html.
+     SIN defer y a proposito: tiene que escribir las variables ANTES del
+     primer pintado, o el color viejo se ve un instante y despues salta.
+     Si no hay nada guardado no escribe nada y la app queda como siempre. -->
+<script src="tema.js"></script>
 <style>
   .container{padding-bottom:calc(112px + var(--sa-b))}
 
@@ -151,7 +156,7 @@
     content:attr(data-ini);
     position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     background:var(--accent-soft);color:var(--accent);
-    font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:38px;
+    font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);font-size:38px;
   }
   .dish-tag{
     position:absolute;left:0;right:0;bottom:0;
@@ -428,7 +433,7 @@
     gap:14px;flex-wrap:wrap;
   }
   .tip-card .tip-txt strong{
-    display:block;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;
+    display:block;font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);
     font-weight:500;font-size:21px;color:var(--gold);
   }
   .tip-card .tip-txt span{display:block;font-size:14px;color:var(--dark-muted);margin-top:2px}
@@ -439,7 +444,7 @@
     background:var(--accent-soft);border:1px solid var(--accent);border-radius:var(--r-md);
     padding:16px;text-align:center;margin-bottom:16px;
   }
-  .tip-mozo .nom{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;
+  .tip-mozo .nom{font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);
     font-size:22px;color:var(--ink);margin:0 0 10px}
   .tip-mozo .alias{
     font-size:19px;font-weight:600;color:var(--accent);word-break:break-all;
@@ -463,7 +468,7 @@
 <div class="container">
   <header class="top">
     <div class="brand">
-      <h1>La Positiva</h1>
+      <h1 data-nombre-local>La Positiva</h1>
       <span class="mesa-pill" id="mesaPill">Mesa 7</span>
     </div>
 

@@ -14,6 +14,11 @@
 <link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
+<!-- El tema (nombre, color, letra y forma) que se edita en diseno.html.
+     SIN defer y a proposito: tiene que escribir las variables ANTES del
+     primer pintado, o el color viejo se ve un instante y despues salta.
+     Si no hay nada guardado no escribe nada y la app queda como siempre. -->
+<script src="tema.js"></script>
 <style>
   /* Sobre fondo tinta: el titulo y el subtitulo claros. El tamanio y la
      disposicion vienen de la cabecera compartida en styles.css. */
@@ -66,7 +71,7 @@
     margin:0 0 10px;padding:0 2px;
   }
   .col-head h2{
-    color:var(--dark-ink);font-family:'Jost',sans-serif;font-style:normal;
+    color:var(--dark-ink);font-family:var(--font-cuerpo);font-style:normal;
     font-size:14px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;margin:0;
   }
   .col-head .n{
@@ -88,7 +93,7 @@
     .kcard.is-new{animation:none;box-shadow:0 0 0 3px var(--gold),0 6px 18px rgba(0,0,0,.22)}
   }
   .kcard-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
-  .kmesa{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:22px;line-height:1.15}
+  .kmesa{font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);font-size:22px;line-height:1.15}
   .kmeta{color:var(--muted);font-size:14px;margin-top:3px}
   /* Lo que el comensal aviso de palabra. Va con el color de atencion y no
      junto al resto del texto: si se lee igual que los ingredientes, no se
@@ -155,7 +160,7 @@
   .aviso-bloque{padding-top:16px;margin-top:16px;border-top:1px dashed var(--border-strong)}
   .aviso-bloque:first-of-type{padding-top:0;margin-top:0;border-top:none}
   .aviso-bloque h3{
-    font-family:'Jost',sans-serif;font-style:normal;font-weight:600;
+    font-family:var(--font-cuerpo);font-style:normal;font-weight:600;
     font-size:14px;letter-spacing:.1em;text-transform:uppercase;
     color:var(--muted-strong);margin:0 0 8px;
   }

@@ -14,6 +14,11 @@
 <link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
+<!-- El tema (nombre, color, letra y forma) que se edita en diseno.html.
+     SIN defer y a proposito: tiene que escribir las variables ANTES del
+     primer pintado, o el color viejo se ve un instante y despues salta.
+     Si no hay nada guardado no escribe nada y la app queda como siempre. -->
+<script src="tema.js"></script>
 <style>
   .wrap{max-width:760px;padding-top:calc(20px + var(--sa-t));padding-bottom:80px}
 
@@ -38,7 +43,7 @@
   .resumen[hidden]{display:none}
 
   h2.seccion{
-    font-family:'Jost',sans-serif;font-style:normal;
+    font-family:var(--font-cuerpo);font-style:normal;
     font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
     color:var(--muted-strong);margin:26px 0 10px;display:flex;align-items:center;gap:9px;
   }
@@ -60,7 +65,7 @@
   }
   .prop.pendiente{border-color:var(--warn-border);background:var(--warn-soft)}
   .prop .info{min-width:0;flex:1 1 140px}
-  .prop .mesa{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:19px}
+  .prop .mesa{font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);font-size:19px}
   .prop .meta{font-size:13px;color:var(--muted);margin-top:2px}
   .prop .cola{display:flex;align-items:center;gap:10px;flex:none}
   .prop .monto{font-weight:600;font-size:17px;font-variant-numeric:tabular-nums;flex:none}
@@ -88,6 +93,19 @@
   .field-err{color:var(--err-ink);font-size:14px;margin-top:8px}
   .field-err:empty{display:none}
 
+  /* Escritorio: las propinas a la izquierda, cargar una en efectivo a la
+     derecha. Era una tira de 760px de ancho y 993 de alto en una pantalla
+     de 1440x900: sobraba ancho y faltaba alto. */
+  .dos > .col{min-width:0}
+  @media (min-width:1000px){
+    .wrap{max-width:1080px}
+    .dos{
+      display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);
+      gap:30px;align-items:start;
+    }
+    .dos .col > .seccion:first-child{margin-top:0}
+  }
+
   [hidden]{display:none!important}
 </style>
 </head>
@@ -103,7 +121,7 @@
       <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
         <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
       </span>
-      <a class="back-link" href="mozo.html">Volver a mis pedidos</a>
+      <a class="back-link" href="./" id="volver">Volver al inicio</a>
     </div>
   </header>
 
@@ -119,6 +137,8 @@
   <div id="contenido" hidden>
     <div class="resumen" id="resumen"></div>
 
+    <div class="dos">
+     <div class="col">
     <h2 class="seccion">Por confirmar <span class="n" id="nPendientes">0</span></h2>
     <p class="sub" style="margin:-4px 0 12px">
       Lo que un comensal avis&oacute; que ya transfiri&oacute;. Confirm&aacute;lo cuando lo veas
@@ -128,7 +148,9 @@
 
     <h2 class="seccion">Confirmadas</h2>
     <ul class="lista" id="confirmadas"></ul>
+     </div>
 
+     <div class="col">
     <h2 class="seccion">Cargar propina en efectivo</h2>
     <p class="sub" style="margin:-4px 0 12px">
       Para el comensal de toda la vida que no abre el QR ni transfiere.
@@ -149,9 +171,9 @@
       <p class="field-err" id="efectivoErr" role="alert"></p>
       <button type="submit" class="btn btn-primary btn-block" id="efectivoBtn">Cargar propina</button>
     </form>
+     </div>
+    </div>
   </div>
-
-  <a class="back-link" href="./">Volver al inicio</a>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
@@ -164,6 +186,27 @@ document.addEventListener('DOMContentLoaded', function () {
   var sb = LP.client();
   var conn = new LP.ConnBadge(document.getElementById('conn'));
   var soy = LP.quienSoy();
+
+  /* Volver a donde vino. A esta pantalla se entra por dos puertas: el mozo
+     desde sus pedidos y el encargado desde su panel. El boton decia siempre
+     "Volver a mis pedidos", asi que al encargado lo mandaba a la pantalla del
+     mozo. Se mira de donde llego; si no se sabe, se usa el rol guardado. */
+  (function () {
+    var b = document.getElementById('volver');
+    if (!b) return;
+    var de = '';
+    try {
+      if (document.referrer && new URL(document.referrer).origin === location.origin) {
+        de = new URL(document.referrer).pathname.split('/').pop();
+      }
+    } catch (e) {}
+    var rol = soy && soy.rol;
+    if (de === 'mozo.html' || (!de && rol === 'Mozo')) {
+      b.href = 'mozo.html'; b.textContent = 'Volver a mis pedidos';
+    } else if (de === 'admin.html' || (!de && rol === 'Duenio')) {
+      b.href = 'admin.html'; b.textContent = 'Volver al encargado';
+    }
+  }());
 
   var mozos = [];
   var actual = null;    // fila de la_positiva_personas del mozo que se esta mirando

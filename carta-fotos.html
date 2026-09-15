@@ -14,8 +14,14 @@
 <link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
+<!-- El tema (nombre, color, letra y forma) que se edita en diseno.html.
+     SIN defer y a proposito: tiene que escribir las variables ANTES del
+     primer pintado, o el color viejo se ve un instante y despues salta.
+     Si no hay nada guardado no escribe nada y la app queda como siempre. -->
+<script src="tema.js"></script>
 <style>
   .wrap{max-width:900px;padding-top:calc(26px + var(--sa-t))}
+  @media (min-width:1180px){.wrap{max-width:1320px}}
 
   /* --------------------------------------------------------- filtros --- */
   .filtros{
@@ -37,6 +43,9 @@
   /* --------------------------------------------------------- listado --- */
   .platos{list-style:none;margin:0;padding:0;display:grid;gap:12px}
   @media (min-width:700px){.platos{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  /* Tres por fila en la notebook: la carta tiene 156 platos y en dos columnas
+     eran 15.000px de scroll con media pantalla vacia al costado. */
+  @media (min-width:1180px){.platos{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
   .plato{
     display:flex;gap:13px;align-items:flex-start;
@@ -142,6 +151,7 @@
     </div>
     <div class="head-right">
       <a class="soy" href="./" data-quien hidden></a>
+      <a class="back-link" href="./" id="volver">Volver al inicio</a>
     </div>
   </header>
 

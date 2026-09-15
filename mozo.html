@@ -14,9 +14,17 @@
 <link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
+<!-- El tema (nombre, color, letra y forma) que se edita en diseno.html.
+     SIN defer y a proposito: tiene que escribir las variables ANTES del
+     primer pintado, o el color viejo se ve un instante y despues salta.
+     Si no hay nada guardado no escribe nada y la app queda como siempre. -->
+<script src="tema.js"></script>
 <style>
   /* Colores propios de la cabecera (el resto viene de styles.css). */
-  .wrap{max-width:820px;padding-top:calc(18px + var(--sa-t))}
+  /* Antes: 820px y una sola columna de tarjetas. En la tablet del salon y en
+     la notebook sobraba medio metro de pantalla a la derecha mientras el mozo
+     bajaba y bajaba para llegar al cuarto pedido. Ahora el ancho se usa. */
+  .wrap{max-width:1180px;padding-top:calc(18px + var(--sa-t));padding-bottom:40px}
 
   #avisosBtn.on{border-color:var(--gold);color:var(--gold);background:var(--dark-card-hover)}
   #avisosBtn.off{border-color:#e0855f;color:#ffc9b3;background:#3a221a}
@@ -33,9 +41,9 @@
   .alerta-barra[hidden]{display:none}
 
   h2.seccion{
-    color:#fff;font-family:'Jost',sans-serif;font-style:normal;
+    color:#fff;font-family:var(--font-cuerpo);font-style:normal;
     font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
-    margin:22px 0 10px;display:flex;align-items:center;gap:9px;
+    margin:18px 0 9px;display:flex;align-items:center;gap:9px;
   }
   h2.seccion .n{
     display:inline-flex;align-items:center;justify-content:center;
@@ -43,22 +51,47 @@
     background:var(--gold);color:var(--ink);font-size:13px;font-weight:700;
   }
 
-  .lista{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+  /* Dos columnas apenas hay ancho. Se corta en 820px y no antes: abajo de
+     eso una tarjeta partida al medio deja el boton de "Enviar a cocina" en
+     una franja de 160px, que con el pulgar no se toca bien.
+     align-items:start para que una tarjeta con notas no estire a su vecina. */
+  .lista{list-style:none;margin:0;padding:0;display:grid;gap:10px;align-items:start}
+  @media (min-width:820px){.lista{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}}
 
   .ped{
     background:var(--card);border:1px solid var(--border);
-    border-radius:var(--r-md);padding:14px 15px;
+    border-radius:var(--r-md);padding:12px 14px;
   }
   /* Urgente por tiempo de espera: mismo criterio y color que cocina.html
      y caja.html (var(--err)). Antes era dorado, que es el color de marca
      y no debe leerse como alerta. */
   .ped.urge{border-color:var(--err);box-shadow:0 0 0 2px rgba(154,47,28,.28)}
   .ped-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-  .ped-top .mesa{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:24px;color:var(--ink)}
+  .ped-top .mesa{font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);font-size:24px;color:var(--ink)}
   .ped-top .meta{font-size:13px;color:var(--muted);margin-top:1px}
-  .items{margin:11px 0 0;font-size:15px;line-height:1.6;color:var(--ink)}
+  .items{margin:9px 0 0;font-size:15px;line-height:1.5;color:var(--ink)}
   .items .q{display:inline-block;min-width:26px;color:var(--muted-strong);font-weight:600}
-  .total{margin-top:9px;font-size:19px;font-weight:600}
+  .total{margin-top:7px;font-size:19px;font-weight:600}
+  .ped .acciones{margin-top:11px}
+
+  /* Lo que se abre solo si hace falta. El detalle del comensal y el ida y
+     vuelta con la cocina se usan en una de cada cinco comandas, y plegados
+     ahorran ~180px por tarjeta: con cuatro pedidos en pantalla, eso es la
+     diferencia entre ver los cuatro y bajar tres veces. */
+  details.plegable{margin-top:10px;border-top:1px dashed var(--border);padding-top:8px}
+  details.plegable > summary{
+    cursor:pointer;list-style:none;min-height:34px;display:flex;align-items:center;gap:8px;
+    font-family:var(--font-cuerpo);font-size:12px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--muted-strong);font-weight:600;
+  }
+  details.plegable > summary::-webkit-details-marker{display:none}
+  details.plegable > summary::after{content:'\25be';margin-left:auto;font-size:12px}
+  details.plegable[open] > summary::after{content:'\25b4'}
+  details.plegable > summary .cuenta{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:20px;height:20px;padding:0 6px;border-radius:var(--r-pill);
+    background:var(--warn-bg);color:var(--warn);font-size:12px;
+  }
 
   .campo{margin-top:12px}
   .campo label{display:block;font-size:13px;color:var(--muted-strong);margin-bottom:5px}
@@ -79,12 +112,7 @@
   .btn-rechazar:hover{background:var(--err-bg);border-color:var(--err-border)}
 
   /* ------------------------------------------------------------- notas -- */
-  .notas{margin-top:12px;border-top:1px dashed var(--border);padding-top:10px}
-  .notas h3{
-    font-family:'Jost',sans-serif;font-style:normal;font-size:12px;
-    letter-spacing:.1em;text-transform:uppercase;color:var(--muted-strong);
-    font-weight:600;margin:0 0 8px;
-  }
+  .notas .cuerpo-notas{padding-top:8px}
   .nota{
     font-size:14px;line-height:1.5;padding:7px 11px;border-radius:var(--r-md);
     margin-bottom:6px;background:var(--bg);border:1px solid var(--border);
@@ -117,9 +145,35 @@
   details.detalle-fijo p{margin:0;padding:0 12px 9px}
 
   .vacio{
-    color:var(--dark-muted);text-align:center;padding:26px 16px;font-size:15px;
+    color:var(--dark-muted);text-align:center;padding:22px 16px;font-size:15px;
     border:1px dashed var(--dark-border);border-radius:var(--r-md);
+    grid-column:1/-1;
   }
+
+  /* ---------------------------------------------------------- anuladas -- */
+  .anuladas{margin-top:22px;border-top:1px solid var(--dark-border);padding-top:6px}
+  .anuladas[hidden]{display:none}
+  .anuladas > summary{
+    cursor:pointer;list-style:none;min-height:var(--tap);
+    display:flex;align-items:center;gap:9px;
+    color:var(--dark-muted);font-family:var(--font-cuerpo);
+    font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
+  }
+  .anuladas > summary::-webkit-details-marker{display:none}
+  .anuladas > summary .n{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:22px;height:22px;padding:0 6px;border-radius:var(--r-pill);
+    background:var(--dark-border);color:var(--dark-ink);font-size:13px;font-weight:700;
+  }
+  .anuladas > summary::after{content:'\25be';margin-left:6px}
+  .anuladas[open] > summary::after{content:'\25b4'}
+  .anuladas .lista{margin-top:10px}
+  .anul{
+    background:var(--dark-panel);border:1px solid var(--dark-border);
+    border-radius:var(--r-md);padding:11px 13px;color:var(--dark-ink);font-size:14px;
+  }
+  .anul b{color:#fff;font-weight:500;font-size:15px}
+  .anul .motivo{display:block;margin-top:3px;color:var(--dark-muted);line-height:1.45}
 
   /* Dialogo de avisos, igual que en cocina. */
   .aviso-bloque{padding:16px 0;border-bottom:1px solid var(--border)}
@@ -141,7 +195,7 @@
 <div class="wrap">
   <header class="top">
     <div>
-      <h1>Mozo</h1>
+      <h1>Los pedidos</h1>
       <p class="sub">Aprobá lo que piden las mesas y mandá la comanda</p>
     </div>
     <div class="head-right">
@@ -149,6 +203,9 @@
       <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
         <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
       </span>
+      <!-- Tomar la comanda uno mismo es lo que mas se usa en el servicio:
+           va primero y va lleno. Esta pantalla es para lo que YA pidieron. -->
+      <a class="btn btn-primary btn-head" href="comanda.html">Tomar comanda</a>
       <button type="button" class="btn btn-secondary btn-head" id="avisosBtn">Avisos</button>
       <a class="btn btn-secondary btn-head" href="propinas.html">Propinas</a>
       <!-- Salir del panel no es terminar el turno: eso se hace en la portada. -->
@@ -166,6 +223,15 @@
 
   <h2 class="seccion">En curso <span class="n" id="nEnCurso">0</span></h2>
   <ul class="lista" id="enCurso"><li class="vacio">Cargando...</li></ul>
+
+  <!-- Lo que se anulo hace poco. Va plegado y al final: no es trabajo
+       pendiente, es el rastro de quien anulo que y cuando. Se muestra porque
+       anular una comanda entera es la accion mas destructiva de la pantalla y
+       tiene que poder mirarse despues, sin entrar a la base. -->
+  <details class="anuladas" id="anuladasBox" hidden>
+    <summary><span>Anuladas reci&eacute;n</span><span class="n" id="nAnuladas">0</span></summary>
+    <ul class="lista" id="anuladas"></ul>
+  </details>
 </div>
 
 <div class="sheet" id="avisosSheet" role="dialog" aria-modal="true" aria-labelledby="avisosTitle" hidden>
@@ -233,6 +299,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var conn = new LP.ConnBadge(document.getElementById('conn'));
 
   var pedidos = [];
+  var anuladas = [];                    // las comandas dadas de baja hace poco
   var notas = {};                       // { pedido_id: [notas] }
   var ocupado = Object.create(null);
   var borradores = Object.create(null); // lo tipeado, para no perderlo al repintar
@@ -281,11 +348,36 @@ document.addEventListener('DOMContentLoaded', function () {
       ? curso.map(tarjetaCurso).join('')
       : '<li class="vacio">Nada en curso.</li>';
 
-    // Devuelve lo que el mozo estaba escribiendo antes del repintado.
+    // Devuelve lo que el mozo estaba escribiendo antes del repintado. Si
+    // habia algo escrito adentro de un bloque plegado, el bloque se abre:
+    // texto que existe y no se ve es texto que el mozo da por perdido.
     Object.keys(borradores).forEach(function (k) {
       var el = document.querySelector('[data-borrador="' + k + '"]');
-      if (el) el.value = borradores[k];
+      if (!el) return;
+      el.value = borradores[k];
+      if (!borradores[k]) return;
+      var det = el.closest('details');
+      if (det) det.open = true;
     });
+
+    renderAnuladas();
+  }
+
+  /* Lo anulado hace poco: mesa, plata, quien la anulo y cuando. Sale de lo
+     que ya guarda sacarPlato() -rechazado_motivo lleva el motivo y el
+     nombre-, no hay dato nuevo que inventar. */
+  function renderAnuladas() {
+    var caja = document.getElementById('anuladasBox');
+    if (!anuladas.length) { caja.hidden = true; return; }
+    caja.hidden = false;
+    document.getElementById('nAnuladas').textContent = anuladas.length;
+    document.getElementById('anuladas').innerHTML = anuladas.map(function (p) {
+      return '<li class="anul">' +
+        '<b>' + esc(p.mesa) + '</b> &middot; ' + money(p.total) +
+        ' &middot; ' + esc(LP.timeAgo(p.updated_at || p.created_at)) +
+        '<span class="motivo">' + esc(p.rechazado_motivo || 'Sin motivo anotado') + '</span>' +
+      '</li>';
+    }).join('');
   }
 
   function itemsHTML(p) {
@@ -305,11 +397,17 @@ document.addEventListener('DOMContentLoaded', function () {
         '</div></div>' +
         '<div class="items">' + itemsHTML(p) + '</div>' +
         '<div class="total">' + money(p.total) + '</div>' +
-        '<div class="campo">' +
-          '<label for="det-' + p.id + '">Algo que dijo el comensal y no está en la carta</label>' +
-          '<textarea id="det-' + p.id + '" data-borrador="det-' + p.id + '" ' +
-            'placeholder="Sin sal, la carne bien cocida, alergia al maní..."></textarea>' +
-        '</div>' +
+        /* El detalle va plegado: se usa poco y abierto empuja el boton de
+           "Enviar a cocina" fuera de la pantalla en el celular. Si el mozo
+           dejo algo escrito, se abre solo al repintar (ver render). */
+        '<details class="plegable" data-det="' + p.id + '">' +
+          '<summary>Agregar un detalle para la cocina</summary>' +
+          '<div class="campo">' +
+            '<label for="det-' + p.id + '">Algo que dijo el comensal y no está en la carta</label>' +
+            '<textarea id="det-' + p.id + '" data-borrador="det-' + p.id + '" ' +
+              'placeholder="Sin sal, la carne bien cocida, alergia al maní..."></textarea>' +
+          '</div>' +
+        '</details>' +
         '<div class="acciones">' +
           '<button type="button" class="btn btn-primary" data-aprobar="' + p.id + '">' +
             'Enviar a cocina</button>' +
@@ -341,25 +439,44 @@ document.addEventListener('DOMContentLoaded', function () {
               : '<details class="detalle-fijo"><summary>Ver nota del comensal</summary>' +
                 '<p>' + esc(p.detalle_comensal) + '</p></details>')
           : '') +
-        (listo ? '<div class="acciones"><button type="button" class="btn btn-primary" ' +
-                 'data-entregar="' + p.id + '">Lo llevé a la mesa</button></div>' : '') +
+        /* Anular la comanda entera se puede en CUALQUIER punto, no solo antes
+           de aprobarla: "hay gente que no siempre se queda, y es normal".
+           Antes, mandada la comanda a la cocina, no habia forma de darla de
+           baja y la mesa se iba con la cuenta abierta por algo que nadie
+           comio. Pide confirmacion aparte, porque la cocina puede estar
+           cocinandolo. */
+        '<div class="acciones">' +
+          (listo ? '<button type="button" class="btn btn-primary" ' +
+                   'data-entregar="' + p.id + '">Lo llevé a la mesa</button>' : '') +
+          '<button type="button" class="btn-rechazar" data-anular="' + p.id + '">' +
+            'Anular comanda</button>' +
+        '</div>' +
         notasHTML(p) +
       '</li>';
   }
 
+  /* Plegado cuando no hay nada dicho -que es casi siempre- y abierto en
+     cuanto la cocina escribio algo: un mensaje de la cocina no se puede
+     esconder detras de un triangulito. */
   function notasHTML(p) {
     var lista = notas[p.id] || [];
-    return '<div class="notas"><h3>Con la cocina</h3>' +
-      lista.map(function (n) {
-        return '<div class="nota' + (n.autor === 'Cocina' ? ' cocina' : '') + '">' +
-          '<b>' + esc(n.autor) + ' &middot; ' + esc(LP.timeAgo(n.created_at)) + '</b>' +
-          esc(n.texto) + '</div>';
-      }).join('') +
-      '<div class="nota-alta">' +
-        '<input type="text" data-borrador="nota-' + p.id + '" ' +
-          'aria-label="Mensaje para la cocina" placeholder="Avisarle algo a la cocina...">' +
-        '<button type="button" class="btn btn-secondary" data-nota="' + p.id + '">Mandar</button>' +
-      '</div></div>';
+    return '<details class="plegable notas" data-notas="' + p.id + '"' +
+        (lista.length ? ' open' : '') + '>' +
+      '<summary>Con la cocina' +
+        (lista.length ? ' <span class="cuenta">' + lista.length + '</span>' : '') +
+      '</summary>' +
+      '<div class="cuerpo-notas">' +
+        lista.map(function (n) {
+          return '<div class="nota' + (n.autor === 'Cocina' ? ' cocina' : '') + '">' +
+            '<b>' + esc(n.autor) + ' &middot; ' + esc(LP.timeAgo(n.created_at)) + '</b>' +
+            esc(n.texto) + '</div>';
+        }).join('') +
+        '<div class="nota-alta">' +
+          '<input type="text" data-borrador="nota-' + p.id + '" ' +
+            'aria-label="Mensaje para la cocina" placeholder="Avisarle algo a la cocina...">' +
+          '<button type="button" class="btn btn-secondary" data-nota="' + p.id + '">Mandar</button>' +
+        '</div>' +
+      '</div></details>';
   }
 
   /* ------------------------------------------------------------ acciones -- */
@@ -402,6 +519,14 @@ document.addEventListener('DOMContentLoaded', function () {
          botones grandes, los mismos que en el salon. */
       var pS = buscar(b.dataset.sacar);
       if (pS) abrirSacar(pS);
+      return;
+    }
+
+    /* Anular la comanda entera. Va derecho al "por que", sin pasar por
+       "que sale": el mozo ya dijo que sale TODO. */
+    if (b.dataset.anular) {
+      var pA = buscar(b.dataset.anular);
+      if (pA) abrirSacar(pA, true);
       return;
     }
 
@@ -452,17 +577,24 @@ document.addEventListener('DOMContentLoaded', function () {
     LP.closeDialog(hs);
     hsCuerpo.innerHTML = '';
     sacando = null;
+    hsPaso = null;
   }
 
   var hsBack = document.getElementById('hsBack');
-  function abrirSacar(p) {
+  /* En que paso esta la hoja, para que la flecha de atras vuelva UN paso y no
+     al principio: elegir que sale -> por que -> confirmar. */
+  var hsPaso = null;
+
+  function abrirSacar(p, todoDerecho) {
     sacando = p;
     hsBack.hidden = true;
+    hsPaso = 'elegir';
     if (!LP.isDialogOpen(hs)) LP.openDialog(hs, { persistent: true, focus: '#hsX' });
     var vivas = [];
     LP.lineasDe(p).forEach(function (l, i) {
       if (!LP.lineaSacada(l)) vivas.push({ l: l, i: i });
     });
+    if (todoDerecho) { pasoMotivo('todo', null); return; }
     if (vivas.length <= 1) {
       pasoMotivo(vivas.length ? vivas[0].i : 'todo', vivas.length ? vivas[0].l : null);
       return;
@@ -484,6 +616,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function pasoMotivo(indice, linea) {
     var todo = indice === 'todo';
+    hsPaso = 'motivo';
     // Con varios platos se puede volver a "Que sale?"; con uno solo no hay a donde.
     hsBack.hidden = LP.lineasVivas(sacando).length <= 1;
     var cuanto = todo ? LP.cobrable(sacando) : LP.importeDeLinea(linea);
@@ -509,13 +642,47 @@ document.addEventListener('DOMContentLoaded', function () {
     pasoMotivo(Number(idx), LP.lineasDe(sacando)[Number(idx)]);
   });
 
-  hsCuerpo.addEventListener('click', function (ev) {
-    var b = ev.target.closest('[data-motivo]');
-    if (!b || !sacando || sacarEnVuelo) return;
+  /* Ultimo paso, SOLO cuando sale la comanda entera. Un plato suelto no lo
+     tiene -elegir el motivo ya es la confirmacion, y volver a ponerlo es un
+     toque-, pero anular la comanda entera apaga algo que la cocina puede
+     tener en la plancha: eso se pregunta.
+
+     Dice quien la anula y desde cuando corre, porque es lo que despues queda
+     escrito en el pedido y aparece en "Anuladas reci\u00e9n".                  */
+  function pasoConfirmar(indice, linea, motivo) {
+    hsPaso = 'confirmar';
+    hsBack.hidden = false;
+    var cuanto = LP.cobrable(sacando);
+    var enCocina = ['En cocina', 'Cocinando', 'Listo'].indexOf(sacando.estado) !== -1;
+    hsTit.textContent = '\u00bfAnulamos la comanda?';
+    hsSub.textContent = sacando.mesa + ' \u00b7 ' + money(cuanto) + ' \u00b7 ' + motivo;
+    hsCuerpo.innerHTML =
+      (enCocina
+        ? '<div class="banda-pago">La cocina ya la tiene' +
+          (sacando.estado === 'Cocinando' ? ' y la est\u00e1 haciendo' : '') +
+          '. Se le avisa sola, pero pas\u00e1 a dec\u00edrselo.</div>'
+        : '') +
+      (sacando.pagado
+        ? '<div class="banda-pago">Esto ya est\u00e1 pagado: la caja tiene que ' +
+          'devolverle ' + money(cuanto) + '.</div>'
+        : '') +
+      '<p class="hs-et">Se anulan ' + LP.lineasVivas(sacando).length +
+        (LP.lineasVivas(sacando).length === 1 ? ' plato' : ' platos') +
+        ' y la mesa deja de deber esa plata. Queda anotado que la anulaste vos (' +
+        esc(YO) + ').</p>' +
+      '<button type="button" class="opcion toda" data-confirmar="1" ' +
+        'data-indice="' + esc(String(indice)) + '" data-motivo="' + esc(motivo) + '">' +
+        '<span>S\u00ed, anular toda la comanda</span></button>' +
+      '<button type="button" class="opcion" data-cancelar="1">' +
+        '<span>No, dejarla como est\u00e1</span></button>';
+  }
+
+  function ejecutarSacar(btn, crudo, motivo) {
+    if (!sacando || sacarEnVuelo) return;
     sacarEnVuelo = true;
-    var pedido = sacando, motivo = b.dataset.motivo, crudo = b.dataset.indice;
+    var pedido = sacando;
     [].forEach.call(hsCuerpo.querySelectorAll('button'), function (x) { x.disabled = true; });
-    b.textContent = 'Sacando...';
+    btn.textContent = crudo === 'todo' ? 'Anulando...' : 'Sacando...';
 
     var accion = (crudo === 'todo')
       ? LP.sacarRonda(sb, pedido, motivo, YO)
@@ -528,13 +695,37 @@ document.addEventListener('DOMContentLoaded', function () {
       LP.toast(r.devolver > 0
         ? 'Listo. Hay que devolverle ' + money(r.devolver) + ' a ' + pedido.mesa +
           ' \u2014 lo hace la caja.'
-        : 'Listo, lo sacamos de la cuenta de ' + pedido.mesa + '.', 'ok');
+        : (crudo === 'todo'
+            ? 'Comanda de ' + pedido.mesa + ' anulada.'
+            : 'Listo, lo sacamos de la cuenta de ' + pedido.mesa + '.'), 'ok');
       cargar(true);
     });
+  }
+
+  hsCuerpo.addEventListener('click', function (ev) {
+    if (ev.target.closest('[data-cancelar]')) { cerrarSacar(); return; }
+
+    var ok = ev.target.closest('[data-confirmar]');
+    if (ok) { ejecutarSacar(ok, ok.dataset.indice, ok.dataset.motivo); return; }
+
+    var b = ev.target.closest('[data-motivo]');
+    if (!b || !sacando || sacarEnVuelo) return;
+    var crudo = b.dataset.indice;
+    // La comanda entera pasa por el "\u00bfseguro?". Un plato suelto, no.
+    if (crudo === 'todo') {
+      pasoConfirmar('todo', null, b.dataset.motivo);
+      return;
+    }
+    ejecutarSacar(b, crudo, b.dataset.motivo);
   });
 
   document.getElementById('hsX').addEventListener('click', cerrarSacar);
-  hsBack.addEventListener('click', function () { if (sacando) abrirSacar(sacando); });
+  hsBack.addEventListener('click', function () {
+    if (!sacando) return;
+    // Un paso atras, no al principio.
+    if (hsPaso === 'confirmar') { pasoMotivo('todo', null); return; }
+    abrirSacar(sacando);
+  });
   hs.addEventListener('click', function (ev) { if (ev.target === hs) cerrarSacar(); });
   // En captura y antes que el helper, para que el cierre limpie el estado propio.
   document.addEventListener('keydown', function (ev) {
@@ -584,6 +775,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (nuevos.length) alertar(nuevos.length);
         render();
         repasar();
+        cargarAnuladas();
 
         var ids = data.map(function (p) { return p.id; });
         if (ids.length) {
@@ -606,6 +798,25 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!otraPendiente) return;
     otraPendiente = false;
     cargar(s);
+  }
+
+  /* Las tres ultimas horas de anulaciones. Va en una consulta aparte y con
+     tope: si se sumara al .in() de arriba, una noche larga traeria decenas de
+     pedidos muertos en cada refresco, cada quince segundos, para una lista
+     que casi nadie abre. Que falle no molesta a nadie. */
+  function cargarAnuladas() {
+    if (!sb) return;
+    var desde = new Date(Date.now() - 3 * 3600 * 1000).toISOString();
+    sb.from(LP.TABLE).select('id, mesa, total, updated_at, created_at, rechazado_motivo')
+      .eq('estado', 'Rechazado')
+      .gte('updated_at', desde)
+      .order('updated_at', { ascending: false })
+      .limit(15)
+      .then(function (res) {
+        if (res.error) return;
+        anuladas = res.data || [];
+        renderAnuladas();
+      }, function () {});
   }
 
   /* ================================ AVISOS ================================

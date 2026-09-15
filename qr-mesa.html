@@ -12,11 +12,16 @@
 <link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
+<!-- El tema (nombre, color, letra y forma) que se edita en diseno.html.
+     SIN defer y a proposito: tiene que escribir las variables ANTES del
+     primer pintado, o el color viejo se ve un instante y despues salta.
+     Si no hay nada guardado no escribe nada y la app queda como siempre. -->
+<script src="tema.js"></script>
 <style>
   .wrap{max-width:760px;padding-top:calc(36px + var(--sa-t))}
-  .intro{margin-bottom:24px}
-  .intro h1{font-size:32px;margin:0 0 6px}
-  .intro p{color:var(--muted);margin:0;font-size:16px;line-height:1.55}
+  .top{margin-bottom:22px}
+  .top .sub{max-width:52ch}
+  @media (min-width:1080px){.wrap{max-width:1320px}}
 
   .controles{
     display:flex;gap:10px;flex-wrap:wrap;align-items:center;
@@ -28,7 +33,20 @@
 
   /* Las piezas apiladas en pantalla, una debajo de la otra, con su boton
      propio para reimprimir una sola cuando se mancha o se despega. */
-  .piezas{display:flex;flex-direction:column;gap:22px;align-items:center}
+  /* En pantalla: una debajo de la otra en el celular, y en la notebook
+     varias por fila. Con doce mesas eran 8.200px de scroll para mirarlas y
+     para llegar al boton de volver del pie. Al imprimir no cambia nada: el
+     bloque @media print de abajo vuelve a poner una por hoja. */
+  .piezas{
+    display:grid;grid-template-columns:minmax(0,420px);
+    justify-content:center;gap:22px;
+  }
+  @media (min-width:900px){
+    .piezas{grid-template-columns:repeat(2,minmax(0,420px));align-items:start}
+  }
+  @media (min-width:1300px){
+    .piezas{grid-template-columns:repeat(3,minmax(0,420px))}
+  }
   .sobre{width:100%;max-width:420px}
   .sola{
     display:flex;align-items:center;justify-content:center;
@@ -46,7 +64,7 @@
   .pieza .marca{width:74px;height:74px;border-radius:14px;margin:0 auto 16px;display:block}
   .pieza h2{font-size:31px;margin:0 0 2px;color:var(--ink)}
   .pieza .mesa{
-    font-family:'Jost',sans-serif;font-style:normal;
+    font-family:var(--font-cuerpo);font-style:normal;
     font-size:15px;letter-spacing:.16em;text-transform:uppercase;
     font-weight:600;color:var(--accent);margin:0 0 22px;
   }
@@ -57,6 +75,8 @@
   .pieza .codigo svg path{fill:var(--ink)}
   .pieza .pedi{font-size:17px;color:var(--ink);margin:0 0 6px;line-height:1.45}
   .pieza .chico{font-size:13px;color:var(--muted);margin:0;line-height:1.5}
+
+  .piezas > .state{grid-column:1/-1}
 
   .destino{
     margin:20px auto 0;max-width:420px;padding:12px 14px;
@@ -103,12 +123,17 @@
 <body>
 <div class="wrap">
   <div class="no-imprimir">
-    <div class="intro">
-      <h1>QR de las mesas</h1>
-      <p>Ya est&aacute;n los c&oacute;digos de todas las mesas del local. Imprim&iacute;,
-         recort&aacute; y dej&aacute; uno sobre cada mesa. Cada c&oacute;digo lleva a la
-         carta con esa mesa ya cargada.</p>
-    </div>
+    <header class="top">
+      <div>
+        <h1>QR de las mesas</h1>
+        <p class="sub">Ya est&aacute;n los c&oacute;digos de todas las mesas del local. Imprim&iacute;,
+           recort&aacute; y dej&aacute; uno sobre cada mesa. Cada c&oacute;digo lleva a la
+           carta con esa mesa ya cargada.</p>
+      </div>
+      <div class="head-right">
+        <a class="back-link" href="./" id="volver">Volver al inicio</a>
+      </div>
+    </header>
 
     <div class="aviso" id="avisoLocal" hidden></div>
 
@@ -144,6 +169,17 @@ document.addEventListener('DOMContentLoaded', function () {
   var cajaDestino = document.getElementById('destino');
   var btnImprimir = document.getElementById('imprimir');
   var avisoLocal = document.getElementById('avisoLocal');
+
+  (function () {
+    var b = document.getElementById('volver');
+    var de = '';
+    try {
+      if (document.referrer && new URL(document.referrer).origin === location.origin) {
+        de = new URL(document.referrer).pathname.split('/').pop();
+      }
+    } catch (e) {}
+    if (b && de === 'admin.html') { b.href = 'admin.html'; b.textContent = 'Volver al encargado'; }
+  }());
 
   /* La URL se arma contra el origen donde esta corriendo ESTA pagina. Es a
      proposito: el QR del paquete viejo apuntaba a un dominio que ya no es el
@@ -200,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function () {
     return '<div class="sobre" data-mesa="' + esc(numero) + '">' +
         '<div class="pieza">' +
           '<img class="marca" src="icons/icon-192.png" alt="" width="74" height="74">' +
-          '<h2>La Positiva</h2>' +
+          '<h2>' + esc(LP.nombreLocal()) + '</h2>' +
           '<p class="mesa">' + esc(etiqueta) + '</p>' +
           '<div class="codigo">' + codigo + '</div>' +
           '<p class="pedi">Escane\u00e1 para ver la carta y pedir</p>' +

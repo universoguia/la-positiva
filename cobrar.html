@@ -14,8 +14,31 @@
 <link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
+<!-- El tema (nombre, color, letra y forma) que se edita en diseno.html.
+     SIN defer y a proposito: tiene que escribir las variables ANTES del
+     primer pintado, o el color viejo se ve un instante y despues salta.
+     Si no hay nada guardado no escribe nada y la app queda como siempre. -->
+<script src="tema.js"></script>
 <style>
   .wrap{max-width:560px;padding-top:calc(16px + var(--sa-t));padding-bottom:40px}
+
+  /* En la notebook: a quien le cobras, a la izquierda; el QR, el monto y el
+     boton de confirmar, a la derecha. Antes era una tira de 560px y habia
+     que scrollear para llegar a "Ya pago". En modo pantalla no aplica: ahi
+     el QR se lleva todo. */
+  @media (min-width:1000px){
+    body:not(.zoom) .wrap{max-width:1000px}
+    body:not(.zoom) #contenido{
+      display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);
+      gap:26px;align-items:start;
+    }
+    body:not(.zoom) #contenido > .picker{grid-column:1;margin-bottom:0}
+    body:not(.zoom) #contenido > .tip{grid-column:1}
+    body:not(.zoom) #contenido > #zonaQR{grid-column:2;grid-row:1}
+    body:not(.zoom) #contenido > .acciones{grid-column:2}
+    /* El estado de carga y los avisos ocupan las dos columnas. */
+    body:not(.zoom) #contenido > .state{grid-column:1/-1}
+  }
 
 
   /* --------------------------------------------------------- el QR ----- */
@@ -31,6 +54,15 @@
   .qr-pie{
     margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);
     color:var(--muted);font-size:15px;
+  }
+  /* En el celular el QR medido daba 306px de alto y empujaba los botones a
+     884px: "Agrandar para el cliente" y "Ya pago" quedaban fuera de pantalla.
+     Achicado a 250 sigue escaneando de sobra -y para acercarselo al cliente
+     esta el modo pantalla, que no toca esta regla-. */
+  @media (max-width:560px){
+    .qr-card{padding:14px}
+    .qr-card img{max-width:250px}
+    .qr-pie{margin-top:10px;padding-top:10px;font-size:14px}
   }
 
   /* Monto: lo mas grande de la pantalla, como en Mercado Pago. */
@@ -122,7 +154,7 @@
     </div>
     <div class="head-right">
       <a class="soy" href="./" data-quien hidden></a>
-      <a class="back-link" href="./">Volver al inicio</a>
+      <a class="back-link" href="./" id="volver">Volver al inicio</a>
     </div>
   </header>
 
@@ -152,6 +184,27 @@ document.addEventListener('DOMContentLoaded', function () {
      Sin esto la pantalla mostraba los impagos de todo el local mezclados y
      era facil marcar pagada la mesa equivocada.                         */
   var SESION = new URLSearchParams(location.search).get('sesion') || '';
+
+  /* El boton de volver vuelve a donde vino. Cobrar es un paso adentro de un
+     flujo: se entra desde el salon (mesas.html?sesion=) o desde caja. Volver
+     siempre a la portada obligaba a rehacer el camino entero. */
+  (function () {
+    var b = document.getElementById('volver');
+    if (!b) return;
+    var de = '';
+    try {
+      if (document.referrer && new URL(document.referrer).origin === location.origin) {
+        de = new URL(document.referrer).pathname.split('/').pop();
+      }
+    } catch (e) {}
+    if (de === 'mesas.html' || (!de && SESION)) {
+      b.href = 'mesas.html'; b.textContent = 'Volver al salón';
+    } else if (de === 'caja.html') {
+      b.href = 'caja.html'; b.textContent = 'Volver a caja';
+    } else if (de === 'mozo.html') {
+      b.href = 'mozo.html'; b.textContent = 'Volver a mis pedidos';
+    }
+  }());
 
   /* ------------------------------------------------------------- carga -- */
   function cargar() {
@@ -255,7 +308,7 @@ document.addEventListener('DOMContentLoaded', function () {
         '</div>' +
         '<div class="qr-card">' +
           '<img id="qrImg" src="' + esc(qr.imagen_url) + '" ' +
-               'alt="Código QR para pagar en La Positiva">' +
+               'alt="Código QR para pagar en ' + esc(LP.nombreLocal()) + '">' +
           '<p class="qr-pie">Escaneálo con cualquier billetera o app del banco</p>' +
         '</div>' +
       '</div>' +
@@ -385,20 +438,20 @@ document.addEventListener('DOMContentLoaded', function () {
     var btn = document.getElementById('shareBtn');
     btn.disabled = true;
     var texto = elegido
-      ? 'Pago de ' + elegido.mesa + ' en La Positiva: ' + money(LP.cobrable(elegido))
-      : 'QR para pagar en La Positiva';
+      ? 'Pago de ' + elegido.mesa + ' en ' + LP.nombreLocal() + ': ' + money(LP.cobrable(elegido))
+      : 'QR para pagar en ' + LP.nombreLocal();
 
     fetch(qr.imagen_url).then(function (r) { return r.blob(); }).then(function (blob) {
       var ext = blob.type === 'image/png' ? 'png' : 'jpg';
       var file = new File([blob], 'qr-la-positiva.' + ext, { type: blob.type || 'image/jpeg' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        return navigator.share({ files: [file], title: 'La Positiva', text: texto });
+        return navigator.share({ files: [file], title: LP.nombreLocal(), text: texto });
       }
       throw new Error('sin archivos');
     }).catch(function (e) {
       if (e && e.name === 'AbortError') return;          // cancelo el menu: no es falla
       // Sin archivo (CORS, sin senial, WebView viejo): se comparte el link.
-      return navigator.share({ title: 'La Positiva', text: texto, url: qr.imagen_url })
+      return navigator.share({ title: LP.nombreLocal(), text: texto, url: qr.imagen_url })
         .catch(function (e2) {
           if (e2 && e2.name === 'AbortError') return;
           LP.toast('No se pudo compartir el QR. Us\u00e1 "Agrandar para el cliente".', 'err');
@@ -414,12 +467,12 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!qr || !qr.link_pago || btn.disabled) return;
 
     var texto = elegido
-      ? 'Para pagar ' + money(LP.cobrable(elegido)) + ' de ' + elegido.mesa + ' en La Positiva'
-      : 'Para pagar en La Positiva';
+      ? 'Para pagar ' + money(LP.cobrable(elegido)) + ' de ' + elegido.mesa + ' en ' + LP.nombreLocal()
+      : 'Para pagar en ' + LP.nombreLocal();
 
     if (navigator.share) {
       btn.disabled = true;
-      navigator.share({ title: 'La Positiva', text: texto, url: qr.link_pago })
+      navigator.share({ title: LP.nombreLocal(), text: texto, url: qr.link_pago })
         .catch(function () { /* cancelar no es un error */ })
         .then(function () { btn.disabled = false; });
       return;

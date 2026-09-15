@@ -14,13 +14,18 @@
 <link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
+<!-- El tema (nombre, color, letra y forma) que se edita en diseno.html.
+     SIN defer y a proposito: tiene que escribir las variables ANTES del
+     primer pintado, o el color viejo se ve un instante y despues salta.
+     Si no hay nada guardado no escribe nada y la app queda como siempre. -->
+<script src="tema.js"></script>
 <style>
   .wrap{max-width:1180px;padding-top:calc(20px + var(--sa-t));padding-bottom:120px}
 
   .section{margin-bottom:28px}
   .section-head{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:0 2px}
   .section-head h2{
-    margin:0;font-family:'Jost',sans-serif;font-style:normal;
+    margin:0;font-family:var(--font-cuerpo);font-style:normal;
     font-size:14px;letter-spacing:.12em;text-transform:uppercase;
     font-weight:600;color:var(--muted-strong);
   }
@@ -44,7 +49,7 @@
   .pcard.pcard-urgente .pmeta{color:var(--err-ink);font-weight:600}
   /* Cabecera flexible: mesa, badge y metodo nunca se pisan en celular. */
   .pcard-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
-  .pmesa{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:23px;line-height:1.15}
+  .pmesa{font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);font-size:23px;line-height:1.15}
   .pmeta{color:var(--muted);font-size:14px;margin-top:3px}
   .pmetodo{font-size:14px;color:var(--muted-strong);margin-top:6px}
   .plines{
@@ -88,6 +93,21 @@
   [data-body="pend"] .estado-vacio{min-height:249px;display:flex;align-items:center;justify-content:center}
 
   /* -------------------------------------------------- QR de cobro ----- */
+  .qr-det{margin-bottom:28px}
+  .qr-det > summary{
+    cursor:pointer;list-style:none;min-height:var(--tap);
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  }
+  .qr-det > summary::-webkit-details-marker{display:none}
+  .qr-det > summary::before{
+    content:'›';font-size:18px;line-height:1;color:var(--muted);
+    transition:transform .15s;flex:none;
+  }
+  .qr-det[open] > summary::before{transform:rotate(90deg)}
+  .qr-det-pie{font-size:14px;color:var(--muted)}
+  .qr-det:not([open]) .qr-det-pie{color:var(--muted-strong)}
+  @media (hover:hover){.qr-det > summary:hover h2{color:var(--ink)}}
+  .qr-det > .card{margin-top:12px}
   .qr-panel{max-width:620px}
   .qr-intro{margin:0 0 14px;color:var(--muted);font-size:15px;line-height:1.55}
   .qr-actual{
@@ -162,10 +182,16 @@
     </div>
   </header>
 
-  <section class="section" id="qr" aria-labelledby="h-qr">
-    <div class="section-head">
+  <!-- Cargar el QR es una tarea de UNA sola vez, y se estaba comiendo la
+       primera pantalla entera todos los turnos: en el celular los pagos
+       pendientes arrancaban recien a los 880px. Ahora, si el QR ya esta
+       cargado, el panel nace plegado y lo primero que se ve es el trabajo
+       del dia. Si no hay QR, se abre solo (lo hace pintarQR). -->
+  <details class="section qr-det" id="qr" open>
+    <summary class="section-head">
       <h2 id="h-qr">QR de cobro del local</h2>
-    </div>
+      <span class="qr-det-pie" id="qrResumen">Sin cargar</span>
+    </summary>
     <div class="card qr-panel">
       <p class="qr-intro">
         Sacale una foto al QR del posnet, o subí la captura de tu app de cobro.
@@ -210,7 +236,7 @@
         Ir a mostrar el QR a un cliente
       </a>
     </div>
-  </section>
+  </details>
 
   <!-- Va ARRIBA de los pagos pendientes y tiene su propia consulta, sin el
        recorte a 9 ni el limite de 60 de la lista comun: si no, la unica
@@ -653,15 +679,42 @@ document.addEventListener('DOMContentLoaded', function () {
   var elQrMsg = document.getElementById('qrMsg');
   var elQrFile = document.getElementById('qrFile');
   var elQrLabel = document.getElementById('qrLabel');
+  var elQrDet = document.getElementById('qr');
+  var elQrResumen = document.getElementById('qrResumen');
   var subiendo = false;
+
+  /* Plegado o abierto. Se abre solo cuando falta el QR (hay algo que hacer),
+     cuando se llego con #qr (la cajera viene de la pantalla de cobro a
+     cambiarlo) o cuando ella misma lo abrio a mano en esta visita. */
+  var qrTocado = false;
+  if (elQrDet) {
+    elQrDet.addEventListener('toggle', function () { qrTocado = true; });
+    // Llegar a #qr con la pagina ya abierta (el link de la pantalla de cobro
+    // cuando la cajera vuelve por su cuenta) no recarga nada: hay que abrirlo.
+    window.addEventListener('hashchange', function () {
+      if (location.hash === '#qr') elQrDet.open = true;
+    });
+  }
+
+  function acomodarQrDet(hayQR) {
+    if (!elQrDet || qrTocado) return;
+    elQrDet.open = !hayQR || location.hash === '#qr';
+  }
 
   function pintarQR(qr) {
     if (!qr) {
       elQrEstado.innerHTML = '<p class="qr-vacio">Todavía no hay ningún QR cargado. ' +
         'Hasta que subas uno, la pantalla de cobro no le puede mostrar nada al cliente.</p>';
       elQrLabel.textContent = 'Subir o sacar foto del QR';
+      if (elQrResumen) elQrResumen.textContent = 'Falta cargarlo';
+      acomodarQrDet(false);
       return;
     }
+    if (elQrResumen) {
+      elQrResumen.textContent = 'Cargado ' + LP.timeAgo(qr.created_at) +
+        (qr.link_pago ? ' · con link de pago' : '');
+    }
+    acomodarQrDet(true);
     elQrEstado.innerHTML =
       '<div class="qr-actual">' +
         '<img src="' + esc(qr.imagen_url) + '" alt="QR de cobro cargado" ' +

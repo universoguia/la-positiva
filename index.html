@@ -14,6 +14,11 @@
 <link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
+<!-- El tema (nombre, color, letra y forma) que se edita en diseno.html.
+     SIN defer y a proposito: tiene que escribir las variables ANTES del
+     primer pintado, o el color viejo se ve un instante y despues salta.
+     Si no hay nada guardado no escribe nada y la app queda como siempre. -->
+<script src="tema.js"></script>
 <style>
   /* ------------------------------------------------------------------------
      La puerta del local. Lo primero y lo unico que se ve al entrar es quien
@@ -49,7 +54,7 @@
   .yo .inicial{width:66px;height:66px;font-size:32px;margin:0 auto 12px}
   .yo h2{color:#fff;margin:0;font-size:27px;font-weight:400}
   .yo .rol-yo{
-    font-family:'Jost',sans-serif;font-size:13px;letter-spacing:.12em;
+    font-family:var(--font-cuerpo);font-size:13px;letter-spacing:.12em;
     text-transform:uppercase;color:var(--gold);margin:4px 0 0;
   }
   .mis-cosas{display:grid;gap:9px;margin-top:20px}
@@ -109,7 +114,7 @@
     width:48px;height:48px;border-radius:50%;flex:none;
     display:flex;align-items:center;justify-content:center;
     background:var(--accent);color:#fff;
-    font-family:'Cormorant Garamond',Georgia,serif;font-size:25px;font-weight:600;
+    font-family:var(--font-titulos);font-size:25px;font-weight:600;
     box-shadow:0 0 0 3px rgba(255,255,255,.06);
   }
   .quien.duenio .inicial{background:var(--gold);color:var(--ink)}
@@ -117,7 +122,7 @@
 
   .nombre{font-size:18px;font-weight:500;line-height:1.2}
   .rol{
-    font-family:'Jost',sans-serif;font-size:12px;letter-spacing:.1em;
+    font-family:var(--font-cuerpo);font-size:12px;letter-spacing:.1em;
     text-transform:uppercase;color:var(--dark-muted);
   }
 
@@ -130,18 +135,23 @@
   /* --------------------------------------------------------- el cliente -- */
   .cliente{flex:none;margin-top:18px}
   .cliente h2{
-    color:var(--dark-muted);font-family:'Jost',sans-serif;font-style:normal;
+    color:var(--dark-muted);font-family:var(--font-cuerpo);font-style:normal;
     font-size:13px;letter-spacing:.11em;text-transform:uppercase;font-weight:600;
     margin:0 0 9px;text-align:center;
   }
   .mesas-demo{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
   .mesa-demo{
     display:inline-flex;align-items:center;gap:8px;min-height:var(--tap);
-    padding:0 17px;border-radius:var(--r-pill);
+    padding:0 20px;border-radius:var(--r-pill);
     background:transparent;border:1px solid var(--dark-border);color:var(--dark-muted);
     font-size:15px;text-decoration:none;transition:border-color .16s,color .16s;
+    text-align:center;
   }
   .mesa-demo:hover{border-color:var(--gold);color:#fff}
+  .demo-nota{
+    margin:8px 0 0;text-align:center;color:var(--dark-muted);
+    font-size:13px;line-height:1.4;
+  }
 
   /* -------------------------------------------------- todas las vistas -- */
   .todas{
@@ -189,6 +199,10 @@
     .rol{font-size:12px;line-height:1.2}
     .cliente{margin-top:12px}
     .todas{margin-top:12px}
+    /* En pantalla baja la aclaracion de la mesa de ejemplo se guarda: el
+       link ya lo dice, y esos 20px son los que dejan la ultima fila de caras
+       adentro de la pantalla. */
+    .demo-nota{display:none}
   }
   /* Celulares muy bajos (320x568): tres por fila para que entren las seis. */
   @media (max-height:600px){
@@ -221,18 +235,24 @@
     <li class="cargando">Cargando...</li>
   </ul>
 
+  <!-- Una sola entrada, con una mesa de ejemplo. Antes habia dos botones con
+       DOS MESAS REALES del salon (7 y 8): cualquiera que entrara por curiosidad
+       podia mandar un pedido a una mesa donde hay gente comiendo. La mesa de
+       ejemplo no existe en el plano, asi que un pedido de prueba se ve al toque
+       y no se mezcla con el servicio. -->
   <div class="cliente">
-    <h2>Ver la carta como un cliente</h2>
+    <h2>La carta del cliente</h2>
     <div class="mesas-demo">
-      <a class="mesa-demo" href="pedir.html?mesa=7">Mesa 7</a>
-      <a class="mesa-demo" href="pedir.html?mesa=8">Mesa 8</a>
+      <a class="mesa-demo" href="pedir.html?mesa=Ejemplo">Ver la carta como la ve un cliente</a>
     </div>
+    <p class="demo-nota">Es una mesa de ejemplo. Las mesas de verdad entran por su c&oacute;digo QR.</p>
   </div>
 
   <details class="todas">
     <summary><span>Todas las pantallas del sistema</span><span class="mas">Ver</span></summary>
     <div class="cuerpo">
       <ul>
+        <li><a href="comanda.html"><b>Tomar la comanda en la mesa</b><em>Mozo</em></a></li>
         <li><a href="mozo.html"><b>Los pedidos de las mesas</b><em>Mozo</em></a></li>
         <li><a href="cocina.html"><b>Las comandas</b><em>Cocina</em></a></li>
         <li><a href="mesas.html"><b>El sal&oacute;n y las cuentas</b><em>Mozo</em></a></li>

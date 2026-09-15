@@ -14,6 +14,11 @@
 <link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
+<!-- El tema (nombre, color, letra y forma) que se edita en diseno.html.
+     SIN defer y a proposito: tiene que escribir las variables ANTES del
+     primer pintado, o el color viejo se ve un instante y despues salta.
+     Si no hay nada guardado no escribe nada y la app queda como siempre. -->
+<script src="tema.js"></script>
 <style>
   /* Una sola cosa que hacer, y el boton bien a mano: esta pagina la abre
      alguien en plena cocina o en pleno salon, apurado y con una mano
@@ -23,15 +28,15 @@
      Antes habia una pagina por rol -jonathan.html y cocina-avisos.html-, dos
      archivos de 250 lineas para la misma funcion, y el rol Mozo se habia
      quedado sin la suya. */
-  .wrap{max-width:520px;padding-top:calc(34px + var(--sa-t));text-align:center}
+  .wrap{max-width:520px;padding-top:calc(22px + var(--sa-t));text-align:center}
   .avatar{
-    width:76px;height:76px;border-radius:50%;
+    width:62px;height:62px;border-radius:50%;
     background:var(--card);border:1px solid var(--border-strong);
     display:flex;align-items:center;justify-content:center;
     margin:0 auto 16px;color:var(--accent);
   }
   h1{font-size:29px;margin:0 0 6px}
-  p.lead{color:var(--muted);margin:0 0 24px;font-size:16px;line-height:1.55}
+  p.lead{color:var(--muted);margin:0 0 20px;font-size:16px;line-height:1.55}
 
   /* Apagado lleva el estado ("Permiso bloqueado"): sin opacidad, que se lea. */
   .btn-grande:disabled{opacity:1}
@@ -51,11 +56,11 @@
   .estado:empty{display:none}
 
   .guia{
-    margin-top:18px;text-align:left;background:var(--card);
+    margin-top:16px;text-align:left;background:var(--card);
     border:1px solid var(--border);border-radius:var(--r-md);padding:16px 18px;
   }
   .guia h2{
-    font-family:'Jost',sans-serif;font-style:normal;font-size:13px;
+    font-family:var(--font-cuerpo);font-style:normal;font-size:13px;
     letter-spacing:.1em;text-transform:uppercase;font-weight:600;
     color:var(--muted-strong);margin:0 0 10px;
   }
@@ -69,7 +74,7 @@
   .cuantos:empty{display:none}
 
   .abajo{
-    margin-top:26px;padding-top:18px;border-top:1px dashed var(--border);
+    margin-top:20px;padding-top:16px;border-top:1px dashed var(--border);
     display:flex;flex-direction:column;gap:10px;align-items:center;
   }
 </style>
@@ -77,7 +82,7 @@
 <body>
 <div class="wrap">
   <div class="avatar" aria-hidden="true">
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
          stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
       <path d="M13.7 21a2 2 0 0 1-3.4 0"></path>
@@ -98,7 +103,7 @@
   <p class="cuantos" id="cuantos"></p>
 
   <div class="abajo">
-    <a class="back-link" href="cocina.html" id="irAlPanel">Ir a mi panel</a>
+    <a class="btn btn-secondary btn-block" href="cocina.html" id="irAlPanel">Ir a mi panel</a>
     <a class="back-link" href="./">Volver al inicio</a>
   </div>
 </div>

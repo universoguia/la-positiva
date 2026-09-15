@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14100e">
+<meta name="description" content="El mozo toma la comanda en la mesa: elige la mesa, cuanta gente hay y carga los platos de la carta.">
+<title>La Positiva - Tomar comanda</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="La Positiva">
+<link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<!-- El tema (nombre, color, letra y forma) que se edita en diseno.html.
+     SIN defer y a proposito: tiene que escribir las variables ANTES del
+     primer pintado, o el color viejo se ve un instante y despues salta.
+     Si no hay nada guardado no escribe nada y la app queda como siempre. -->
+<script src="tema.js"></script>
+<style>
+  /* ------------------------------------------------------------------------
+     TOMAR COMANDA. Es la pantalla que mas se usa en el servicio: el mozo
+     parado al lado de la mesa, con el celular en una mano y la libreta en la
+     otra. Todo lo que hay aca esta puesto para eso.
+
+     Tres decisiones que explican el resto:
+
+     1. DOS PASOS, NO UNO. Primero la mesa y cuanta gente; despues la carta.
+        Si estuviera todo junto, la carta -156 platos- empujaria la eleccion
+        de mesa fuera de la pantalla, y elegir mal la mesa es el error mas
+        caro de todos: el plato sale a la mesa equivocada.
+
+     2. LA CARTA VA EN LISTA, NO EN FICHAS CON FOTO. La foto es para el
+        comensal que no sabe que es una provoleta. El mozo sabe: necesita
+        encontrar el nombre y sumarlo, y en fichas entran cuatro platos por
+        pantalla contra los quince de la lista.
+
+     3. LA FILA ENTERA SUMA UNO. No hay que apuntarle a un boton chico: se
+        toca el plato y se agrega. Es un gesto solo, con el pulgar, sin mirar.
+
+     El archivo NO toca styles.css: todo lo propio de esta pantalla vive aca
+     adentro, como pide la division de trabajo del proyecto.               */
+
+  .wrap{max-width:1180px;padding-top:calc(18px + var(--sa-t))}
+  /* El pie fijo con el total tapa el final de la lista: se le devuelve el
+     alto en padding para que el ultimo plato se pueda tocar siempre. */
+  body.con-barra .wrap{padding-bottom:calc(112px + var(--sa-b))}
+
+  h2.seccion{
+    color:#fff;font-family:var(--font-cuerpo);font-style:normal;
+    font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
+    margin:20px 0 10px;display:flex;align-items:center;gap:9px;
+  }
+  h2.seccion:first-of-type{margin-top:6px}
+  h2.seccion .paso{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:22px;height:22px;border-radius:50%;
+    background:var(--gold);color:var(--ink);font-size:13px;font-weight:700;flex:none;
+  }
+
+  /* --------------------------------------------------------- paso 1: mesa --
+     Las doce mesas entran juntas: en el celular son tres columnas, en la
+     tablet del salon seis. Sin scroll para elegir, que es el punto. */
+  .mesas{
+    display:grid;gap:8px;margin:0;padding:0;list-style:none;
+    grid-template-columns:repeat(auto-fill,minmax(98px,1fr));
+  }
+  .mesa{
+    width:100%;min-height:78px;padding:9px 8px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    background:var(--dark-card);border:1px solid var(--dark-border);border-radius:var(--r-md);
+    color:#fff;text-align:center;
+    transition:border-color .16s,background-color .16s,transform .08s;
+  }
+  .mesa:hover{background:var(--dark-card-hover);border-color:var(--gold)}
+  .mesa:active{transform:scale(.98)}
+  .mesa[aria-pressed="true"]{
+    border-color:var(--accent);background:var(--accent);
+    box-shadow:0 0 0 2px rgba(180,71,42,.35);
+  }
+  .mesa .num{font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);font-size:23px;line-height:1.05}
+  .mesa .est{font-size:12px;color:var(--dark-muted);line-height:1.25}
+  .mesa[aria-pressed="true"] .est{color:#ffe6dc}
+  .mesa .est.ocupada{color:var(--gold)}
+  .mesa[aria-pressed="true"] .est.ocupada{color:#fff}
+
+  /* ----------------------------------------------------- paso 1: gente -- */
+  .gente-fila{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .npers{
+    min-width:var(--tap);min-height:var(--tap);padding:0 14px;border-radius:var(--r-pill);
+    background:var(--dark-card);border:1px solid var(--dark-border);color:#fff;font-size:17px;
+  }
+  .npers:hover{border-color:var(--gold)}
+  .npers[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:600}
+  .npers.mas{font-size:15px;padding:0 16px}
+  .gente-otra{display:flex;align-items:center;gap:8px;margin-top:10px}
+  .gente-otra[hidden]{display:none}
+  .gente-otra input{
+    width:92px;min-height:var(--tap);padding:8px 12px;font-size:17px;text-align:center;
+    border:1px solid var(--dark-border);border-radius:var(--r-md);
+    background:var(--dark-card);color:#fff;
+  }
+  .gente-otra label{color:var(--dark-muted);font-size:14px}
+
+  .listo-fila{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap}
+  .listo-fila .btn{flex:1 1 240px}
+
+  /* ------------------------------------------------- paso 2: la cabecera --
+     Queda pegada arriba: el mozo tiene que poder ver EN QUE MESA esta
+     cargando sin volver a subir. Es el dato que no se puede equivocar. */
+  .barra-mesa{
+    position:sticky;top:0;z-index:4;margin:0 0 10px;
+    padding:9px 0 10px;background:var(--ink);
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  }
+  .barra-mesa .quien-mesa{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);
+    font-size:23px;color:#fff;line-height:1;
+  }
+  .barra-mesa .pers{
+    font-family:var(--font-cuerpo);font-style:normal;font-size:13px;
+    color:var(--ink);background:var(--gold);border-radius:var(--r-pill);
+    padding:4px 10px;font-weight:600;
+  }
+  .btn-cambiar{
+    margin-left:auto;min-height:var(--tap);padding:0 14px;border-radius:var(--r-pill);
+    background:transparent;border:1px solid var(--dark-border);color:var(--dark-ink);font-size:15px;
+  }
+  .btn-cambiar:hover{border-color:var(--gold);color:#fff}
+
+  /* ------------------------------------------------- paso 2: buscador --- */
+  .buscar{position:relative;margin:0 0 10px}
+  .buscar input{
+    width:100%;min-height:50px;padding:10px 44px 10px 14px;font-size:16px;
+    border:1px solid var(--dark-border);border-radius:var(--r-md);
+    background:var(--dark-card);color:#fff;
+  }
+  .buscar input::placeholder{color:var(--dark-muted)}
+  .buscar .limpiar{
+    position:absolute;right:5px;top:50%;transform:translateY(-50%);
+    width:40px;height:40px;border-radius:50%;color:var(--dark-muted);font-size:17px;
+  }
+  .buscar .limpiar:hover{color:#fff;background:var(--dark-card-hover)}
+  .buscar .limpiar[hidden]{display:none}
+
+  .cats{
+    display:flex;gap:7px;overflow-x:auto;padding:2px 0 8px;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;
+  }
+  .cats::-webkit-scrollbar{display:none}
+  .cat-b{
+    flex:none;min-height:38px;padding:0 14px;border-radius:var(--r-pill);
+    background:var(--dark-card);border:1px solid var(--dark-border);
+    color:var(--dark-ink);font-size:14px;white-space:nowrap;
+  }
+  .cat-b[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:600}
+
+  /* ---------------------------------------------------- paso 2: la carta --
+     En pantalla ancha va en dos columnas: en la tablet del salon sobraba
+     medio metro de mesa vacia a la derecha y la lista obligaba a bajar el
+     doble. */
+  .carta{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+  @media (min-width:760px){.carta{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .cat-tit{
+    color:var(--dark-muted);font-family:var(--font-cuerpo);font-style:normal;
+    font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+    margin:2px 0 8px;font-weight:600;
+  }
+  .plato{
+    display:flex;align-items:stretch;gap:8px;
+    background:var(--dark-card);border:1px solid var(--dark-border);
+    border-radius:var(--r-md);overflow:hidden;
+  }
+  .plato.tiene{border-color:var(--gold)}
+  .plato.agotado{opacity:.5}
+  .pl-main{
+    flex:1;min-width:0;display:flex;align-items:center;gap:10px;
+    padding:10px 4px 10px 13px;min-height:56px;text-align:left;color:#fff;
+  }
+  .pl-main:hover{background:var(--dark-card-hover)}
+  .pl-tex{flex:1;min-width:0}
+  .pl-tex b{display:block;font-size:16px;font-weight:500;line-height:1.25}
+  .pl-tex i{display:block;font-style:normal;font-size:13px;color:var(--dark-muted);line-height:1.3}
+  .pl-pre{flex:none;font-size:15px;color:var(--dark-ink);font-variant-numeric:tabular-nums}
+  .pl-act{display:flex;align-items:center;gap:2px;padding:6px 8px 6px 2px}
+  .pl-act .icon-btn{background:var(--dark-panel);border-color:var(--dark-border);color:#fff}
+  .pl-act .icon-btn:hover{background:var(--dark-card-hover);border-color:var(--gold)}
+  .pl-q{
+    min-width:28px;text-align:center;font-size:17px;font-weight:600;color:var(--gold);
+    font-variant-numeric:tabular-nums;
+  }
+  .pl-no{
+    flex:none;padding:0 12px;font-size:13px;color:var(--dark-muted);
+    display:flex;align-items:center;
+  }
+
+  .nada{
+    color:var(--dark-muted);text-align:center;padding:26px 16px;font-size:15px;
+    border:1px dashed var(--dark-border);border-radius:var(--r-md);grid-column:1/-1;
+  }
+
+  /* --------------------------------------------------------- pie fijo ---- */
+  .pie{
+    position:fixed;left:0;right:0;bottom:0;z-index:20;
+    padding:10px max(14px,var(--sa-l)) calc(10px + var(--sa-b)) max(14px,var(--sa-r));
+    background:var(--dark-panel);border-top:1px solid var(--dark-border);
+    box-shadow:0 -8px 24px rgba(0,0,0,.4);
+  }
+  .pie[hidden]{display:none}
+  .pie-in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:12px}
+  .pie-dato{flex:1;min-width:0;color:#fff;line-height:1.25}
+  .pie-dato b{display:block;font-size:19px;font-variant-numeric:tabular-nums}
+  .pie-dato span{font-size:13px;color:var(--dark-muted)}
+  .pie .btn{flex:none;min-height:52px;padding:0 22px;font-size:17px}
+
+  /* -------------------------------------------------------- la comanda --- */
+  .lin{
+    display:flex;align-items:center;gap:10px;padding:10px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .lin:last-of-type{border-bottom:none}
+  .lin-tex{flex:1;min-width:0}
+  .lin-tex b{display:block;font-size:16px;font-weight:500}
+  .lin-tex span{font-size:13px;color:var(--muted)}
+  .lin-act{display:flex;align-items:center;gap:2px;flex:none}
+  .lin-q{min-width:26px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums}
+  .lin-pre{flex:none;min-width:78px;text-align:right;font-variant-numeric:tabular-nums}
+
+  .total-fila{
+    display:flex;justify-content:space-between;align-items:baseline;
+    margin-top:14px;padding-top:12px;border-top:2px solid var(--border-strong);
+    font-size:21px;font-weight:600;
+  }
+  .campo{margin-top:14px}
+  .campo label{display:block;font-size:13px;color:var(--muted-strong);margin-bottom:5px}
+  .campo textarea{
+    width:100%;min-height:76px;padding:9px 12px;font-size:16px;
+    border:1px solid var(--border-strong);border-radius:var(--r-md);
+    background:var(--bg);color:var(--ink);font-family:inherit;resize:vertical;
+  }
+  .campo textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+
+  .aviso{
+    margin:0 0 12px;padding:10px 13px;border-radius:var(--r-md);font-size:14px;line-height:1.5;
+    background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn-border);
+  }
+  .aviso[hidden]{display:none}
+
+  /* --------------------------------------------------------- se mando ---- */
+  .hecho{text-align:center;padding:10px 0 4px}
+  .hecho .tilde{
+    width:64px;height:64px;border-radius:50%;margin:0 auto 12px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--ok-bg);color:var(--ok);font-size:32px;
+  }
+  .hecho h3{font-size:24px;margin:0 0 6px}
+  .hecho p{margin:0 0 4px;color:var(--muted);font-size:15px;line-height:1.5}
+
+  /* Celular: las doce mesas, los numeros de gente y el boton tienen que
+     entrar en la primera pantalla. Sin esto sobraban 35px y el mozo tenia
+     que hacer scroll para tocar "Cargar los platos", que es lo unico que se
+     hace en este paso. Los botones NO se achican: se achican los huecos. */
+  @media (max-width:420px){
+    h2.seccion{margin:13px 0 8px}
+    .mesas{gap:7px;grid-template-columns:repeat(auto-fill,minmax(88px,1fr))}
+    .mesa{min-height:68px;padding:7px 6px}
+    .mesa .num{font-size:21px}
+    .listo-fila{margin-top:14px}
+  }
+
+  /* En pantalla ancha el paso 1 aprovecha el ancho: mesas a la izquierda,
+     la gente y el boton a la derecha, sin bajar. */
+  @media (min-width:900px){
+    .paso1-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr);gap:26px;align-items:start}
+    .paso1-grid h2.seccion:first-of-type{margin-top:6px}
+    .paso1-der h2.seccion{margin-top:6px}
+    .listo-fila{margin-top:16px}
+  }
+</style>
+</head>
+<body class="dark">
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Tomar comanda</h1>
+      <p class="sub" id="sub">Eleg&iacute; la mesa, dec&iacute; cu&aacute;ntos son y carg&aacute; lo que piden</p>
+    </div>
+    <div class="head-right">
+      <a class="soy" href="./" data-quien hidden></a>
+      <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
+        <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
+      </span>
+      <a class="btn btn-secondary btn-head" href="mozo.html">Los pedidos</a>
+      <!-- Volver SIEMPRE visible. En el paso 2 vuelve al paso anterior
+           (elegir la mesa), no a la portada: saltar al inicio desde la mitad
+           de una comanda es perder la comanda. -->
+      <a class="back-link" href="./" id="volverInicio">Volver al inicio</a>
+      <button type="button" class="back-link" id="volverPaso1" hidden>&#8592; Volver a elegir la mesa</button>
+    </div>
+  </header>
+
+  <!-- ===================================================== PASO 1: mesa === -->
+  <section id="paso1" class="paso1-grid">
+    <div>
+      <h2 class="seccion"><span class="paso">1</span>&iquest;Qu&eacute; mesa?</h2>
+      <ul class="mesas" id="mesas">
+        <li class="nada">Cargando las mesas...</li>
+      </ul>
+    </div>
+    <div class="paso1-der">
+      <h2 class="seccion"><span class="paso">2</span>&iquest;Cu&aacute;ntas personas?</h2>
+      <div class="gente-fila" id="gente"></div>
+      <div class="gente-otra" id="genteOtra" hidden>
+        <label for="genteInput">Son</label>
+        <input type="number" id="genteInput" min="1" max="99" inputmode="numeric" value="9"
+               aria-label="Cu&aacute;ntas personas hay en la mesa">
+        <label for="genteInput">personas</label>
+      </div>
+
+      <div class="listo-fila">
+        <button type="button" class="btn btn-primary btn-grande" id="irCarta" disabled>
+          Eleg&iacute; una mesa
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================================================== PASO 2: carta === -->
+  <section id="paso2" hidden>
+    <div class="barra-mesa">
+      <span class="quien-mesa"><span id="chipMesa">Mesa</span>
+        <span class="pers" id="chipPers">2</span></span>
+      <button type="button" class="btn-cambiar" id="cambiarMesa">Cambiar mesa</button>
+    </div>
+
+    <p class="aviso" id="avisoAgotados" hidden></p>
+
+    <div class="buscar">
+      <input type="search" id="buscador" placeholder="Buscar un plato..."
+             autocomplete="off" aria-label="Buscar un plato de la carta">
+      <button type="button" class="limpiar" id="limpiarBusq" hidden aria-label="Borrar la b&uacute;squeda">&#10005;</button>
+    </div>
+
+    <div class="cats" id="cats" role="group" aria-label="Categor&iacute;as de la carta"></div>
+    <p class="cat-tit" id="catTit"></p>
+    <ul class="carta" id="carta"></ul>
+  </section>
+</div>
+
+<!-- Pie fijo con lo que va cargado. Solo aparece cuando hay algo. -->
+<div class="pie" id="pie" hidden>
+  <div class="pie-in">
+    <div class="pie-dato">
+      <b id="pieTotal">$0</b>
+      <span id="pieCuenta">nada cargado</span>
+    </div>
+    <button type="button" class="btn btn-primary" id="verComanda">Ver la comanda</button>
+  </div>
+</div>
+
+<!-- ======================================================= la comanda ==== -->
+<div class="sheet" id="hojaComanda" hidden role="dialog" aria-modal="true" aria-labelledby="hcTit">
+  <div class="sheet-panel">
+    <div class="sheet-head">
+      <h2 id="hcTit">La comanda</h2>
+      <button type="button" class="close-x" id="hcX" aria-label="Seguir cargando">&#10005;</button>
+    </div>
+    <div id="hcCuerpo"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+<script src="menu-data.js" defer></script>
+<script src="config.js" defer></script>
+<script src="app.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var esc = LP.esc, money = LP.money;
+  var sb = LP.client();
+
+  /* Quien esta tomando la comanda. Se firma con el nombre real: en la cuenta
+     de la mesa despues se lee quien la abrio y quien mando cada ronda. */
+  var soy = LP.quienSoy();
+  var YO = (soy && soy.nombre) || 'Mozo';
+
+  LP.pantallaSiempreEncendida();
+
+  var conn = new LP.ConnBadge(document.getElementById('conn'));
+
+  /* --------------------------------------------------------- el estado -- */
+  var mesaSel = null;        // 'Mesa 7'
+  var personas = 2;
+  var plano = null;          // lo que devuelve LP.planoDelSalon
+  var carrito = Object.create(null);   // id -> qty
+  var agotados = {};
+  var query = '';
+  var catActiva = null;
+  var enviando = false;
+
+  var CATS = [];
+  for (var i = 0; i < MENU.length; i++) {
+    if (CATS.indexOf(MENU[i].cat) === -1) CATS.push(MENU[i].cat);
+  }
+  catActiva = CATS[0];
+
+  var PLATO = Object.create(null);
+  MENU.forEach(function (d) { PLATO[d.id] = d; });
+
+  /* El borrador vive en el celular. Un mozo que carga doce platos y se queda
+     sin bateria, o al que el navegador le descarta la pestania mientras
+     atiende otra mesa, no puede perder la comanda: al volver esta igual. */
+  var BORRADOR = 'lp_comanda_borrador';
+
+  function guardarBorrador() {
+    try {
+      localStorage.setItem(BORRADOR, JSON.stringify({
+        mesa: mesaSel, personas: personas, items: carrito,
+        nota: notaTexto, en: Date.now()
+      }));
+    } catch (e) {}
+  }
+  function olvidarBorrador() {
+    try { localStorage.removeItem(BORRADOR); } catch (e) {}
+  }
+  function leerBorrador() {
+    try {
+      var b = JSON.parse(localStorage.getItem(BORRADOR) || 'null');
+      // Mas de 8 horas es de otro servicio: no se retoma.
+      if (!b || !b.mesa || (Date.now() - (b.en || 0)) > 8 * 3600 * 1000) return null;
+      return b;
+    } catch (e) { return null; }
+  }
+
+  var notaTexto = '';
+
+  /* Una clave por comanda: identifica ESTA comanda aunque se mande dos veces.
+     Es la misma defensa que usa la carta del comensal contra el duplicado. */
+  var claveEnvio = null;
+  function claveDeEnvio() {
+    if (claveEnvio) return claveEnvio;
+    try { claveEnvio = crypto.randomUUID(); }
+    catch (e) { claveEnvio = 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+    return claveEnvio;
+  }
+
+  /* ---------------------------------------------------------- los pasos -- */
+  var elP1 = document.getElementById('paso1');
+  var elP2 = document.getElementById('paso2');
+  var volverInicio = document.getElementById('volverInicio');
+  var volverPaso1 = document.getElementById('volverPaso1');
+
+  function irAPaso(n) {
+    elP1.hidden = n !== 1;
+    elP2.hidden = n !== 2;
+    volverInicio.hidden = n !== 1;
+    volverPaso1.hidden = n !== 2;
+    document.getElementById('sub').textContent = n === 1
+      ? 'Elegí la mesa, decí cuántos son y cargá lo que piden'
+      : 'Tocá el plato para sumarlo. Cuando termines, mandalo a la cocina.';
+    if (n === 2) { pintarBarraMesa(); pintarCarta(); }
+    pintarPie();
+    window.scrollTo(0, 0);
+  }
+
+  /* El boton de atras del celular tambien vuelve al paso 1. Sin esto, el
+     mozo tocaba atras para corregir la mesa y se iba de la pantalla con la
+     comanda a medio cargar. */
+  function entrarACarta() {
+    try { history.pushState({ lp: 'carta' }, ''); } catch (e) {}
+    irAPaso(2);
+  }
+  window.addEventListener('popstate', function () {
+    if (LP.isDialogOpen(hoja)) { cerrarHoja(); return; }
+    if (!elP2.hidden) irAPaso(1);
+  });
+
+  volverPaso1.addEventListener('click', function () {
+    // Si hay estado de historia propio, se vuelve por ahi (asi no queda basura).
+    if (history.state && history.state.lp === 'carta') { history.back(); return; }
+    irAPaso(1);
+  });
+  document.getElementById('cambiarMesa').addEventListener('click', function () {
+    volverPaso1.click();
+  });
+
+  /* ------------------------------------------------------ paso 1: mesas -- */
+  var elMesas = document.getElementById('mesas');
+
+  function pintarMesas() {
+    if (plano === null) {
+      elMesas.innerHTML = '<li class="nada">No pudimos traer las mesas. ' +
+        '<button type="button" class="btn btn-secondary" id="reMesas" ' +
+        'style="margin-top:12px">Probar de nuevo</button></li>';
+      return;
+    }
+    if (!plano.length) {
+      elMesas.innerHTML = '<li class="nada">No hay mesas cargadas en el sistema.</li>';
+      return;
+    }
+    elMesas.innerHTML = plano.map(function (t) {
+      var ocupada = t.estado !== 'Libre';
+      var sub = t.estado === 'Libre'
+        ? (t.mesa.capacidad ? t.mesa.capacidad + ' lugares' : 'Libre')
+        : (t.estado === 'Ocupada' && t.cuenta && t.cuenta.rondas
+            ? t.cuenta.rondas + (t.cuenta.rondas === 1 ? ' ronda' : ' rondas')
+            : t.estado);
+      return '<li><button type="button" class="mesa" data-mesa="' + esc(t.etiqueta) + '" ' +
+          'aria-pressed="' + (mesaSel === t.etiqueta ? 'true' : 'false') + '">' +
+          '<span class="num">' + esc(t.mesa.numero) + '</span>' +
+          '<span class="est' + (ocupada ? ' ocupada' : '') + '">' + esc(sub) + '</span>' +
+        '</button></li>';
+    }).join('');
+  }
+
+  elMesas.addEventListener('click', function (ev) {
+    if (ev.target.closest('#reMesas')) { cargarPlano(); return; }
+    var b = ev.target.closest('[data-mesa]');
+    if (!b) return;
+    elegirMesa(b.dataset.mesa);
+  });
+
+  function elegirMesa(etiqueta) {
+    mesaSel = etiqueta;
+    // Si la mesa ya tiene gente anotada, ese numero manda: lo cargo alguien
+    // que la vio. El mozo lo puede cambiar igual.
+    var t = buscarEnPlano(etiqueta);
+    if (t && t.cuenta && t.cuenta.sesion && t.cuenta.sesion.comensales) {
+      personas = Number(t.cuenta.sesion.comensales);
+    }
+    pintarMesas();
+    pintarGente();
+    pintarListo();
+    guardarBorrador();
+  }
+
+  function buscarEnPlano(etiqueta) {
+    if (!plano) return null;
+    for (var i = 0; i < plano.length; i++) {
+      if (plano[i].etiqueta === etiqueta) return plano[i];
+    }
+    return null;
+  }
+
+  /* ------------------------------------------------------ paso 1: gente -- */
+  var elGente = document.getElementById('gente');
+  var elOtra = document.getElementById('genteOtra');
+  var elOtraInput = document.getElementById('genteInput');
+
+  function pintarGente() {
+    var html = '';
+    for (var n = 1; n <= 8; n++) {
+      html += '<button type="button" class="npers" data-n="' + n + '" ' +
+        'aria-pressed="' + (personas === n ? 'true' : 'false') + '">' + n + '</button>';
+    }
+    html += '<button type="button" class="npers mas" data-n="mas" ' +
+      'aria-pressed="' + (personas > 8 ? 'true' : 'false') + '">9 o m&aacute;s</button>';
+    elGente.innerHTML = html;
+    elOtra.hidden = personas <= 8;
+    if (personas > 8) elOtraInput.value = personas;
+  }
+
+  elGente.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-n]');
+    if (!b) return;
+    if (b.dataset.n === 'mas') {
+      personas = Math.max(9, Number(elOtraInput.value) || 9);
+      pintarGente();
+      elOtraInput.focus();
+    } else {
+      personas = Number(b.dataset.n);
+      pintarGente();
+    }
+    pintarListo();
+    guardarBorrador();
+  });
+
+  elOtraInput.addEventListener('input', function () {
+    var n = Math.round(Number(elOtraInput.value));
+    if (isFinite(n) && n >= 1) { personas = Math.min(99, n); guardarBorrador(); }
+    pintarListo();
+  });
+
+  /* ------------------------------------------------------ paso 1: listo -- */
+  var btnIr = document.getElementById('irCarta');
+
+  function pintarListo() {
+    btnIr.disabled = !mesaSel;
+    btnIr.textContent = mesaSel
+      ? 'Cargar los platos de ' + mesaSel + ' (' + personas +
+        (personas === 1 ? ' persona)' : ' personas)')
+      : 'Elegí una mesa';
+  }
+
+  btnIr.addEventListener('click', function () {
+    if (!mesaSel) return;
+    entrarACarta();
+  });
+
+  /* ------------------------------------------------------ paso 2: carta -- */
+  var elCats = document.getElementById('cats');
+  var elCarta = document.getElementById('carta');
+  var elCatTit = document.getElementById('catTit');
+  var elBusc = document.getElementById('buscador');
+  var elLimpiar = document.getElementById('limpiarBusq');
+
+  function pintarBarraMesa() {
+    document.getElementById('chipMesa').textContent = mesaSel || 'Mesa';
+    document.getElementById('chipPers').textContent =
+      personas + (personas === 1 ? ' persona' : ' personas');
+  }
+
+  function pintarCats() {
+    elCats.innerHTML = CATS.map(function (c) {
+      return '<button type="button" class="cat-b" data-cat="' + esc(c) + '" aria-pressed="' +
+        (c === catActiva && !query ? 'true' : 'false') + '">' + esc(c) + '</button>';
+    }).join('');
+  }
+
+  elCats.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-cat]');
+    if (!b) return;
+    catActiva = b.dataset.cat;
+    if (query) { query = ''; elBusc.value = ''; elLimpiar.hidden = true; }
+    pintarCats(); pintarCarta();
+    var act = elCats.querySelector('[aria-pressed="true"]');
+    if (act) { try { act.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); } catch (e) {} }
+  });
+
+  var tBusq = null;
+  elBusc.addEventListener('input', function () {
+    clearTimeout(tBusq);
+    tBusq = setTimeout(function () {
+      query = elBusc.value.trim().toLowerCase();
+      elLimpiar.hidden = !query;
+      pintarCats(); pintarCarta();
+    }, 150);
+  });
+  elLimpiar.addEventListener('click', function () {
+    elBusc.value = ''; query = ''; elLimpiar.hidden = true;
+    pintarCats(); pintarCarta(); elBusc.focus();
+  });
+
+  function visibles() {
+    if (!query) {
+      return MENU.filter(function (d) { return d.cat === catActiva; });
+    }
+    return MENU.filter(function (d) {
+      return (d.name + ' ' + (d.note || '') + ' ' + d.cat).toLowerCase().indexOf(query) !== -1;
+    });
+  }
+
+  function filaHTML(d) {
+    var q = carrito[d.id] || 0;
+    var noHay = !!agotados[d.id];
+    return '<li class="plato' + (q ? ' tiene' : '') + (noHay ? ' agotado' : '') +
+        '" data-fila="' + esc(d.id) + '">' +
+      '<button type="button" class="pl-main" data-act="inc" data-id="' + esc(d.id) + '"' +
+        (noHay ? ' disabled' : '') + ' aria-label="Agregar ' + esc(d.name) + '">' +
+        '<span class="pl-tex"><b>' + esc(d.name) + '</b>' +
+          (d.note ? '<i>' + esc(d.note) + '</i>' : '') +
+          (query ? '<i>' + esc(d.cat) + '</i>' : '') +
+        '</span>' +
+        '<span class="pl-pre">' + money(d.price) + '</span>' +
+      '</button>' +
+      (noHay
+        ? '<span class="pl-no">Se termin&oacute;</span>'
+        : '<span class="pl-act">' +
+            (q ? '<button type="button" class="icon-btn" data-act="dec" data-id="' + esc(d.id) + '" ' +
+                   'aria-label="Sacar uno de ' + esc(d.name) + '">&#8722;</button>' +
+                 '<span class="pl-q">' + q + '</span>' : '') +
+            '<button type="button" class="icon-btn" data-act="inc" data-id="' + esc(d.id) + '" ' +
+              'aria-label="Agregar otro ' + esc(d.name) + '">&#43;</button>' +
+          '</span>') +
+    '</li>';
+  }
+
+  function pintarCarta() {
+    var items = visibles();
+    elCatTit.textContent = query
+      ? (items.length + (items.length === 1 ? ' resultado' : ' resultados'))
+      : catActiva;
+    elCarta.innerHTML = items.length
+      ? items.map(filaHTML).join('')
+      : '<li class="nada">No encontramos ese plato. Probá con otra palabra.</li>';
+  }
+
+  /* Repinta SOLO la fila tocada: repintar la carta entera le hace perder el
+     scroll al mozo justo cuando esta cargando el cuarto plato de la mesa. */
+  function repintarFila(id) {
+    var d = PLATO[id];
+    if (!d) return;
+    var fila = null;
+    var todas = elCarta.querySelectorAll('[data-fila]');
+    for (var k = 0; k < todas.length; k++) {
+      if (todas[k].dataset.fila === id) { fila = todas[k]; break; }
+    }
+    if (!fila) return;
+    // Se arma aparte y se reemplaza el nodo: mas simple que parchear a mano.
+    var cont = document.createElement('ul');
+    cont.innerHTML = filaHTML(d);
+    fila.parentNode.replaceChild(cont.firstChild, fila);
+  }
+
+  elCarta.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-act]');
+    if (!b || b.disabled) return;
+    cambiarCantidad(b.dataset.id, b.dataset.act === 'inc' ? 1 : -1);
+  });
+
+  function cambiarCantidad(id, delta) {
+    if (agotados[id] && delta > 0) return;
+    if (!PLATO[id]) return;
+    var q = Math.max(0, Math.min(99, (carrito[id] || 0) + delta));
+    if (q === 0) delete carrito[id]; else carrito[id] = q;
+    repintarFila(id);
+    pintarPie();
+    guardarBorrador();
+    if (LP.isDialogOpen(hoja)) pintarHoja();
+  }
+
+  /* ------------------------------------------------------------- el pie -- */
+  var pie = document.getElementById('pie');
+
+  function lineasDelCarrito() {
+    var out = [];
+    Object.keys(carrito).forEach(function (id) {
+      var d = PLATO[id];
+      if (d) out.push({ id: id, name: d.name, qty: carrito[id], price: d.price });
+    });
+    return out;
+  }
+  function cuantos() {
+    var n = 0;
+    Object.keys(carrito).forEach(function (id) { n += carrito[id]; });
+    return n;
+  }
+  function totalComanda() {
+    var t = 0;
+    lineasDelCarrito().forEach(function (l) { t += l.price * l.qty; });
+    return t;
+  }
+
+  function pintarPie() {
+    var n = cuantos();
+    var mostrar = !elP2.hidden && n > 0;
+    pie.hidden = !mostrar;
+    document.body.classList.toggle('con-barra', mostrar);
+    if (!mostrar) return;
+    document.getElementById('pieTotal').textContent = money(totalComanda());
+    document.getElementById('pieCuenta').textContent =
+      (n === 1 ? '1 plato' : n + ' platos') + ' · ' + (mesaSel || '');
+  }
+
+  document.getElementById('verComanda').addEventListener('click', abrirHoja);
+
+  /* -------------------------------------------------------- la comanda --- */
+  var hoja = document.getElementById('hojaComanda');
+  var hcCuerpo = document.getElementById('hcCuerpo');
+  var hcTit = document.getElementById('hcTit');
+
+  function abrirHoja() {
+    pintarHoja();
+    LP.openDialog(hoja);
+  }
+  function cerrarHoja() { LP.closeDialog(hoja); }
+  document.getElementById('hcX').addEventListener('click', cerrarHoja);
+  hoja.addEventListener('click', function (ev) { if (ev.target === hoja) cerrarHoja(); });
+
+  function pintarHoja() {
+    var lineas = lineasDelCarrito();
+    hcTit.textContent = 'La comanda de ' + (mesaSel || 'la mesa');
+    if (!lineas.length) {
+      hcCuerpo.innerHTML = '<p class="estado-vacio">Todavía no cargaste nada.</p>';
+      return;
+    }
+    hcCuerpo.innerHTML =
+      '<p class="hs-sub" style="color:var(--muted);margin:0 0 6px;font-size:14px">' +
+        esc(personas + (personas === 1 ? ' persona' : ' personas')) + ' en la mesa</p>' +
+      lineas.map(function (l) {
+        return '<div class="lin">' +
+          '<div class="lin-act">' +
+            '<button type="button" class="icon-btn" data-hact="dec" data-id="' + esc(l.id) + '" ' +
+              'aria-label="Sacar uno de ' + esc(l.name) + '">&#8722;</button>' +
+            '<span class="lin-q">' + l.qty + '</span>' +
+            '<button type="button" class="icon-btn" data-hact="inc" data-id="' + esc(l.id) + '" ' +
+              'aria-label="Agregar otro ' + esc(l.name) + '">&#43;</button>' +
+          '</div>' +
+          '<div class="lin-tex"><b>' + esc(l.name) + '</b>' +
+            '<span>' + money(l.price) + ' c/u</span></div>' +
+          '<div class="lin-pre">' + money(l.price * l.qty) + '</div>' +
+        '</div>';
+      }).join('') +
+      '<div class="total-fila"><span>Total</span><span>' + money(totalComanda()) + '</span></div>' +
+      '<div class="campo">' +
+        '<label for="hcNota">Algo que dijo la mesa y no está en la carta</label>' +
+        '<textarea id="hcNota" placeholder="Sin sal, la carne bien cocida, alergia al maní...">' +
+        esc(notaTexto) + '</textarea>' +
+      '</div>' +
+      '<div class="acciones">' +
+        '<button type="button" class="btn btn-primary" id="hcEnviar">Mandar a la cocina</button>' +
+        '<button type="button" class="btn btn-secondary" id="hcSeguir">Seguir cargando</button>' +
+      '</div>' +
+      '<button type="button" class="btn btn-ghost btn-block" id="hcVaciar" ' +
+        'style="margin-top:10px">Vaciar la comanda</button>';
+  }
+
+  hcCuerpo.addEventListener('input', function (ev) {
+    if (ev.target && ev.target.id === 'hcNota') { notaTexto = ev.target.value; guardarBorrador(); }
+  });
+
+  hcCuerpo.addEventListener('click', function (ev) {
+    var q = ev.target.closest('[data-hact]');
+    if (q) { cambiarCantidad(q.dataset.id, q.dataset.hact === 'inc' ? 1 : -1); return; }
+    if (ev.target.closest('#hcSeguir')) { cerrarHoja(); return; }
+    if (ev.target.closest('#hcVaciar')) { vaciar(); return; }
+    if (ev.target.closest('#hcEnviar')) { mandar(); return; }
+    if (ev.target.closest('#hcOtra')) { otraComanda(); return; }
+    if (ev.target.closest('#hcCerrar')) { cerrarHoja(); return; }
+  });
+
+  function vaciar() {
+    if (!cuantos()) { cerrarHoja(); return; }
+    if (!window.confirm('¿Sacamos todo lo que cargaste de esta comanda?')) return;
+    carrito = Object.create(null);
+    notaTexto = '';
+    guardarBorrador();
+    pintarCarta(); pintarPie(); pintarHoja();
+    LP.toast('Comanda vaciada.', 'ok');
+  }
+
+  /* ---------------------------------------------------------- mandarla --- */
+  /* El guardado es EXACTAMENTE el de la carta del comensal: mismo insert en
+     la misma tabla, con las mismas columnas y la misma linea de cubiertos.
+     Lo unico distinto es que despues se aprueba sola: el mozo ES el que la
+     esta tomando, no tiene sentido que se la tenga que aprobar a si mismo.
+
+     Si el insert entra y la aprobacion falla, la comanda NO se pierde: queda
+     'Por aprobar' en la pantalla de los pedidos, que es donde el mozo la ve
+     y la manda con un toque.                                             */
+  function mandar() {
+    if (enviando) return;
+    var lineas = lineasDelCarrito();
+    if (!lineas.length) { LP.toast('La comanda está vacía.', 'err'); return; }
+    if (!mesaSel) { LP.toast('Falta elegir la mesa.', 'err'); irAPaso(1); return; }
+    if (!sb) { LP.toast('No hay conexión con el sistema.', 'err'); return; }
+
+    enviando = true;
+    var btn = document.getElementById('hcEnviar');
+    if (btn) { btn.disabled = true; btn.textContent = 'Mandando...'; }
+
+    /* Ultima defensa contra lo que se termino: entre que el mozo empezo a
+       cargar y toco mandar pudo pasar media hora. */
+    LP.agotadosEnElCarrito(sb, lineas.map(function (l) { return { id: l.id }; }))
+      .then(function (faltan) {
+        if (faltan.length) {
+          enviando = false;
+          if (btn) { btn.disabled = false; btn.textContent = 'Mandar a la cocina'; }
+          LP.toast((faltan.length === 1 ? 'Se terminó: ' : 'Se terminaron: ') +
+                   faltan.join(', ') + '. Sacalo de la comanda.', 'err');
+          LP.platosAgotados(sb).then(function (m) {
+            agotados = m || {}; pintarCarta(); pintarHoja();
+          });
+          return;
+        }
+        seguir(lineas, btn);
+      });
+  }
+
+  function seguir(lineas, btn) {
+    var payload = {
+      mesa: mesaSel,
+      modo: 'Salón',
+      cliente: null,
+      lines: lineas.map(function (l) {
+        return { id: l.id, name: l.name, qty: l.qty, price: l.price };
+      }),
+      total: lineas.reduce(function (t, l) { return t + l.price * l.qty; }, 0),
+      estado: 'Por aprobar',
+      pagado: false,
+      metodo_pago: null,
+      clave_envio: claveDeEnvio()
+    };
+
+    var sinCubierto = false;
+
+    LP.sesionDeMesa(sb, payload.mesa).then(function (ses) {
+      if (!ses) {
+        console.warn('[La Positiva] la comanda entra sin cuenta de mesa');
+        return insertar();
+      }
+      payload.sesion_id = ses.id;
+      // Cuanta gente hay. Que falle no frena la comanda: es un dato al lado.
+      LP.guardarComensales(sb, ses.id, personas);
+      return LP.cubiertoParaSesion(sb, ses.id).then(function (linea) {
+        if (linea) {
+          payload.lines.push(linea);
+          payload.total = Number(payload.total) + linea.price * linea.qty;
+        }
+        return insertar();
+      });
+    });
+
+    function insertar() {
+      return sb.from(LP.TABLE).insert(payload).select().single().then(function (res) {
+        /* Otro celular de la misma mesa metio el cubierto primero: se saca la
+           linea, se rehace el total y se reintenta una sola vez. */
+        if (res.error && res.error.code === '23505' &&
+            /un_cubierto_por_sesion/.test(res.error.message || '') && !sinCubierto) {
+          sinCubierto = true;
+          payload.lines = payload.lines.filter(function (l) { return !l.cubierto; });
+          payload.total = payload.lines.reduce(function (t, l) {
+            return t + LP.importeDeLinea(l);
+          }, 0);
+          return insertar();
+        }
+        if (res.error || !res.data) {
+          enviando = false;
+          if (btn) { btn.disabled = false; btn.textContent = 'Mandar a la cocina'; }
+          LP.humanError(res.error);
+          LP.toast('No pudimos mandar la comanda. Probá de nuevo.', 'err');
+          return;
+        }
+        aprobar(res.data);
+      }, function (e) {
+        enviando = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'Mandar a la cocina'; }
+        LP.humanError(e);
+        LP.toast('No pudimos mandar la comanda. Probá de nuevo.', 'err');
+      });
+    }
+  }
+
+  function aprobar(pedido) {
+    LP.aprobarPedido(sb, pedido.id, YO, notaTexto).then(function (r) {
+      enviando = false;
+      claveEnvio = null;
+      carrito = Object.create(null);
+      notaTexto = '';
+      olvidarBorrador();
+      pintarCarta(); pintarPie();
+      pantallaHecho(pedido, r.ok);
+    });
+  }
+
+  function pantallaHecho(pedido, aprobada) {
+    hcTit.textContent = 'Comanda enviada';
+    hcCuerpo.innerHTML =
+      '<div class="hecho">' +
+        '<div class="tilde" aria-hidden="true">&#10003;</div>' +
+        '<h3>' + esc(pedido.mesa) + ' · ' + money(pedido.total) + '</h3>' +
+        '<p>' + (aprobada
+          ? 'Ya está en la cocina. Pedido #' + esc(pedido.id) + '.'
+          : 'Quedó cargada (pedido #' + esc(pedido.id) + ') pero no pudimos mandarla a la ' +
+            'cocina. Entrá a <b>Los pedidos</b> y tocá "Enviar a cocina".') + '</p>' +
+      '</div>' +
+      '<div class="acciones">' +
+        '<button type="button" class="btn btn-primary" id="hcOtra">Tomar otra comanda</button>' +
+        '<a class="btn btn-secondary" href="mozo.html">Ver los pedidos</a>' +
+      '</div>' +
+      '<button type="button" class="btn btn-ghost btn-block" id="hcCerrar" ' +
+        'style="margin-top:10px">Seguir cargando en ' + esc(pedido.mesa) + '</button>';
+    if (!aprobada) LP.toast('La comanda quedó para aprobar.', 'err');
+    else LP.toast('Comanda enviada a la cocina.', 'ok');
+  }
+
+  function otraComanda() {
+    cerrarHoja();
+    mesaSel = null;
+    personas = 2;
+    carrito = Object.create(null);
+    notaTexto = '';
+    olvidarBorrador();
+    pintarMesas(); pintarGente(); pintarListo(); pintarCarta();
+    if (history.state && history.state.lp === 'carta') history.back();
+    else irAPaso(1);
+    cargarPlano();
+  }
+
+  /* ------------------------------------------------------------- carga --- */
+  function cargarPlano() {
+    elMesas.innerHTML = '<li class="nada">Cargando las mesas...</li>';
+    return LP.planoDelSalon(sb).then(function (p) {
+      plano = p;
+      conn.set(p === null ? (navigator.onLine ? 'retry' : 'off') : (navigator.onLine ? 'live' : 'off'));
+      pintarMesas();
+      pintarListo();
+    });
+  }
+
+  function avisoDeAgotados() {
+    var ids = Object.keys(agotados || {});
+    var caja = document.getElementById('avisoAgotados');
+    if (!ids.length) { caja.hidden = true; return; }
+    var nombres = ids.map(function (id) {
+      return (PLATO[id] && PLATO[id].name) || id;
+    });
+    caja.hidden = false;
+    caja.textContent = 'Hoy no hay: ' + nombres.slice(0, 6).join(', ') +
+      (nombres.length > 6 ? ' y ' + (nombres.length - 6) + ' más.' : '.');
+  }
+
+  function arrancar() {
+    if (!sb) {
+      conn.set('off');
+      elMesas.innerHTML = '<li class="nada">No hay conexión con el sistema. ' +
+        'No se puede tomar la comanda desde acá.</li>';
+      return;
+    }
+
+    cargarPlano();
+
+    // Los precios de verdad (los que toco el duenio) pisan a los de la carta.
+    LP.preciosDePlatos(sb).then(function (m) {
+      LP.aplicarPrecios(MENU, m || {});
+      pintarCarta(); pintarPie(); if (LP.isDialogOpen(hoja)) pintarHoja();
+    });
+
+    LP.platosAgotados(sb).then(function (m) {
+      agotados = m || {};
+      avisoDeAgotados();
+      pintarCarta();
+    });
+
+    /* En vivo: si la cocina apaga un plato mientras el mozo esta cargando,
+       la carta de su celular se entera sin recargar. */
+    var canal = sb.channel('comanda-' + Date.now())
+      .on('postgres_changes', { event: '*', schema: 'public', table: LP.AGOTADOS_TABLE },
+          function () {
+            LP.platosAgotados(sb).then(function (m) {
+              agotados = m || {}; avisoDeAgotados(); pintarCarta();
+            });
+          });
+    canal.subscribe();
+    LP.onCleanup(function () { try { sb.removeChannel(canal); } catch (e) {} });
+  }
+
+  /* --------------------------------------------------------- el arranque - */
+  pintarCats();
+  pintarGente();
+  pintarListo();
+  pintarCarta();
+
+  var b = leerBorrador();
+  if (b) {
+    mesaSel = b.mesa;
+    personas = Number(b.personas) || 2;
+    carrito = b.items || Object.create(null);
+    notaTexto = b.nota || '';
+    pintarGente(); pintarListo(); pintarCarta();
+    if (cuantos()) {
+      entrarACarta();
+      LP.toast('Retomamos la comanda de ' + mesaSel + '.', 'ok');
+    }
+  }
+
+  arrancar();
+});
+</script>
+</body>
+</html>

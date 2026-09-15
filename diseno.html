@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3ece2">
+<meta name="description" content="El nombre, el color, la letra y la forma de La Positiva.">
+<title>La Positiva - El diseño</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="La Positiva">
+<link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<!-- El tema (nombre, color, letra y forma) que se edita en diseno.html.
+     SIN defer y a proposito: tiene que escribir las variables ANTES del
+     primer pintado, o el color viejo se ve un instante y despues salta.
+     Si no hay nada guardado no escribe nada y la app queda como siempre. -->
+<script src="tema.js"></script>
+<style>
+  /* ------------------------------------------------------------------------
+     EL EDITOR DE DISENO.
+
+     La idea, copiada del panel de LIDERA: a un lado los controles, al otro
+     la vista previa en vivo, y NADA se publica hasta tocar Guardar. La
+     vista previa pinta las variables acotadas a #preview, asi que mientras
+     se prueba, el propio editor sigue viendose con el tema guardado. Es la
+     diferencia entre probar y romper.
+
+     Todo por presets y ninguno por cuentagotas de color: el objetivo no es
+     que se pueda elegir cualquier cosa, es que no se pueda elegir algo
+     ilegible en un salon a las nueve de la noche.
+     ------------------------------------------------------------------------ */
+  .wrap{max-width:760px;padding-top:calc(26px + var(--sa-t))}
+  .tablero > div{min-width:0}
+
+  /* EN EL CELULAR la vista previa va ARRIBA y clavada. Si fuera al final,
+     tocar "Arena" al fondo de la lista no se veria sin scrollear: se elegiria
+     a ciegas, que es justo lo que este editor vino a evitar. Va acotada a 40
+     de alto y con scroll propio, asi siempre queda pantalla para los
+     controles y para la barra de Guardar. */
+  .tablero{display:flex;flex-direction:column}
+  .lado-previa{
+    order:-1;position:sticky;top:0;z-index:15;
+    background:var(--bg);padding-bottom:12px;margin-bottom:6px;
+  }
+  .lado-previa h2{margin-top:0;padding-top:6px}
+  .lado-previa #preview{max-height:40svh;overflow-y:auto;overscroll-behavior:contain}
+
+  /* EN ESCRITORIO entran las dos cosas de una: controles a la izquierda,
+     previa a la derecha, quieta mientras se scrollea la lista. */
+  @media (min-width:1000px){
+    .wrap{max-width:1180px}
+    .tablero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);
+             gap:32px;align-items:start}
+    .lado-previa{
+      order:0;top:calc(20px + var(--sa-t));background:none;
+      padding-bottom:0;margin-bottom:0;
+    }
+    .lado-previa #preview{max-height:none;overflow:visible}
+  }
+
+  h2{
+    font-family:var(--font-cuerpo);font-style:normal;
+    font-size:13px;letter-spacing:.11em;text-transform:uppercase;font-weight:600;
+    color:var(--muted-strong);margin:30px 0 10px;
+  }
+  h2:first-child{margin-top:0}
+  .pista{margin:0 0 12px;font-size:14px;color:var(--muted);line-height:1.5}
+
+  /* ---------------------------------------------------------- controles -- */
+  .campo{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--r-md);padding:15px 16px;
+  }
+  .campo input[type=text]{
+    width:100%;min-height:var(--tap);padding:0 13px;font-size:17px;
+    border:1px solid var(--border-strong);border-radius:var(--r-md);
+    background:#fff;color:var(--ink);font-family:inherit;
+  }
+  .campo input[type=text]:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .campo .largo{font-size:12px;color:var(--muted);margin:7px 0 0}
+
+  .opciones{display:grid;gap:9px;grid-template-columns:repeat(2,minmax(0,1fr))}
+  @media (min-width:480px){.opciones{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media (min-width:1000px){.opciones{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+  /* Un boton de opcion: se toca entero, mide 44px de sobra y cuando esta
+     elegido se ve elegido sin depender del color (borde grueso + tilde),
+     que es justo lo que puede cambiar debajo de los pies. */
+  .op{
+    display:flex;flex-direction:column;align-items:flex-start;gap:6px;
+    min-height:var(--tap);padding:11px 12px;text-align:left;width:100%;
+    background:var(--card);border:2px solid var(--border);border-radius:var(--r-md);
+    color:var(--ink);font-family:inherit;font-size:15px;line-height:1.25;cursor:pointer;
+    transition:border-color .15s,background-color .15s;
+  }
+  .op[aria-pressed="true"]{border-color:var(--ink);background:#fff}
+  .op[aria-pressed="true"] .op-nom::after{content:" ✓";color:var(--ok)}
+  @media (hover:hover){.op:hover{border-color:var(--muted)}}
+  .op:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .op-nom{font-weight:500;display:block}
+  .op-ayuda{font-size:12px;color:var(--muted);line-height:1.35}
+
+  /* Color: la muestra manda, el nombre acompania. */
+  .op-color{flex-direction:row;align-items:center;gap:10px}
+  .muestra{
+    width:30px;height:30px;border-radius:50%;flex:none;
+    box-shadow:inset 0 0 0 1px rgba(20,16,14,.22);
+  }
+  .muestra.par{
+    border-radius:8px;position:relative;overflow:hidden;
+    box-shadow:inset 0 0 0 1px rgba(20,16,14,.22);
+  }
+  .muestra.par i{position:absolute;inset:0;display:block}
+  .muestra.par i+i{inset:auto 0 0 0;height:42%}
+
+  /* Tipografia: cada nombre escrito EN su propia letra. Sin esto hay que
+     elegir a ciegas, guardar y ver que paso. */
+  .op-letra .titulo-demo{font-size:26px;line-height:1.1;display:block}
+  .op-letra .cuerpo-demo{font-size:13px;color:var(--muted-strong);display:block}
+
+  /* Esquinas: se muestra la forma, no la palabra. */
+  .op-forma .forma{
+    width:100%;height:26px;background:var(--border);display:block;
+  }
+
+  /* ---------------------------------------------------- la guarda de AA -- */
+  .avisos{margin-top:14px;display:grid;gap:8px}
+  .aviso{
+    padding:11px 13px;border-radius:var(--r-md);font-size:14px;line-height:1.5;
+  }
+  .aviso b{display:block;margin-bottom:2px}
+  .aviso.flojo{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn-border)}
+  .aviso.grave{background:var(--err-bg);color:var(--err-ink);border:1px solid var(--err-border)}
+  .aviso.ok{background:var(--ok-soft);color:var(--ok);border:1px solid var(--ok-border)}
+
+  /* --------------------------------------------------------- la previa -- */
+  .previa-caja{
+    border:1px solid var(--border-strong);border-radius:var(--r-lg);
+    overflow:hidden;background:var(--card);
+  }
+  .previa-tit{
+    font-family:var(--font-cuerpo);font-style:normal;
+    font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;
+    color:var(--muted-strong);background:var(--bg);
+    padding:10px 14px;border-bottom:1px solid var(--border);
+    display:flex;justify-content:space-between;align-items:center;gap:8px;
+  }
+  .previa-tit span{font-weight:400;letter-spacing:0;text-transform:none;font-size:12px;color:var(--muted)}
+
+  /* Todo lo de adentro se pinta con las variables del tema PROBADO, no del
+     guardado: el <style id="previa-css"> las redefine solo para #preview. */
+  #preview{padding:16px;background:var(--bg);color:var(--ink);font-family:var(--font-cuerpo)}
+  #preview .p-marca{
+    font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);
+    font-weight:500;font-size:27px;line-height:1.15;margin:0;
+  }
+  #preview .p-sub{color:var(--muted);font-size:14px;margin:3px 0 14px}
+  #preview .p-cifras{
+    display:grid;grid-template-columns:repeat(2,1fr);gap:1px;margin-bottom:14px;
+    background:var(--border);border:1px solid var(--border);
+    border-radius:var(--r-md);overflow:hidden;
+  }
+  #preview .p-cifra{background:var(--card);padding:11px}
+  #preview .p-cifra span{display:block;font-size:11px;color:var(--muted)}
+  #preview .p-cifra b{font-size:20px;font-variant-numeric:tabular-nums}
+  #preview .p-card{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--r-md);padding:13px;margin-bottom:12px;
+  }
+  #preview .p-mesa{
+    font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);
+    font-size:21px;font-weight:500;display:block;
+  }
+  #preview .p-linea{font-size:14px;color:var(--muted-strong);margin:5px 0 9px}
+  #preview .p-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px}
+  #preview .p-badge{
+    font-size:12px;font-weight:500;padding:4px 9px;border-radius:var(--r-pill);
+  }
+  #preview .p-b1{background:var(--warn-bg);color:var(--warn)}
+  #preview .p-b2{background:var(--ok-bg);color:var(--ok)}
+  #preview .p-btns{display:flex;gap:7px;flex-wrap:wrap}
+  #preview .p-btn{
+    min-height:40px;padding:0 15px;border-radius:var(--r-sm);font-size:15px;
+    display:inline-flex;align-items:center;font-weight:500;
+  }
+  #preview .p-pri{background:var(--accent);color:#fff}
+  #preview .p-sec{background:var(--card);color:var(--muted-strong);border:1px solid var(--border-strong)}
+  /* La tira oscura: es como se ven de verdad la portada, el mozo y la
+     cocina. Sin esto el dorado se elige a ciegas, porque sobre crema casi
+     no aparece. */
+  #preview .p-oscuro{
+    background:var(--ink);border-radius:var(--r-md);padding:13px;
+    display:flex;align-items:center;gap:11px;
+  }
+  #preview .p-ini{
+    width:40px;height:40px;border-radius:50%;flex:none;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--accent);color:#fff;
+    font-family:var(--font-titulos);font-size:21px;font-weight:600;
+  }
+  #preview .p-oscuro b{color:#fff;font-size:16px;font-weight:500;display:block}
+  #preview .p-rol{
+    font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);
+  }
+
+  /* --------------------------------------------------------- guardar ---- */
+  .barra{
+    position:sticky;bottom:0;z-index:20;margin-top:26px;
+    background:var(--bg);border-top:1px solid var(--border);
+    padding:12px 0 calc(12px + var(--sa-b));
+    display:flex;gap:9px;flex-wrap:wrap;align-items:center;
+  }
+  .barra .btn{min-height:var(--tap);padding:0 20px;font-size:16px}
+  .barra .crece{flex:1 1 160px}
+  .estado{font-size:14px;margin:0;min-height:1.3em;flex:1 1 100%}
+  .estado.ok{color:var(--ok)}
+  .estado.err{color:var(--err-ink)}
+  .cargando{color:var(--muted);padding:16px 0;font-size:15px}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#controles">Ir a los controles</a>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>El diseño</h1>
+      <p class="sub">El nombre, el color, la letra y la forma de todas las pantallas</p>
+    </div>
+    <div class="head-right">
+      <a class="soy" href="./" data-quien hidden></a>
+      <a class="back-link" href="admin.html">Volver al panel</a>
+    </div>
+  </header>
+
+  <div class="tablero">
+
+    <!-- ------------------------------------------------------ controles -- -->
+    <div id="controles">
+      <p class="cargando" id="cargando">Cargando el diseño guardado...</p>
+
+      <div id="form" hidden>
+        <h2>El nombre del local</h2>
+        <p class="pista">Es el que ve el comensal: la cabecera de la carta, la hoja del QR
+           de cada mesa y el mensaje de cobro por WhatsApp.</p>
+        <div class="campo">
+          <label class="visually-hidden" for="nombre">Nombre del local</label>
+          <input type="text" id="nombre" maxlength="40" autocomplete="off"
+                 placeholder="La Positiva" value="">
+          <p class="largo" id="nombreLargo"></p>
+        </div>
+
+        <h2>Color principal</h2>
+        <p class="pista">Es el de los botones, el de la inicial en la portada y el del
+           borde cuando algo está seleccionado.</p>
+        <div class="opciones" id="opMarca" role="group" aria-label="Color principal"></div>
+
+        <h2>Color del detalle</h2>
+        <p class="pista">El dorado de los bordes y de los rótulos en las pantallas oscuras
+           (la portada, el mozo, la cocina).</p>
+        <div class="opciones" id="opDorado" role="group" aria-label="Color del detalle"></div>
+
+        <h2>Fondo</h2>
+        <p class="pista">El color del papel y el de las tarjetas, siempre de a juego.</p>
+        <div class="opciones" id="opFondo" role="group" aria-label="Fondo"></div>
+
+        <h2>Letra</h2>
+        <p class="pista">Cada opción está escrita con su propia letra, para elegir viéndola.
+           Las tres primeras no descargan nada y andan igual sin internet.</p>
+        <div class="opciones" id="opLetra" role="group" aria-label="Letra"></div>
+
+        <h2>Esquinas</h2>
+        <p class="pista">Qué tan redondeados son los botones, las tarjetas y las ventanas.</p>
+        <div class="opciones" id="opForma" role="group" aria-label="Esquinas"></div>
+
+        <h2>Que se lea</h2>
+        <p class="pista">Se revisa solo, cada vez que tocás algo. Lo que avisa acá no es de
+           gusto: es si el texto se va a poder leer en el salón.</p>
+        <div class="avisos" id="avisos" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <!-- --------------------------------------------------------- previa -- -->
+    <div class="lado-previa">
+      <h2>Cómo va a quedar</h2>
+      <div class="previa-caja">
+        <p class="previa-tit">Vista previa <span id="previaNota">nada guardado todavía</span></p>
+        <div id="preview" aria-hidden="true">
+          <p class="p-marca" id="pvMarca">La Positiva</p>
+          <p class="p-sub">Cómo viene el salón</p>
+
+          <div class="p-cifras">
+            <div class="p-cifra"><span>Mesas abiertas</span><b>6</b></div>
+            <div class="p-cifra"><span>Para aprobar</span><b>2</b></div>
+          </div>
+
+          <div class="p-card">
+            <b class="p-mesa">Mesa 7</b>
+            <p class="p-linea">2 milanesas napolitanas · 1 flan con dulce</p>
+            <div class="p-badges">
+              <span class="p-badge p-b1">Por aprobar</span>
+              <span class="p-badge p-b2">Listo</span>
+            </div>
+            <div class="p-btns">
+              <span class="p-btn p-pri">Aprobar</span>
+              <span class="p-btn p-sec">Ver la cuenta</span>
+            </div>
+          </div>
+
+          <div class="p-oscuro">
+            <span class="p-ini">N</span>
+            <span><b>Nelly</b><span class="p-rol">Encargada</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="barra">
+    <button type="button" class="btn btn-primary crece" id="guardar" disabled>Guardar</button>
+    <button type="button" class="btn btn-secondary" id="descartar" disabled>Descartar</button>
+    <button type="button" class="btn btn-ghost" id="fabrica">Volver al diseño original</button>
+    <p class="estado" id="estado" role="status" aria-live="polite"></p>
+  </div>
+</div>
+
+<!-- Las cinco letras cargadas a la vez, para que cada boton se vea en la
+     suya. Es una sola peticion y SOLO la hace esta pantalla, nunca la carta
+     del comensal. Entra con media="print" y pasa a "all" al terminar de
+     bajar: asi no frena el pintado, y si no hay internet los botones se ven
+     con la letra de respaldo en vez de quedar en blanco. -->
+<link id="letrasDemo" rel="stylesheet" media="print"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Serif+Display&family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Nunito:wght@300;400;600;700&display=swap"
+      onload="this.media='all'">
+
+<!-- La vista previa vive aca: variables acotadas a #preview. Lo llena el
+     script de abajo con LP_TEMA.css(valores, '#preview'). -->
+<style id="previa-css"></style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+<script src="config.js" defer></script>
+<script src="app.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var T = window.LP_TEMA;
+  var esc = LP.esc;
+  var sb = LP.client();
+  var soy = LP.quienSoy();
+  var YO = (soy && soy.nombre) || 'Encargado';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var estado = $('estado');
+
+  /* `guardado` es lo que hoy ve el local. `borrador` es lo que se esta
+     probando. Son dos cosas distintas hasta que se toca Guardar: eso es lo
+     que hace que probar no sea peligroso. */
+  var guardado = T.normalizar(null);
+  var borrador = T.normalizar(null);
+
+  function decir(t, clase) {
+    estado.textContent = t || '';
+    estado.className = 'estado' + (clase ? ' ' + clase : '');
+  }
+
+  /* --------------------------------------------------------- los botones -- */
+
+  /* Un grupo de opciones. `pinta` devuelve el HTML de adentro de cada boton;
+     el valor va en data-v y NUNCA se concatena sin escapar. */
+  function grupo(cajaId, presets, campo, clase, pinta) {
+    var caja = $(cajaId);
+    caja.innerHTML = Object.keys(presets).map(function (k) {
+      var p = presets[k];
+      return '<button type="button" class="op ' + clase + '" data-v="' + esc(k) + '" ' +
+             'aria-pressed="false">' + pinta(p, k) + '</button>';
+    }).join('');
+    caja.addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-v]');
+      if (!b) return;
+      borrador[campo] = b.dataset.v;
+      refrescar();
+    });
+  }
+
+  function nom(p) {
+    return '<span class="op-nom">' + esc(p.nombre) + '</span>' +
+           (p.ayuda ? '<span class="op-ayuda">' + esc(p.ayuda) + '</span>' : '');
+  }
+
+  grupo('opMarca', T.MARCA, 'tema_marca', 'op-color', function (p) {
+    return '<span class="muestra" style="background:' + esc(p.hex) + '"></span>' +
+           '<span>' + nom(p) + '</span>';
+  });
+
+  grupo('opDorado', T.DORADO, 'tema_dorado', 'op-color', function (p) {
+    return '<span class="muestra" style="background:' + esc(p.hex) + '"></span>' +
+           '<span>' + nom(p) + '</span>';
+  });
+
+  grupo('opFondo', T.FONDO, 'tema_fondo', '', function (p) {
+    // Dos mitades: arriba el papel del fondo, abajo el de las tarjetas.
+    return '<span class="muestra par" style="width:100%;height:30px">' +
+             '<i style="background:' + esc(p.bg) + '"></i>' +
+             '<i style="background:' + esc(p.card) + '"></i>' +
+           '</span>' + nom(p);
+  });
+
+  grupo('opLetra', T.TIPOGRAFIA, 'tema_tipografia', 'op-letra', function (p) {
+    return '<span class="titulo-demo" style="font-family:' + esc(p.titulos) +
+             ';font-style:' + esc(p.estilo) + '">' + esc(p.nombre) + '</span>' +
+           '<span class="cuerpo-demo" style="font-family:' + esc(p.cuerpo) + '">' +
+             esc(p.ayuda) + '</span>';
+  });
+
+  grupo('opForma', T.ESQUINAS, 'tema_esquinas', 'op-forma', function (p) {
+    return '<span class="forma" style="border-radius:' + esc(p.md) + ' ' + esc(p.md) + ' 0 0"></span>' +
+           nom(p);
+  });
+
+  /* ---------------------------------------------------------- refrescar -- */
+
+  function marcarElegidos() {
+    ['opMarca:tema_marca', 'opDorado:tema_dorado', 'opFondo:tema_fondo',
+     'opLetra:tema_tipografia', 'opForma:tema_esquinas'].forEach(function (par) {
+      var p = par.split(':');
+      var btns = $(p[0]).querySelectorAll('[data-v]');
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].setAttribute('aria-pressed', btns[i].dataset.v === borrador[p[1]] ? 'true' : 'false');
+      }
+    });
+  }
+
+  function hayCambios() { return JSON.stringify(borrador) !== JSON.stringify(guardado); }
+
+  function refrescar() {
+    borrador = T.normalizar(borrador);
+    marcarElegidos();
+
+    // La vista previa: las mismas variables que usaria la app, pero acotadas
+    // a #preview. Es la misma funcion que aplica el tema de verdad, asi que
+    // lo que se ve aca no se puede desincronizar de lo que se guarda.
+    $('previa-css').textContent = T.css(borrador, '#preview');
+    T.asegurarFuentes(borrador.tema_tipografia);
+    $('pvMarca').textContent = borrador.nombre_local;
+
+    $('previaNota').textContent = hayCambios() ? 'sin guardar' : 'es lo que está puesto';
+
+    pintarAvisos(T.revisar(borrador));
+
+    $('guardar').disabled = !hayCambios();
+    $('descartar').disabled = !hayCambios();
+    if (hayCambios()) decir('Todavía no se guardó nada. Lo ve solo esta pantalla.', '');
+  }
+
+  function pintarAvisos(problemas) {
+    var caja = $('avisos');
+    if (!problemas.length) {
+      caja.innerHTML = '<p class="aviso ok"><b>Se lee todo bien.</b>' +
+        'Las seis combinaciones que aparecen en pantalla pasan el mínimo.</p>';
+      return;
+    }
+    caja.innerHTML = problemas.map(function (p) {
+      return '<p class="aviso ' + (p.grave ? 'grave' : 'flojo') + '">' +
+               '<b>' + esc(p.rotulo) + '</b>' + esc(p.mensaje) + '</p>';
+    }).join('');
+  }
+
+  /* ------------------------------------------------------------ nombre --- */
+  var input = $('nombre');
+  input.addEventListener('input', function () {
+    var v = String(input.value);
+    $('nombreLargo').textContent = v.length + ' de 40';
+    // Vacio = vuelve al de fabrica. Nadie se queda sin nombre por borrar.
+    borrador.nombre_local = T.nombreValido(v) ? v.trim() : T.NOMBRE_FABRICA;
+    refrescar();
+  });
+
+  /* ----------------------------------------------------------- guardar --- */
+
+  $('guardar').addEventListener('click', function () {
+    var problemas = T.revisar(borrador);
+    var graves = problemas.filter(function (p) { return p.grave; });
+
+    // Por debajo de 3:1 no es una decision de gusto: es una pantalla que no
+    // se puede usar. Eso si se frena.
+    if (graves.length) {
+      decir('No se puede guardar así: ' + graves[0].rotulo.toLowerCase() + ' queda ilegible. '
+          + graves[0].mensaje, 'err');
+      return;
+    }
+    // Entre 3:1 y el minimo se avisa y se deja decidir: prohibir convierte
+    // el editor en una discusion con la pantalla.
+    if (problemas.length) {
+      var texto = problemas.map(function (p) { return '· ' + p.rotulo + ': ' + p.mensaje; }).join('\n');
+      if (!confirm('Se lee, pero cuesta:\n\n' + texto + '\n\n¿Guardar igual?')) return;
+    }
+    guardarAhora(borrador);
+  });
+
+  function guardarAhora(v) {
+    if (!sb) { decir('No hay conexión con el sistema. No se pudo guardar.', 'err'); return; }
+    var btn = $('guardar');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    LP.guardarTema(sb, v, YO).then(function (ok) {
+      btn.textContent = 'Guardar';
+      if (!ok) { btn.disabled = false; decir('No pudimos guardar. Probá de nuevo.', 'err'); return; }
+      guardado = T.normalizar(v);
+      borrador = T.normalizar(v);
+      // Recién acá se publica: se aplica al editor y queda en la copia local
+      // para que la próxima pantalla que se abra ya arranque con esto.
+      T.aplicar(guardado);
+      refrescar();
+      decir('Guardado. Ya lo ven todas las pantallas cuando se abren de nuevo.', 'ok');
+    });
+  }
+
+  $('descartar').addEventListener('click', function () {
+    borrador = T.normalizar(guardado);
+    input.value = guardado.nombre_local === T.NOMBRE_FABRICA ? '' : guardado.nombre_local;
+    $('nombreLargo').textContent = '';
+    refrescar();
+    decir('Listo, volvió a lo que estaba guardado.', '');
+  });
+
+  $('fabrica').addEventListener('click', function () {
+    if (!confirm('Vuelve el diseño original: terracota, dorado, crema, Cormorant con Jost '
+               + 'y esquinas suaves. El nombre también.\n\n¿Seguimos?')) return;
+    borrador = T.normalizar(null);
+    input.value = '';
+    $('nombreLargo').textContent = '';
+    refrescar();
+    guardarAhora(borrador);
+  });
+
+  /* ------------------------------------------------------------- carga --- */
+
+  function arrancar(v) {
+    guardado = T.normalizar(v);
+    borrador = T.normalizar(v);
+    input.value = guardado.nombre_local === T.NOMBRE_FABRICA ? '' : guardado.nombre_local;
+    $('cargando').hidden = true;
+    $('form').hidden = false;
+    refrescar();
+    decir('', '');
+  }
+
+  if (!sb) {
+    // Sin base no se puede guardar, pero SI se puede mirar y probar: el
+    // editor arranca con la copia local y avisa por que no hay boton.
+    arrancar(T.leerCache());
+    $('guardar').disabled = true;
+    decir('No hay conexión con el sistema: podés mirar, pero no guardar.', 'err');
+    return;
+  }
+
+  LP.temaGuardado(sb).then(function (v) {
+    if (v) { arrancar(v); return; }
+    // La consulta fallo. Se arranca con lo que haya en el telefono y se
+    // avisa: guardar desde acá pisaría lo que hay en la base sin haberlo leído.
+    arrancar(T.leerCache());
+    decir('No pudimos leer el diseño guardado. Revisá la conexión antes de guardar.', 'err');
+  });
+});
+</script>
+</body>
+</html>

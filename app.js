@@ -849,6 +849,7 @@
   var FUNCIONES_POR_ROL = {
     Duenio: [
       { url: 'admin.html',       texto: 'C\u00f3mo viene el sal\u00f3n' },
+      { url: 'comanda.html',     texto: 'Tomar comanda' },
       { url: 'mesas.html',       texto: 'El sal\u00f3n y las cuentas' },
       { url: 'mozo.html',        texto: 'Los pedidos de las mesas' },
       { url: 'cocina.html',      texto: 'Las comandas' },
@@ -856,13 +857,22 @@
       { url: 'cobrar.html',      texto: 'Cobrar con QR' },
       { url: 'carta-fotos.html', texto: 'La carta y lo que se termin\u00f3' },
       { url: 'qr-mesa.html',     texto: 'Los QR de las mesas' },
-      { url: 'propinas.html',    texto: 'Las propinas de los mozos' }
+      { url: 'propinas.html',    texto: 'Las propinas de los mozos' },
+      { url: 'diseno.html',      texto: 'El diseño del local' }
     ],
-    /* El mozo tiene tres caminos, en el orden del servicio: tomar la comanda,
-       gestionar las mesas, cobrar. Desde ahi ve todo lo que ya existe:
-       aprobado, cocinando, entregado, cobrado. */
+    /* El mozo tiene cuatro caminos, en el orden del servicio: tomar la
+       comanda EL MISMO (comanda.html: elige mesa, cuanta gente y carga los
+       platos de la carta), mirar los pedidos que ya estan dando vueltas
+       -los que manda el comensal desde el QR y los que ya salieron-,
+       gestionar las mesas y cobrar.
+
+       'Tomar comanda' apuntaba a mozo.html, que es la pantalla de APROBAR lo
+       que ya pidio el comensal: el mozo entraba a tomar un pedido y se
+       encontraba con una lista de pedidos ajenos y ningun lugar donde cargar
+       un plato.                                                          */
     Mozo: [
-      { url: 'mozo.html',     texto: 'Tomar comanda' },
+      { url: 'comanda.html',  texto: 'Tomar comanda' },
+      { url: 'mozo.html',     texto: 'Los pedidos de las mesas' },
       { url: 'mesas.html',    texto: 'Gestionar mesas' },
       { url: 'cobrar.html',   texto: 'Cobrar con QR' },
       { url: 'propinas.html', texto: 'Mis propinas' }
@@ -1554,6 +1564,26 @@
       .then(function (res) { return !res.error; }, function () { return false; });
   }
 
+  /* Cuanta gente hay sentada. Lo carga el mozo cuando toma la comanda.
+
+     Va en la SESION y no en el pedido a proposito: la gente es de la mesa,
+     no de la ronda. Una mesa de cuatro que pide tres veces sigue siendo de
+     cuatro, y si se escribiera en cada pedido habria tres numeros que
+     mantener de acuerdo.
+
+     No pisa con nulo: si el mozo no declara cuantos son, queda lo que ya
+     hubiera. Que falle no rompe nada -es un dato de color al lado del
+     pedido-, por eso devuelve un booleano y no frena a nadie.          */
+  function guardarComensales(sb, sesionId, cuantos) {
+    if (!sb || !sesionId) return Promise.resolve(false);
+    var n = Math.round(Number(cuantos));
+    if (!isFinite(n) || n < 1) return Promise.resolve(false);
+    n = Math.min(99, n);                       // el check de la base corta en 99
+    return sb.from(SESIONES_TABLE).update({ comensales: n })
+      .eq('id', sesionId).is('cerrada_en', null)
+      .then(function (res) { return !res.error; }, function () { return false; });
+  }
+
   /* Reservar una mesa libre: se abre una sesion sin gente todavia. No es un
      sistema de reservas -no hay hora ni nombre-: es el cartelito de "no
      sentar aca", que es lo que el mozo necesita en el momento.
@@ -1756,6 +1786,72 @@
     }, { onConflict: 'clave' })
       .then(function (res) { if (res.error) humanError(res.error); return !res.error; },
             function (e) { humanError(e); return false; });
+  }
+
+  /* --- El tema (nombre, color, letra, forma) -------------------------------
+     El motor vive en tema.js, que se carga SIN defer en el <head> de cada
+     pantalla y ya pinto el tema de la copia local antes del primer pintado.
+     Lo unico que falta es traer de la base lo que haya cambiado y dejarlo
+     guardado para la proxima vez.
+
+     Va suelto y despues, a proposito: es una consulta de red y no puede
+     frenar la pantalla. Si falla -sin internet, Supabase caido, RLS- no
+     pasa NADA: queda el tema de la copia local, y si tampoco hay copia
+     local queda el diseno de fabrica de styles.css. El tema nunca puede
+     dejar una pantalla en blanco en medio de un turno.                     */
+  function temaGuardado(sb) {
+    if (!sb || !global.LP_TEMA) return Promise.resolve(null);
+    return sb.from(AJUSTES_TABLE).select('clave, valor')
+      .in('clave', global.LP_TEMA.CLAVES)
+      .then(function (res) {
+        if (res.error) return null;
+        var m = {};
+        (res.data || []).forEach(function (a) { if (a.valor) m[a.clave] = a.valor; });
+        return global.LP_TEMA.normalizar(m);
+      }, function () { return null; });
+  }
+
+  /* Trae el tema y, si cambio respecto de lo que ya se esta viendo, lo
+     aplica y actualiza la copia local. Compararlo antes evita reescribir el
+     <style> en cada carga, que en la vista previa se ve como un parpadeo. */
+  function refrescarTema() {
+    if (!global.LP_TEMA) return Promise.resolve(null);
+    var sb = client();
+    if (!sb) return Promise.resolve(null);
+    return temaGuardado(sb).then(function (v) {
+      if (!v) return null;
+      var antes = JSON.stringify(global.LP_TEMA.leerCache() || {});
+      global.LP_TEMA.guardarCache(v);
+      if (JSON.stringify(v) !== antes) global.LP_TEMA.aplicar(v);
+      else global.LP_TEMA.escribirNombre(v.nombre_local);
+      return v;
+    }, function () { return null; });
+  }
+
+  /* Guarda las claves del tema de una sola vez. Cada una es un renglon en
+     la_positiva_ajustes, la misma tabla clave/valor del cubierto: no hace
+     falta ninguna tabla nueva. */
+  function guardarTema(sb, valores, quien) {
+    if (!sb || !global.LP_TEMA) return Promise.resolve(false);
+    var v = global.LP_TEMA.normalizar(valores);
+    var ahora = new Date().toISOString();
+    var filas = global.LP_TEMA.CLAVES.map(function (c) {
+      return { clave: c, valor: String(v[c]),
+               actualizado_por: (quien || '').slice(0, 40) || null, actualizado_en: ahora };
+    });
+    return sb.from(AJUSTES_TABLE).upsert(filas, { onConflict: 'clave' })
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return false; }
+        global.LP_TEMA.guardarCache(v);
+        return true;
+      }, function (e) { humanError(e); return false; });
+  }
+
+  /* El nombre del local para los textos que se arman en JavaScript (la hoja
+     del QR, el mensaje de WhatsApp, el rotulo del plano). En el HTML fijo se
+     usa [data-nombre-local], que lo llena tema.js solo. */
+  function nombreLocal() {
+    return (global.LP_TEMA && global.LP_TEMA.nombre()) || 'La Positiva';
   }
 
   /* --- El cubierto ---------------------------------------------------------
@@ -2263,6 +2359,10 @@
     CUBIERTO_ID: CUBIERTO_ID,
     ajustes: ajustes,
     guardarAjuste: guardarAjuste,
+    temaGuardado: temaGuardado,
+    refrescarTema: refrescarTema,
+    guardarTema: guardarTema,
+    nombreLocal: nombreLocal,
     importeCubierto: importeCubierto,
     cubiertoParaSesion: cubiertoParaSesion,
     preciosDePlatos: preciosDePlatos,
@@ -2279,6 +2379,7 @@
     planoDelSalon: planoDelSalon,
     abrirMesa: abrirMesa,
     estadoDeMesa: estadoDeMesa,
+    guardarComensales: guardarComensales,
     reservarMesa: reservarMesa,
     NOTAS_TABLE: NOTAS_TABLE,
     PERSONAS_TABLE: PERSONAS_TABLE,
@@ -2355,4 +2456,9 @@
   } else {
     mostrarQuienSoy();
   }
+
+  /* El tema, igual: ninguna pantalla se tiene que acordar de pedirlo. Se
+     llama envuelto en try porque una falla aca no puede tumbar el resto de
+     app.js, que es lo que hace funcionar el turno. */
+  try { refrescarTema(); } catch (e) {}
 })(window);
