@@ -123,8 +123,66 @@
   .klines .fuera{color:var(--muted);text-decoration:line-through}
   .kcard.anulada{border-color:var(--err);background:var(--err-bg)}
   /* El cartel, terracota con letra blanca: se distingue de la tarjeta rosada. */
-  .kcard.anulada .kfuera{background:var(--err);border-color:var(--err);color:#fff}
-  .kcard.anulada .kfuera span{color:#fff;opacity:.9}
+  .kcard.anulada .kfuera,
+  .ronda.e-anulada .kfuera{background:var(--err);border-color:var(--err);color:#fff}
+  .kcard.anulada .kfuera span,
+  .ronda.e-anulada .kfuera span{color:#fff;opacity:.9}
+
+  /* ------------------------------------------------ la mesa y sus rondas --
+     Un recuadro por MESA, las rondas adentro. El duenio: "es como que fueran
+     separadas, pero en realidad no lo son; la gente simplemente pidio a
+     destiempo". Cada ronda conserva su estado: una puede estar en el fuego y
+     la otra lista al mismo tiempo, y las dos se ven en el mismo recuadro. */
+  .kcomensales{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:13px;font-weight:600;padding:3px 9px;border-radius:var(--r-pill);
+    background:var(--border);color:var(--muted-strong);margin-left:8px;
+    vertical-align:middle;
+  }
+  .rondas{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+  .ronda{
+    border:1px solid var(--border);border-left:5px solid var(--border-strong);
+    border-radius:var(--r-sm);padding:10px 12px;background:var(--bg);
+  }
+  /* Los colores del estado, que era lo que pedia el duenio ("es todo muy
+     igual, requiero mas colores"). Salen de las variables que ya existen. */
+  .ronda.e-encocina{border-left-color:var(--warn);background:var(--warn-soft)}
+  .ronda.e-cocinando{border-left-color:var(--err);background:var(--err-bg)}
+  .ronda.e-listo{border-left-color:var(--ok);background:var(--ok-soft)}
+  /* Lo entregado y lo anulado pasan a segundo plano: ya no es trabajo. */
+  .ronda.e-entregado{border-left-color:var(--done);background:var(--card);color:var(--muted-strong)}
+  .ronda.e-anulada{border-left-color:var(--err);background:var(--err-bg)}
+  .ronda-top{
+    display:flex;justify-content:space-between;align-items:flex-start;gap:8px;
+  }
+  .rnum{
+    font-family:var(--font-cuerpo);font-size:12px;letter-spacing:.08em;
+    text-transform:uppercase;font-weight:700;color:var(--muted-strong);
+  }
+  .rnum span{
+    display:block;font-size:13px;letter-spacing:0;text-transform:none;
+    font-weight:400;color:var(--muted);margin-top:1px;
+  }
+  .rnum span.urgent{color:var(--err-ink);font-weight:600}
+  .ronda .btn{margin-top:10px}
+  .ronda .klines{margin:7px 0 0}
+  /* "Recibido y cocinando" enciende la ronda: rojo. "Marcar listo" la apaga
+     y la manda al pase: verde. Antes los dos eran el mismo terracota. */
+  .btn-fuego{background:var(--err);color:#fff;border:1px solid var(--err)}
+  .btn-fuego:active:not(:disabled){transform:translateY(1px)}
+  /* Volver a avisarle al mozo. No cambia nada del pedido: solo vuelve a
+     sonar el celular del que lo tiene que ir a buscar. */
+  .btn-avisar{
+    display:flex;width:100%;min-height:var(--tap);margin-top:8px;
+    align-items:center;justify-content:center;
+    border:1px solid var(--ok-border);border-radius:var(--r-sm);
+    background:var(--card);color:var(--ok);font-size:15px;font-weight:500;
+  }
+  .btn-avisar:disabled{color:var(--muted-strong);cursor:default}
+  .ravisado{
+    margin:6px 0 0;font-size:13px;line-height:1.4;color:var(--muted-strong);
+  }
+  .ravisado:empty{display:none}
 
   .klines{
     border-top:1px dashed var(--border);border-bottom:1px dashed var(--border);
@@ -387,9 +445,15 @@ document.addEventListener('DOMContentLoaded', function () {
   var activeTab = 'En cocina';   // en celular arranca en las comandas
   var showAllDone = false;
   var orders = [];
+  /* Las sesiones de las mesas que estan en pantalla: { id: fila }. De aca
+     salen el nombre de la mesa y cuanta gente hay sentada. Si la consulta
+     falla queda {} y el tablero se pinta igual, sin el "4 personas". */
+  var sesiones = {};
   var knownIds = null;           // null = primera carga, no marcamos nada como nuevo
   var flashIds = Object.create(null);
   var pendingIds = Object.create(null);   // pedidos con un cambio de estado en curso
+  var avisando = Object.create(null);     // reavisos al mozo en vuelo
+  var avisados = Object.create(null);     // y como salio el ultimo
   var newsTabs = Object.create(null);     // tabs con novedades sin mirar
   var loaded = false;
 
@@ -406,6 +470,11 @@ document.addEventListener('DOMContentLoaded', function () {
         (news ? '<span class="visually-hidden">tiene pedidos nuevos</span>' : '') +
         '</button>';
     }).join('');
+    /* Se reescribe solo si cambio. Antes se rehacia en cada pintado -cada 7
+       segundos con Realtime caido- y en el celular, donde las tabs SI se ven,
+       eso es rehacer cuatro botones para dejarlos iguales. */
+    if (elTabs.dataset.sig === html) return;
+    elTabs.dataset.sig = html;
     elTabs.innerHTML = html;
   }
 
@@ -425,13 +494,35 @@ document.addEventListener('DOMContentLoaded', function () {
     return Math.max(0, Math.round((Date.now() - new Date(o.created_at).getTime()) / 60000));
   }
 
-  // Firma: si no cambia, la tarjeta no se vuelve a pintar (sin parpadeos).
+  // Firma: si no cambia, la ronda no se vuelve a pintar (sin parpadeos).
   function signature(o) {
     return [o.id, o.estado, o.pagado, o.updated_at, minutesOld(o),
-            pendingIds[o.id] ? 1 : 0].join('|');
+            pendingIds[o.id] ? 1 : 0, avisando[o.id] || '',
+            avisados[o.id] || ''].join('|');
   }
 
-  function cardHTML(o) {
+  /* La firma de la MESA entera. Desde que la tarjeta es la mesa y no la ronda,
+     una firma que mirara una sola ronda seria una mentira: agregar la bebida
+     diez minutos despues no repintaria el recuadro. Esta lleva la mesa, cuanta
+     gente hay y la firma de CADA ronda, en orden. Si nada de eso cambio, el
+     nodo se reusa tal cual: es lo que evita que una pantalla prendida todo el
+     turno parpadee cada siete segundos.                                    */
+  function firmaMesa(caja) {
+    var partes = [caja.clave, caja.mesa,
+                  caja.comensales === null ? '-' : caja.comensales];
+    caja.rondas.forEach(function (o) { partes.push(signature(o)); });
+    return partes.join('||');
+  }
+
+  var CLASE_RONDA = {
+    'En cocina': 'e-encocina', 'Cocinando': 'e-cocinando',
+    'Listo': 'e-listo', 'Entregado': 'e-entregado'
+  };
+  // "Recibido y cocinando" enciende la ronda (rojo); "Marcar listo" la manda
+  // al pase (verde). Antes los dos botones eran el mismo terracota.
+  var CLASE_BOTON = { 'En cocina': 'btn-fuego', 'Cocinando': 'btn-ok' };
+
+  function rondaHTML(o, indice) {
     var next = NEXT[o.estado];
     var mins = minutesOld(o);
     var urgent = (o.estado === 'En cocina' || o.estado === 'Cocinando') && mins >= 15;
@@ -466,16 +557,20 @@ document.addEventListener('DOMContentLoaded', function () {
         '</span></p>';
     }
 
-    return '<div class="kcard-top">' +
-        '<div>' +
-          '<div class="kmesa">' + esc(o.mesa) + '</div>' +
-          '<div class="kmeta' + (urgent ? ' urgent' : '') + '">' +
-            esc(o.modo) + ' &middot; ' + esc(LP.timeAgo(o.created_at)) +
+    return '<div class="ronda ' +
+        (anulada ? 'e-anulada' : (CLASE_RONDA[o.estado] || '')) +
+        '" data-ronda="' + esc(o.id) + '">' +
+      '<div class="ronda-top">' +
+        '<div class="rnum">Ronda ' + (indice + 1) +
+          '<span' + (urgent ? ' class="urgent"' : '') + '>' +
+            esc(LP.timeAgo(o.created_at)) +
             (urgent ? ' &middot; demorado' : '') +
             (o.cliente ? ' &middot; ' + esc(o.cliente) : '') +
-          '</div>' +
+          '</span>' +
         '</div>' +
-        '<span class="badge ' + (BADGE[o.estado] || '') + (urgent ? ' badge-urgente' : '') + '">' + esc(BADGE_LABEL[o.estado] || o.estado) + '</span>' +
+        '<span class="badge ' + (BADGE[o.estado] || '') +
+          (urgent ? ' badge-urgente' : '') + '">' +
+          esc(BADGE_LABEL[o.estado] || o.estado) + '</span>' +
       '</div>' +
       aviso +
       (o.detalle_comensal
@@ -486,15 +581,64 @@ document.addEventListener('DOMContentLoaded', function () {
       /* Una comanda anulada no tiene boton: no hay nada que avanzar.
          Los dos botones desactivados que habia antes ('Esperando al mozo' y
          'Completado') se sacaron: no hacian nada y estaban a pantalla
-         completa en dos de las cuatro columnas. La tarjeta ahora termina
+         completa en dos de las cuatro columnas. La ronda ahora termina
          donde termina la comida. Tambien se fue el total en plata, que la
          cocina no usa. */
       (anulada || !next
         ? ''
-        : '<button type="button" class="btn btn-primary btn-block" data-adv="' + esc(o.id) + '" ' +
+        : '<button type="button" class="btn btn-block ' +
+            (CLASE_BOTON[o.estado] || 'btn-primary') +
+            '" data-adv="' + esc(o.id) + '" ' +
             'data-next="' + esc(next) + '" data-desde="' + esc(o.estado) + '"' +
             (busy ? ' disabled' : '') + '>' +
-            (busy ? 'Guardando...' : esc(NEXT_LABEL[o.estado])) + '</button>');
+            (busy ? 'Guardando...' : esc(NEXT_LABEL[o.estado])) + '</button>') +
+      /* Listo y ahi sigue. El mozo esta en el salon y el plato se enfria: se
+         le vuelve a avisar sin tocar el pedido -no cambia el estado, no manda
+         una comanda nueva, solo vuelve a sonar su celular. */
+      (anulada || o.estado !== 'Listo'
+        ? ''
+        : '<button type="button" class="btn-avisar" data-avisar="' + esc(o.id) + '"' +
+            (avisando[o.id] ? ' disabled' : '') + '>' +
+            (avisando[o.id] === 'enviando' ? 'Avisando...'
+              : avisando[o.id] === 'espera' ? 'Avisado' : 'Avisarle de nuevo al mozo') +
+          '</button>' +
+          '<p class="ravisado">' + esc(avisados[o.id] || '') + '</p>') +
+      '</div>';
+  }
+
+  /* La tarjeta es la MESA. Adentro van sus rondas, cada una con su estado y
+     su boton: la comida puede estar cocinandose mientras la bebida ya esta
+     lista, y agregar una ronda nueva no toca a las anteriores.           */
+  function cardHTML(caja) {
+    var cuantas = caja.rondas.length;
+    var demora = 0;
+    caja.rondas.forEach(function (o) {
+      if (!LP.seCobra(o)) return;
+      if (o.estado === 'En cocina' || o.estado === 'Cocinando') {
+        demora = Math.max(demora, minutesOld(o));
+      }
+    });
+    var urgent = demora >= 15;
+
+    return '<div class="kcard-top">' +
+        '<div>' +
+          '<div class="kmesa">' + esc(caja.mesa) +
+            (caja.comensales
+              ? '<span class="kcomensales">' + caja.comensales +
+                (caja.comensales === 1 ? ' persona' : ' personas') + '</span>'
+              : '') +
+          '</div>' +
+          '<div class="kmeta' + (urgent ? ' urgent' : '') + '">' +
+            cuantas + (cuantas === 1 ? ' ronda' : ' rondas') +
+            ' &middot; desde ' + esc(LP.timeAgo(caja.desde)) +
+            (urgent ? ' &middot; demorado' : '') +
+            (caja.sinCuenta ? ' &middot; sin cuenta de mesa' : '') +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="rondas">' +
+        caja.rondas.map(function (o, i) { return rondaHTML(o, i); }).join('') +
+      '</div>';
   }
 
   /* ------------------------------------------------- render con diffing -- */
@@ -509,6 +653,29 @@ document.addEventListener('DOMContentLoaded', function () {
     return 'En cocina';
   }
 
+  /* En que columna va la MESA. Manda la ronda menos avanzada, que es lo que
+     la cocina todavia debe: una mesa con una ronda sin tomar y otra ya lista
+     sigue siendo trabajo pendiente y va en Comandas, con las dos rondas
+     adentro y cada una con su color.
+
+     Las anuladas no definen la columna mientras haya algo vivo -si no, una
+     comanda dada de baja arrastraria a toda la mesa-, pero si son lo unico
+     que quedo, la mesa se muestra igual donde estaban: el cocinero que ya la
+     empezo tiene que enterarse.                                          */
+  var PESO = { 'En cocina': 0, 'Cocinando': 1, 'Listo': 2, 'Entregado': 3 };
+
+  function columnaDeMesa(caja) {
+    var vivo = null, cualquiera = null;
+    caja.rondas.forEach(function (o) {
+      var w = PESO[columnaDe(o)];
+      if (w === undefined) w = 3;
+      if (cualquiera === null || w < cualquiera) cualquiera = w;
+      if (LP.seCobra(o) && (vivo === null || w < vivo)) vivo = w;
+    });
+    var i = vivo !== null ? vivo : (cualquiera !== null ? cualquiera : 3);
+    return STEPS[i];
+  }
+
   function groupOrders() {
     /* Los grupos salen de STEPS y no de una lista escrita a mano: cuando
        cambiaron los estados, la lista fija dejaba g['En cocina'] en undefined
@@ -516,12 +683,14 @@ document.addEventListener('DOMContentLoaded', function () {
        o sea invisibles para la cocina.                                    */
     var g = {};
     STEPS.forEach(function (s) { g[s] = []; });
-    orders.forEach(function (o) { (g[columnaDe(o)] || g[STEPS[STEPS.length - 1]]).push(o); });
-    // Activos: el mas viejo primero (es el que apura). Entregados: los ultimos.
-    STEPS.slice(0, -1).forEach(function (s) {
-      g[s].sort(function (a, b) { return new Date(a.created_at) - new Date(b.created_at); });
+    LP.agruparPorMesa(orders, sesiones).forEach(function (caja) {
+      (g[columnaDeMesa(caja)] || g[STEPS[STEPS.length - 1]]).push(caja);
     });
-    g.Entregado.sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+    // Activos: la mesa que espera hace mas primero. Entregados: las ultimas.
+    STEPS.slice(0, -1).forEach(function (s) {
+      g[s].sort(function (a, b) { return new Date(a.desde) - new Date(b.desde); });
+    });
+    g.Entregado.sort(function (a, b) { return new Date(b.ultima) - new Date(a.ultima); });
     return g;
   }
 
@@ -546,7 +715,8 @@ document.addEventListener('DOMContentLoaded', function () {
       var count = elCols.querySelector('[data-count="' + s + '"]');
       var list = g[s];
       var limited = (s === 'Entregado' && !showAllDone) ? list.slice(0, ENTREGADOS_VISIBLES) : list;
-      count.textContent = list.length;
+      // Solo si cambio: escribir el mismo numero igual cuenta como repintado.
+      if (count.textContent !== String(list.length)) count.textContent = list.length;
 
       elCols.querySelector('[data-col="' + s + '"]').classList.toggle('is-active', s === activeTab);
 
@@ -559,35 +729,44 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       if (body.dataset.mode !== 'list') { body.dataset.mode = 'list'; body.innerHTML = ''; }
 
-      // Reconciliacion: se reutiliza el nodo si la firma no cambio.
+      // Reconciliacion: se reutiliza el nodo si la firma de la mesa no cambio.
       var seen = Object.create(null);
-      limited.forEach(function (o, i) {
-        seen[o.id] = true;
-        var el = body.querySelector('[data-card="' + o.id + '"]');
-        var sig = signature(o);
+      limited.forEach(function (caja, i) {
+        seen[caja.clave] = true;
+        var el = body.querySelector('[data-card="' + caja.clave + '"]');
+        var sig = firmaMesa(caja);
         if (!el) {
           el = document.createElement('article');
           el.className = 'kcard';
-          el.dataset.card = o.id;
+          el.dataset.card = caja.clave;
           el.dataset.sig = sig;
-          el.innerHTML = cardHTML(o);
+          el.innerHTML = cardHTML(caja);
         } else if (el.dataset.sig !== sig) {
           el.dataset.sig = sig;
-          el.innerHTML = cardHTML(o);
+          el.innerHTML = cardHTML(caja);
         }
-        /* Va en cada pintado y no solo al crear el nodo: una comanda puede
-           pasar a anulada con la tarjeta ya en pantalla, que es justo el
-           caso que importa. */
-        el.classList.toggle('anulada', !LP.seCobra(o));
+        /* Va en cada pintado y no solo al crear el nodo: la mesa puede quedar
+           entera anulada con la tarjeta ya en pantalla, que es justo el caso
+           que importa. Cada ronda ademas lleva su propio color. */
+        el.classList.toggle('anulada', caja.rondas.every(function (o) {
+          return !LP.seCobra(o);
+        }));
         /* El destello se aplica DESPUES de tener el nodo, sea recien creado o
            reutilizado. Estaba adentro de la rama de creacion, asi que el
            pedido que entraba con la pantalla oculta creaba su tarjeta ahi
            mismo y despues nunca volvia a pasar por esa rama: la marca no se
-           usaba nunca y flashIds crecia sin fin.                          */
-        if (flashIds[o.id] && !document.hidden) {
-          delete flashIds[o.id];
-          el.classList.add('is-new');
-          setTimeout(function () { el.classList.remove('is-new'); }, 1800);
+           usaba nunca y flashIds crecia sin fin.
+           Ahora destella la MESA: si entra la segunda ronda, lo que tiene que
+           llamar la atencion es el recuadro donde acaba de aparecer.      */
+        if (!document.hidden) {
+          var destella = false;
+          caja.rondas.forEach(function (o) {
+            if (flashIds[o.id]) { delete flashIds[o.id]; destella = true; }
+          });
+          if (destella) {
+            el.classList.add('is-new');
+            setTimeout(function () { el.classList.remove('is-new'); }, 1800);
+          }
         }
         // Reordena solo si hace falta, para no saltar el scroll.
         if (body.children[i] !== el) body.insertBefore(el, body.children[i] || null);
@@ -601,8 +780,8 @@ document.addEventListener('DOMContentLoaded', function () {
         var mb = body.querySelector('.more-btn') || document.createElement('button');
         mb.type = 'button'; mb.className = 'more-btn';
         mb.textContent = showAllDone
-          ? 'Mostrar solo los ultimos ' + ENTREGADOS_VISIBLES
-          : 'Ver los ' + (list.length - ENTREGADOS_VISIBLES) + ' entregados anteriores';
+          ? 'Mostrar solo las ultimas ' + ENTREGADOS_VISIBLES
+          : 'Ver las ' + (list.length - ENTREGADOS_VISIBLES) + ' mesas anteriores';
         mb.onclick = function () { showAllDone = !showAllDone; render(); };
         body.appendChild(mb);
       }
@@ -611,10 +790,58 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ------------------------------------------------------ avanzar estado -- */
   elCols.addEventListener('click', function (ev) {
+    var avisar = ev.target.closest('[data-avisar]');
+    if (avisar && !avisar.disabled) { reavisar(avisar.dataset.avisar, avisar); return; }
+
     var btn = ev.target.closest('[data-adv]');
     if (!btn || btn.disabled) return;
     advance(btn.dataset.adv, btn.dataset.next, btn, btn.dataset.desde);
   });
+
+  /* Volver a avisarle al mozo. Se puede tocar las veces que haga falta: no
+     escribe nada en el pedido, no cambia el estado y no genera una comanda
+     nueva. Es el mismo push que ya usa el resto del sistema.
+
+     El boton se bloquea 20 segundos despues de cada aviso: no es una regla de
+     negocio, es para que tocarlo cinco veces seguidas no vibre cinco veces el
+     celular del mozo por lo mismo.                                        */
+  function reavisar(id, btn) {
+    if (avisando[id]) return;
+    var pedido = null;
+    for (var i = 0; i < orders.length; i++) {
+      if (String(orders[i].id) === String(id)) { pedido = orders[i]; break; }
+    }
+    if (!pedido || !sb) { LP.toast('No hay conexión con el sistema.', 'err'); return; }
+
+    avisando[id] = 'enviando';
+    btn.disabled = true;
+    btn.textContent = 'Avisando...';
+
+    LP.reavisarMozo(sb, pedido, 'Cocina').then(function (r) {
+      if (r && r.ok) {
+        avisados[id] = 'Le volvimos a avisar al mozo.';
+        LP.toast('Listo, le volvimos a avisar al mozo.', 'ok');
+      } else if (r && r.codigo === 'sin-destinos') {
+        avisados[id] = 'Ningún celular tiene activados los avisos del mozo.';
+        LP.toast('Ningún celular recibe los avisos del mozo.', 'err');
+      } else {
+        avisados[id] = 'No salió el aviso. Avisale de palabra.';
+        LP.toast((r && r.motivo) || 'No salió el aviso.', 'err');
+      }
+      avisando[id] = 'espera';
+      render();
+      /* Se suelta solo a los 20 segundos: el plato sigue ahi y el mozo puede
+         no haber mirado, asi que se tiene que poder volver a tocar. La espera
+         es para que cinco toques seguidos no le vibren cinco veces por lo
+         mismo, no una regla del local.                                    */
+      setTimeout(function () {
+        delete avisando[id];
+        delete avisados[id];
+        render();
+      }, 20000);
+    });
+    render();
+  }
 
   function advance(id, next, btn, desde) {
     if (pendingIds[id]) return;            // evita el doble clic
@@ -730,7 +957,19 @@ document.addEventListener('DOMContentLoaded', function () {
       orders = data;
       loaded = true;
       elState.innerHTML = '';
+
+      /* Las sesiones de las mesas que quedaron en pantalla. Es lo que permite
+         escribir "Mesa 5 - 4 personas" y lo que hace que dos rondas de la
+         misma visita caigan en el mismo recuadro. Va DESPUES de pintar: que
+         esta consulta tarde o falle no puede demorar las comandas.        */
+      var ids = [];
+      data.forEach(function (o) { if (o.sesion_id) ids.push(o.sesion_id); });
       render();
+      LP.sesionesPorId(sb, ids).then(function (mapa) {
+        sesiones = mapa || {};
+        render();
+      }, function () {});
+
       repasarInsistencia();
       reintentarSiHaceFalta(quiet);
     }, function (e) {

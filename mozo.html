@@ -51,6 +51,114 @@
     background:var(--gold);color:var(--ink);font-size:13px;font-weight:700;
   }
 
+  /* ---------------------------------------------------------- solapas ----
+     El duenio: una tarjeta lista quedaba debajo de una que se estaba
+     cocinando, que es al reves de lo que el mozo necesita ver. Ahora lo
+     listo tiene su solapa, va primera y va en verde; el resto pasa a
+     segundo plano. */
+  .solapas{
+    display:flex;gap:8px;flex-wrap:wrap;
+    position:sticky;top:0;z-index:20;background:var(--ink);
+    padding:10px 0;margin:4px 0 12px;
+  }
+  @media (max-width:559px){
+    .solapas{display:grid;grid-template-columns:1fr 1fr;padding:8px 0}
+  }
+  .solapa{
+    flex:1 0 auto;min-height:var(--tap);min-width:0;
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;
+    padding:8px 14px;border-radius:var(--r-pill);
+    border:1px solid var(--dark-border);background:var(--dark-card);color:var(--dark-ink);
+    font-size:15px;white-space:nowrap;
+    transition:background-color .18s,color .18s,border-color .18s;
+  }
+  .solapa:hover{background:var(--dark-card-hover);color:#fff}
+  .solapa .n{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:22px;height:22px;padding:0 6px;border-radius:var(--r-pill);
+    background:rgba(255,255,255,.14);font-size:13px;font-weight:700;
+  }
+  .solapa[aria-pressed="true"]{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:600}
+  .solapa[aria-pressed="true"] .n{background:rgba(20,16,14,.18)}
+  /* Lo listo grita aunque la solapa no este elegida: es comida enfriandose. */
+  .solapa.hay-listo{border-color:var(--ok-bg);color:#cfe8dc}
+  .solapa.hay-listo .n{background:var(--ok);color:#fff}
+  .solapa.hay-listo[aria-pressed="true"]{background:var(--ok);color:#fff;border-color:var(--ok)}
+  .solapa.hay-listo[aria-pressed="true"] .n{background:rgba(255,255,255,.22);color:#fff}
+  .solapa.hay-aprobar{border-color:var(--warn-bg);color:#f3ddb4}
+  .solapa.hay-aprobar .n{background:var(--gold);color:var(--ink)}
+
+  /* ------------------------------------------------- la mesa y sus rondas --
+     Un recuadro por mesa -por SESION, que es la visita-, con las rondas
+     adentro. "Es como que fueran separadas, pero en realidad no lo son; la
+     gente simplemente pidio a destiempo." Cada ronda conserva su estado. */
+  .mesa{
+    background:var(--card);border:1px solid var(--border);
+    border-left:5px solid var(--border-strong);
+    border-radius:var(--r-md);padding:12px 14px;
+  }
+  .mesa.m-listo{border-left-color:var(--ok);box-shadow:0 0 0 2px rgba(20,81,54,.18)}
+  .mesa.m-aprobar{border-left-color:var(--gold)}
+  .mesa.m-curso{border-left-color:var(--cook)}
+  .mesa.m-cobrar{border-left-color:var(--warn)}
+  .mesa.urge{border-left-color:var(--err);box-shadow:0 0 0 2px rgba(154,47,28,.28)}
+  .mesa-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .mesa-nom{
+    font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);
+    font-size:24px;color:var(--ink);line-height:1.15;
+  }
+  .mesa-nom .gente{
+    font-family:var(--font-cuerpo);font-style:normal;
+    display:inline-flex;align-items:center;font-size:13px;font-weight:600;
+    padding:3px 9px;border-radius:var(--r-pill);
+    background:var(--border);color:var(--muted-strong);margin-left:8px;
+    vertical-align:middle;
+  }
+  .mesa-meta{font-size:13px;color:var(--muted);margin-top:2px}
+  .mesa-meta.urge{color:var(--err-ink);font-weight:600}
+
+  ul.rondas{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
+  li.ronda{
+    border:1px solid var(--border);border-left:4px solid var(--border-strong);
+    border-radius:var(--r-sm);padding:10px 12px;background:var(--bg);
+  }
+  /* Los colores del estado. Salen de las variables que ya existen: el duenio
+     pidio mas contraste, no una paleta nueva. */
+  li.ronda.e-aprobar{border-left-color:var(--gold);background:var(--card)}
+  li.ronda.e-encocina{border-left-color:var(--warn);background:var(--warn-soft)}
+  li.ronda.e-cocinando{border-left-color:var(--err);background:var(--err-bg)}
+  li.ronda.e-listo{border-left-color:var(--ok);background:var(--ok-soft)}
+  /* Lo que no esta listo pasa a segundo plano cuando hay algo listo al lado. */
+  .mesa.m-listo li.ronda:not(.e-listo){background:var(--card);color:var(--muted-strong)}
+  .ronda-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+  .rnum{
+    font-family:var(--font-cuerpo);font-size:12px;letter-spacing:.08em;
+    text-transform:uppercase;font-weight:700;color:var(--muted-strong);
+  }
+  .rnum span{
+    display:block;font-size:13px;letter-spacing:0;text-transform:none;
+    font-weight:400;color:var(--muted);margin-top:1px;
+  }
+  .ronda .items{margin-top:7px}
+  .ronda .total{font-size:17px}
+
+  /* ---------------------------------------------------------- cobrar -----
+     La mesa ya comio y todavia no pago. El boton del QR es el MISMO de
+     mesas.html (LP.pedirQRaCaja): no hay canal nuevo ni pantalla nueva. */
+  .cobrar-total{
+    display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+    margin-top:10px;padding-top:9px;border-top:1px dashed var(--border);
+  }
+  .cobrar-total .etq{font-size:14px;color:var(--muted-strong)}
+  .cobrar-total b{font-size:22px;font-variant-numeric:tabular-nums;color:var(--warn)}
+  .cobrar-rondas{margin:8px 0 0;font-size:14px;color:var(--muted);line-height:1.5}
+  .qr-estado{
+    margin:10px 0 0;padding:9px 12px;border-radius:var(--r-md);font-size:14px;line-height:1.45;
+    background:var(--bg);border:1px solid var(--border);color:var(--muted-strong);
+  }
+  .qr-estado.listo{background:var(--ok-soft);border-color:var(--ok-border);color:var(--ok)}
+  .qr-estado.pedido{background:var(--warn-soft);border-color:var(--warn-border);color:var(--warn)}
+
   /* Dos columnas apenas hay ancho. Se corta en 820px y no antes: abajo de
      eso una tarjeta partida al medio deja el boton de "Enviar a cocina" en
      una franja de 160px, que con el pulgar no se toca bien.
@@ -223,11 +331,12 @@
     <button type="button" class="btn btn-primary" id="alertaBtn"></button>
   </div>
 
-  <h2 class="seccion">Para aprobar <span class="n" id="nPorAprobar">0</span></h2>
-  <ul class="lista" id="porAprobar"><li class="vacio">Cargando los pedidos...</li></ul>
-
-  <h2 class="seccion">En curso <span class="n" id="nEnCurso">0</span></h2>
-  <ul class="lista" id="enCurso"><li class="vacio">Cargando...</li></ul>
+  <!-- Las solapas. "Listos" va PRIMERA y en verde: es lo que el mozo tiene
+       que ir a buscar al pase ya mismo. "Entregados" salio de esta pantalla
+       -no es trabajo, es historial- y su lugar lo ocupa "Cobrar", que son las
+       mesas que ya comieron y todavia no pagaron. -->
+  <div class="solapas" id="solapas" role="group" aria-label="Qu&eacute; mirar"></div>
+  <ul class="lista" id="mesas"><li class="vacio">Cargando los pedidos...</li></ul>
 
   <!-- Lo que se anulo hace poco. Va plegado y al final: no es trabajo
        pendiente, es el rastro de quien anulo que y cuando. Se muestra porque
@@ -299,8 +408,8 @@ document.addEventListener('DOMContentLoaded', function () {
   // El nombre va en el chip de la cabecera (lo llena app.js); el h1 dice
   // el rol, como en el resto de las pantallas.
 
-  var elAprobar = document.getElementById('porAprobar');
-  var elCurso = document.getElementById('enCurso');
+  var elMesas = document.getElementById('mesas');
+  var elSolapas = document.getElementById('solapas');
   var conn = new LP.ConnBadge(document.getElementById('conn'));
 
   var pedidos = [];
@@ -310,6 +419,11 @@ document.addEventListener('DOMContentLoaded', function () {
   var borradores = Object.create(null); // lo tipeado, para no perderlo al repintar
   var conocidos = null;
   var cargado = false;
+  /* Las mesas con la cuenta abierta (LP.mesasAbiertas). De aca salen cuanta
+     gente hay sentada y la solapa "Cobrar". Null = no se pudo traer: la
+     pantalla sigue andando con los pedidos, sin la solapa de cobro. */
+  var cuentas = null;
+  var qrsMesa = {};                     // sesion_id -> su QR de cobro cargado
 
   var EN_CURSO = ['En cocina', 'Cocinando', 'Listo'];
   // El mismo color que en la tablet de la cocina para el mismo estado.
@@ -319,6 +433,22 @@ document.addEventListener('DOMContentLoaded', function () {
     'Cocinando': 'La cocina la está haciendo',
     'Listo': 'Listo para llevar a la mesa'
   };
+  var CLASE_RONDA = {
+    'Por aprobar': 'e-aprobar', 'En cocina': 'e-encocina',
+    'Cocinando': 'e-cocinando', 'Listo': 'e-listo'
+  };
+
+  /* Las cuatro solapas, en el orden en que le sirven al mozo: primero lo que
+     hay que ir a buscar, despues lo que hay que mandar, despues lo que esta
+     esperando y al final lo que hay que cobrar. */
+  var SOLAPAS = [
+    { id: 'listos',  texto: 'Listos' },
+    { id: 'aprobar', texto: 'Para aprobar' },
+    { id: 'curso',   texto: 'En curso' },
+    { id: 'cobrar',  texto: 'Cobrar' }
+  ];
+  var solapa = 'listos';
+  var solapaElegida = false;      // hasta que el mozo toque una, la elegimos nosotros
 
   /* ---------------------------------------------------------- pintado -- */
   /* Si el mozo esta escribiendo en un campo de las tarjetas, repintar le
@@ -328,7 +458,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function escribiendo() {
     var a = document.activeElement;
     return !!(a && a.hasAttribute && a.hasAttribute('data-borrador') &&
-              (elAprobar.contains(a) || elCurso.contains(a)));
+              elMesas.contains(a));
   }
   document.addEventListener('focusout', function (ev) {
     if (!ev.target || !ev.target.hasAttribute || !ev.target.hasAttribute('data-borrador')) return;
@@ -336,22 +466,91 @@ document.addEventListener('DOMContentLoaded', function () {
     setTimeout(function () { if (renderPendiente && !escribiendo()) render(); }, 300);
   });
 
+  /* El mapa de sesiones que necesita LP.agruparPorMesa para poner el nombre
+     de la mesa y cuanta gente hay. Sale de las cuentas abiertas. */
+  function mapaSesiones() {
+    var m = {};
+    (cuentas || []).forEach(function (c) { if (c.sesion) m[c.sesion.id] = c.sesion; });
+    return m;
+  }
+
+  /* En que solapa cae la mesa. Una mesa cae en UNA sola: la que manda es la
+     necesidad mas urgente. Si hay algo listo, hay que ir a buscarlo, no
+     importa que ademas tenga una ronda en el horno -esa se ve igual, adentro
+     del mismo recuadro y con su propio color.                            */
+  function solapaDeMesa(caja) {
+    var listo = false, aprobar = false, curso = false;
+    caja.rondas.forEach(function (p) {
+      if (p.estado === 'Listo') listo = true;
+      else if (p.estado === 'Por aprobar') aprobar = true;
+      else if (EN_CURSO.indexOf(p.estado) !== -1) curso = true;
+    });
+    if (listo) return 'listos';
+    if (aprobar) return 'aprobar';
+    if (curso) return 'curso';
+    return null;
+  }
+
+  /* Las mesas que ya comieron y todavia no pagaron. Sale del mismo resumen
+     que usa el salon: 'enCurso' cuenta lo que todavia no se entrego, asi que
+     en cero quiere decir que la comida ya salio toda.                     */
+  function mesasParaCobrar() {
+    return (cuentas || []).filter(function (c) {
+      return c.debe > 0 && c.enCurso === 0 && c.rondas > 0;
+    });
+  }
+
+  function agrupadas() {
+    var g = { listos: [], aprobar: [], curso: [] };
+    LP.agruparPorMesa(pedidos, mapaSesiones()).forEach(function (caja) {
+      var s = solapaDeMesa(caja);
+      if (s && g[s]) g[s].push(caja);
+    });
+    // La mesa que espera hace mas, primero.
+    Object.keys(g).forEach(function (k) {
+      g[k].sort(function (a, b) { return new Date(a.desde) - new Date(b.desde); });
+    });
+    g.cobrar = mesasParaCobrar();
+    return g;
+  }
+
   function render() {
     if (escribiendo()) { renderPendiente = true; return; }
     renderPendiente = false;
-    var aprobar = pedidos.filter(function (p) { return p.estado === 'Por aprobar'; });
-    var curso = pedidos.filter(function (p) { return EN_CURSO.indexOf(p.estado) !== -1; });
 
-    document.getElementById('nPorAprobar').textContent = aprobar.length;
-    document.getElementById('nEnCurso').textContent = curso.length;
+    var g = agrupadas();
 
-    elAprobar.innerHTML = aprobar.length
-      ? aprobar.map(tarjetaAprobar).join('')
-      : '<li class="vacio">No hay pedidos esperando. Cuando una mesa pida, aparece acá.</li>';
+    /* Mientras el mozo no elija solapa a mano, la pantalla lo lleva a la
+       primera que tenga algo: entra y ve trabajo, no una lista vacia.
+       Despues de que eligio una, se respeta aunque quede vacia. Saltar solo
+       mientras el la esta mirando es peor que una lista vacia. */
+    if (!solapaElegida) {
+      for (var i = 0; i < SOLAPAS.length; i++) {
+        if (g[SOLAPAS[i].id].length) { solapa = SOLAPAS[i].id; break; }
+      }
+    }
 
-    elCurso.innerHTML = curso.length
-      ? curso.map(tarjetaCurso).join('')
-      : '<li class="vacio">Nada en curso.</li>';
+    var htmlSolapas = SOLAPAS.map(function (s) {
+      var n = g[s.id].length;
+      var clase = 'solapa' +
+        (s.id === 'listos' && n ? ' hay-listo' : '') +
+        (s.id === 'aprobar' && n ? ' hay-aprobar' : '');
+      return '<button type="button" class="' + clase + '" data-solapa="' + s.id + '" ' +
+        'aria-pressed="' + (s.id === solapa ? 'true' : 'false') + '">' +
+        '<span>' + esc(s.texto) + '</span><span class="n">' + n + '</span></button>';
+    }).join('');
+    // Solo si cambio: rehacer las solapas cada quince segundos para dejarlas
+    // iguales es trabajo y parpadeo de gratis.
+    if (elSolapas.dataset.sig !== htmlSolapas) {
+      elSolapas.dataset.sig = htmlSolapas;
+      elSolapas.innerHTML = htmlSolapas;
+    }
+
+    var lista = g[solapa];
+    elMesas.innerHTML = lista.length
+      ? (solapa === 'cobrar' ? lista.map(cajaCobrar).join('')
+                             : lista.map(cajaMesa).join(''))
+      : '<li class="vacio">' + esc(VACIO[solapa]) + '</li>';
 
     // Devuelve lo que el mozo estaba escribiendo antes del repintado. Si
     // habia algo escrito adentro de un bloque plegado, el bloque se abre:
@@ -367,6 +566,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     renderAnuladas();
   }
+
+  var VACIO = {
+    listos: 'Nada listo para llevar todavía.',
+    aprobar: 'No hay pedidos esperando. Cuando una mesa pida, aparece acá.',
+    curso: 'Nada en curso.',
+    cobrar: 'Ninguna mesa terminó de comer con la cuenta sin pagar.'
+  };
+
+  elSolapas.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-solapa]');
+    if (!b) return;
+    solapa = b.dataset.solapa;
+    solapaElegida = true;
+    render();
+  });
 
   /* Lo anulado hace poco: mesa, plata, quien la anulo y cuando. Sale de lo
      que ya guarda sacarPlato() -rechazado_motivo lleva el motivo y el
@@ -391,15 +605,80 @@ document.addEventListener('DOMContentLoaded', function () {
     }).join('');
   }
 
-  function tarjetaAprobar(p) {
-    var mins = Math.round((Date.now() - new Date(p.created_at).getTime()) / 60000);
-    return '<li class="ped' + (mins >= 3 ? ' urge' : '') + '" data-ped="' + p.id + '">' +
-        '<div class="ped-top"><div>' +
-          '<div class="mesa">' + esc(p.mesa) + '</div>' +
-          '<div class="meta">' + esc(LP.timeAgo(p.created_at)) +
+  function minutos(ts) {
+    return Math.max(0, Math.round((Date.now() - new Date(ts).getTime()) / 60000));
+  }
+
+  /* --------------------------------------------------- la caja de la mesa --
+     Un recuadro por mesa, con sus rondas adentro. Ninguna ronda pierde su
+     estado ni su boton: se pueden mandar dos comandas de la misma mesa a la
+     cocina por separado, y una puede estar lista mientras la otra se cocina. */
+  function cajaMesa(caja) {
+    var cual = solapaDeMesa(caja);
+
+    /* El numero de ronda sale del orden en que pidieron y NO del orden en que
+       se pintan: la ronda 2 sigue siendo la 2 aunque se muestre primera. */
+    var conNumero = caja.rondas.map(function (p, i) { return { p: p, n: i + 1 }; });
+    // Lo listo, arriba de todo. Es lo unico que se reordena.
+    var orden = conNumero.slice().sort(function (a, b) {
+      var la = a.p.estado === 'Listo' ? 0 : 1;
+      var lb = b.p.estado === 'Listo' ? 0 : 1;
+      return la !== lb ? la - lb : a.n - b.n;
+    });
+
+    var listos = 0, espera = 0;
+    caja.rondas.forEach(function (p) {
+      if (p.estado === 'Listo') listos++;
+      if (p.estado === 'Por aprobar') espera = Math.max(espera, minutos(p.created_at));
+    });
+    var urge = espera >= 3;
+
+    var chip = listos
+      ? '<span class="chip ok">' + listos + ' para llevar</span>'
+      : cual === 'aprobar'
+        ? '<span class="chip debe' + (urge ? ' urgente' : '') + '">Mandar a cocina</span>'
+        : '<span class="chip espera">En la cocina</span>';
+
+    return '<li class="mesa m-' + (cual === 'listos' ? 'listo' : cual) +
+        (urge ? ' urge' : '') + '" data-mesa="' + esc(caja.clave) + '">' +
+      '<div class="mesa-top"><div>' +
+        '<div class="mesa-nom">' + esc(caja.mesa) +
+          (caja.comensales
+            ? '<span class="gente">' + caja.comensales +
+              (caja.comensales === 1 ? ' persona' : ' personas') + '</span>'
+            : '') +
+        '</div>' +
+        '<div class="mesa-meta' + (urge ? ' urge' : '') + '">' +
+          caja.rondas.length + (caja.rondas.length === 1 ? ' ronda' : ' rondas') +
+          ' &middot; desde ' + esc(LP.timeAgo(caja.desde)) +
+          (urge ? ' &middot; esperando hace rato' : '') +
+          (caja.sinCuenta ? ' &middot; sin cuenta de mesa' : '') +
+        '</div>' +
+      '</div>' + chip + '</div>' +
+      '<ul class="rondas">' +
+        orden.map(function (x) {
+          return x.p.estado === 'Por aprobar' ? rondaAprobar(x.p, x.n)
+                                              : rondaCurso(x.p, x.n);
+        }).join('') +
+      '</ul>' +
+    '</li>';
+  }
+
+  function cabezaRonda(p, n, extra) {
+    return '<div class="ronda-top">' +
+        '<div class="rnum">Ronda ' + n +
+          '<span>' + esc(LP.timeAgo(p.created_at)) +
             (p.cliente ? ' &middot; ' + esc(p.cliente) : '') +
-            (mins >= 3 ? ' &middot; esperando hace rato' : '') + '</div>' +
-        '</div></div>' +
+            (extra ? ' &middot; ' + esc(extra) : '') + '</span>' +
+        '</div>' +
+        '<span class="badge ' + (BADGE[p.estado] || 'b-pend') + '">' +
+          esc(p.estado) + '</span>' +
+      '</div>';
+  }
+
+  function rondaAprobar(p, n) {
+    return '<li class="ronda e-aprobar" data-ped="' + p.id + '">' +
+        cabezaRonda(p, n, minutos(p.created_at) >= 3 ? 'esperando hace rato' : '') +
         '<div class="items">' + itemsHTML(p) + '</div>' +
         '<div class="total">' + money(p.total) + '</div>' +
         /* El detalle va plegado: se usa poco y abierto empuja el boton de
@@ -423,16 +702,10 @@ document.addEventListener('DOMContentLoaded', function () {
       '</li>';
   }
 
-  function tarjetaCurso(p) {
+  function rondaCurso(p, n) {
     var listo = p.estado === 'Listo';
-    return '<li class="ped' + (listo ? ' urge' : '') + '" data-ped="' + p.id + '">' +
-        '<div class="ped-top"><div>' +
-          '<div class="mesa">' + esc(p.mesa) + '</div>' +
-          '<div class="meta">' + esc(ETIQUETA[p.estado] || p.estado) +
-            ' &middot; ' + esc(LP.timeAgo(p.created_at)) + '</div>' +
-        '</div>' +
-        '<span class="badge ' + (BADGE[p.estado] || '') + '">' +
-          esc(p.estado) + '</span></div>' +
+    return '<li class="ronda ' + (CLASE_RONDA[p.estado] || '') + '" data-ped="' + p.id + '">' +
+        cabezaRonda(p, n, ETIQUETA[p.estado] || '') +
         '<div class="items">' + itemsHTML(p) + '</div>' +
         '<div class="total">' + money(p.total) + '</div>' +
         (p.detalle_comensal
@@ -449,15 +722,63 @@ document.addEventListener('DOMContentLoaded', function () {
            Antes, mandada la comanda a la cocina, no habia forma de darla de
            baja y la mesa se iba con la cuenta abierta por algo que nadie
            comio. Pide confirmacion aparte, porque la cocina puede estar
-           cocinandolo. */
+           cocinandolo.
+           "Lo lleve a la mesa" va en verde: es la accion que cierra la ronda
+           y el duenio pidio distinguir los estados por color.            */
         '<div class="acciones">' +
-          (listo ? '<button type="button" class="btn btn-primary" ' +
+          (listo ? '<button type="button" class="btn btn-ok" ' +
                    'data-entregar="' + p.id + '">Lo llevé a la mesa</button>' : '') +
           '<button type="button" class="btn-rechazar" data-anular="' + p.id + '">' +
             'Anular comanda</button>' +
         '</div>' +
         notasHTML(p) +
       '</li>';
+  }
+
+  /* --------------------------------------------------------- cobrar ------
+     Las mesas que ya comieron y todavia no pagaron. Reusa lo de la fase 1:
+     el mismo LP.pedirQRaCaja que mesas.html y el mismo cobrar.html?sesion=.
+     Aca no se confirma ningun pago: eso sigue viviendo adentro de la cuenta. */
+  function cajaCobrar(c) {
+    var qr = qrsMesa[c.sesion.id];
+    var pedido = LP.hayPedidoDeQR(c.sesion);
+    var gente = c.sesion.comensales ? Number(c.sesion.comensales) : 0;
+
+    var linea = qr
+      ? '<p class="qr-estado listo">QR de esta mesa cargado ' +
+        esc(LP.timeAgo(qr.created_at)) +
+        (qr.cargado_por ? ' por ' + esc(qr.cargado_por) : '') + '.</p>'
+      : pedido
+        ? '<p class="qr-estado pedido">Todav&iacute;a sin QR. Se lo pidieron a la caja ' +
+          esc(LP.timeAgo(c.sesion.qr_pedido_en)) +
+          (c.sesion.qr_pedido_por ? ' (' + esc(c.sesion.qr_pedido_por) + ')' : '') + '.</p>'
+        : '<p class="qr-estado">Esta mesa todav&iacute;a no tiene QR cargado.</p>';
+
+    return '<li class="mesa m-cobrar" data-mesa="s' + esc(c.sesion.id) + '">' +
+      '<div class="mesa-top"><div>' +
+        '<div class="mesa-nom">' + esc(c.mesa) +
+          (gente ? '<span class="gente">' + gente +
+                   (gente === 1 ? ' persona' : ' personas') + '</span>' : '') +
+        '</div>' +
+        '<div class="mesa-meta">' + c.rondas +
+          (c.rondas === 1 ? ' ronda' : ' rondas') + ' &middot; todo entregado ' +
+          '&middot; abierta ' + esc(LP.timeAgo(c.sesion.abierta_en)) + '</div>' +
+      '</div><span class="chip debe">Falta cobrar</span></div>' +
+      '<div class="cobrar-total"><span class="etq">Falta cobrar' +
+        (c.pagado > 0 ? ' &middot; pago ' + money(c.pagado) : '') + '</span>' +
+        '<b>' + money(c.debe) + '</b></div>' +
+      linea +
+      /* Sin QR, lo que resuelve el momento no es ir a cobrar -no hay nada que
+         mostrar- sino pedirselo a la caja: ese va lleno. Igual que en el salon. */
+      '<div class="acciones">' +
+        (qr ? '' : '<button type="button" class="btn btn-primary" data-pedirqr="' +
+                   esc(c.sesion.id) + '">' +
+                   (pedido ? 'Volver a pedir el QR' : 'Pedirle el QR a la caja') +
+                   '</button>') +
+        '<a class="btn ' + (qr ? 'btn-primary' : 'btn-secondary') +
+          '" href="cobrar.html?sesion=' + esc(c.sesion.id) + '">Cobrar con QR</a>' +
+      '</div>' +
+    '</li>';
   }
 
   /* Plegado cuando no hay nada dicho -que es casi siempre- y abierto en
@@ -545,6 +866,33 @@ document.addEventListener('DOMContentLoaded', function () {
         delete ocupado[idE];
         if (!r.ok) { b.disabled = false; b.textContent = 'Lo llevé a la mesa';
                      LP.toast(r.motivo, 'err'); cargar(true); return; }
+        cargar(true);
+      });
+      return;
+    }
+
+    /* Pedirle el QR a la caja. Es EXACTAMENTE lo mismo que hace mesas.html:
+       marca el pedido en la sesion y manda el push por el canal que ya
+       existe. No hay canal nuevo ni pantalla nueva. */
+    if (b.dataset.pedirqr) {
+      var idQ = b.dataset.pedirqr;
+      if (ocupado['qr' + idQ]) return;
+      var cuenta = null;
+      (cuentas || []).forEach(function (c) {
+        if (c.sesion && String(c.sesion.id) === String(idQ)) cuenta = c;
+      });
+      if (!cuenta) { LP.toast('Esa mesa ya no está abierta.', 'err'); cargar(true); return; }
+      ocupado['qr' + idQ] = true;
+      b.disabled = true; b.textContent = 'Avisando a la caja...';
+      LP.pedirQRaCaja(sb, cuenta.sesion, YO).then(function (r) {
+        delete ocupado['qr' + idQ];
+        if (!r.ok) { b.disabled = false; b.textContent = 'Pedirle el QR a la caja';
+                     LP.toast(r.motivo, 'err'); return; }
+        var av = r.aviso || {};
+        LP.toast(av.ok
+          ? 'Listo: la caja sabe que ' + cuenta.mesa + ' necesita el QR.'
+          : 'Quedó anotado para la caja, pero el aviso al celular no salió.',
+          av.ok ? 'ok' : 'err');
         cargar(true);
       });
       return;
@@ -743,21 +1091,34 @@ document.addEventListener('DOMContentLoaded', function () {
     if (enVuelo) { otraPendiente = true; return Promise.resolve(); }
     if (!sb) {
       conn.set('off');
-      elAprobar.innerHTML = elCurso.innerHTML = '<li class="vacio">No hay conexi\u00f3n con el sistema.</li>';
+      elMesas.innerHTML = '<li class="vacio">No hay conexi\u00f3n con el sistema.</li>';
       return Promise.resolve();
     }
     enVuelo = true;
 
-    return sb.from(LP.TABLE).select('*')
-      .in('estado', ['Por aprobar'].concat(EN_CURSO))
-      .order('created_at', { ascending: true })
-      .then(function (res) {
+    /* Dos consultas en paralelo y a proposito:
+       - los pedidos por estado, que es lo que esta pantalla siempre trajo.
+         Sigue siendo la fuente de las tres primeras solapas, y es la unica
+         que ve los pedidos SIN cuenta de mesa (el mostrador).
+       - las cuentas abiertas, que aportan cuanta gente hay sentada y la
+         solapa "Cobrar".
+       Si la segunda falla, la pantalla funciona igual: se pierde el "4
+       personas" y la solapa de cobro queda vacia, pero el servicio sigue. */
+    return Promise.all([
+      sb.from(LP.TABLE).select('*')
+        .in('estado', ['Por aprobar'].concat(EN_CURSO))
+        .order('created_at', { ascending: true }),
+      LP.mesasAbiertas(sb).then(function (x) { return x; }, function () { return null; })
+    ])
+      .then(function (r) {
+        var res = r[0];
+        cuentas = r[1];
         enVuelo = false;
         if (res.error) {
           LP.humanError(res.error);
           conn.set(navigator.onLine ? 'retry' : 'off');
           if (!cargado) {
-            elAprobar.innerHTML = elCurso.innerHTML =
+            elMesas.innerHTML =
               '<li class="vacio">No pudimos traer los pedidos. Revis\u00e1 la conexi\u00f3n, seguimos intentando.</li>';
           } else if (!silencioso) LP.toast('No pudimos actualizar. Seguimos intentando.', 'err');
           reintentar(silencioso);
@@ -781,6 +1142,21 @@ document.addEventListener('DOMContentLoaded', function () {
         render();
         repasar();
         cargarAnuladas();
+
+        /* Los QR de las mesas que hay que cobrar, en UNA consulta. Es el
+           mismo dato que mira el salon: sirve para que el mozo sepa, desde
+           el celular, si la caja ya le cargo el QR a esa mesa o todavia no.
+           Que falle no puede tumbar la pantalla: sin el mapa la solapa de
+           cobro se ve igual, solo sin el cartelito.                      */
+        var sesIds = mesasParaCobrar().map(function (c) { return c.sesion.id; });
+        if (sesIds.length) {
+          LP.qrsDeSesiones(sb, sesIds).then(function (mapa) {
+            qrsMesa = mapa || {};
+            render();
+          }, function () {});
+        } else {
+          qrsMesa = {};
+        }
 
         var ids = data.map(function (p) { return p.id; });
         if (ids.length) {
@@ -1078,6 +1454,14 @@ document.addEventListener('DOMContentLoaded', function () {
       .on('postgres_changes', { event: '*', schema: 'public', table: LP.TABLE },
           function () { cargar(true); })
       .on('postgres_changes', { event: '*', schema: 'public', table: LP.NOTAS_TABLE },
+          function () { cargar(true); })
+      /* Sobre sesiones: otro puesto puede cerrar una mesa o cargar cuanta
+         gente hay, y la solapa "Cobrar" vive de ese dato. */
+      .on('postgres_changes', { event: '*', schema: 'public', table: LP.SESIONES_TABLE },
+          function () { cargar(true); })
+      /* Y sobre los QR: cuando la caja carga el de una mesa, el mozo lo ve
+         aparecer sin recargar ni ir a preguntar. Igual que en el salon. */
+      .on('postgres_changes', { event: '*', schema: 'public', table: LP.COBROS_TABLE },
           function () { cargar(true); });
     canal = mio;
     mio.subscribe(function (st) {

@@ -77,6 +77,83 @@
     margin-top:20px;padding-top:16px;border-top:1px dashed var(--border);
     display:flex;flex-direction:column;gap:10px;align-items:center;
   }
+
+  /* ------------------------------------------- prueba de sonido ----------
+     Lo unico que fallo delante de la duenia: el aviso llega a la pantalla
+     pero no suena, y en la computadora no llegaba nada. No se puede arreglar
+     a ciegas -depende del celular, del navegador y de los ajustes del
+     sistema-, asi que primero hay que saber QUE falla y DONDE.
+     Esto no arregla nada: sirve para anotar, en cinco minutos, que pasa en
+     cada una de las cuatro situaciones. */
+  .prueba{
+    margin-top:18px;text-align:left;background:var(--card);
+    border:1px solid var(--border);border-radius:var(--r-md);
+  }
+  .prueba > summary{
+    cursor:pointer;list-style:none;min-height:var(--tap);
+    display:flex;align-items:center;gap:8px;padding:12px 16px;
+    font-family:var(--font-cuerpo);font-size:13px;letter-spacing:.1em;
+    text-transform:uppercase;font-weight:600;color:var(--muted-strong);
+  }
+  .prueba > summary::-webkit-details-marker{display:none}
+  .prueba > summary::after{content:'\25be';margin-left:auto}
+  .prueba[open] > summary::after{content:'\25b4'}
+  .prueba .cuerpo{padding:0 16px 16px}
+  .prueba p{margin:0 0 10px;font-size:15px;line-height:1.5;color:var(--muted)}
+  .prueba h3{
+    font-family:var(--font-cuerpo);font-style:normal;font-size:13px;
+    letter-spacing:.08em;text-transform:uppercase;font-weight:600;
+    color:var(--muted-strong);margin:16px 0 8px;
+  }
+  .aparato{
+    font-size:14px;line-height:1.5;color:var(--muted-strong);
+    background:var(--bg);border:1px solid var(--border);
+    border-radius:var(--r-sm);padding:10px 12px;margin:0 0 12px;
+  }
+  .aparato b{display:block;color:var(--ink)}
+  .cuenta-atras{
+    font-size:15px;line-height:1.5;color:var(--warn);
+    background:var(--warn-soft);border:1px solid var(--warn-border);
+    border-radius:var(--r-sm);padding:10px 12px;margin:10px 0 0;
+  }
+  .cuenta-atras:empty{display:none}
+
+  table.diag{width:100%;border-collapse:collapse;font-size:14px}
+  table.diag th,table.diag td{
+    padding:6px 4px;text-align:left;vertical-align:middle;
+    border-bottom:1px solid var(--border);
+  }
+  table.diag th{
+    font-weight:600;font-size:12px;letter-spacing:.04em;
+    text-transform:uppercase;color:var(--muted-strong);
+  }
+  table.diag th.q{text-align:center;width:22%}
+  table.diag td.q{text-align:center}
+  table.diag td.caso{line-height:1.35}
+  table.diag td.caso small{display:block;color:var(--muted);font-size:12px}
+  .tri{
+    width:100%;min-height:var(--tap);border-radius:var(--r-sm);
+    border:1px solid var(--border-strong);background:var(--bg);
+    color:var(--muted-strong);font-size:14px;font-weight:600;
+  }
+  .tri[data-valor="si"]{background:var(--ok-soft);color:var(--ok);border-color:var(--ok-border)}
+  .tri[data-valor="no"]{background:var(--err-bg);color:var(--err-ink);border-color:var(--err-border)}
+  .copiado{
+    width:100%;min-height:120px;margin-top:10px;padding:10px 12px;
+    font-family:ui-monospace,'Consolas',monospace;font-size:13px;line-height:1.45;
+    border:1px solid var(--border-strong);border-radius:var(--r-sm);
+    background:var(--bg);color:var(--ink);
+  }
+  .copiado[hidden]{display:none}
+  .limites{
+    margin-top:14px;font-size:14px;line-height:1.5;color:var(--muted-strong);
+    background:var(--bg);border:1px solid var(--border);
+    border-radius:var(--r-sm);padding:12px 14px;
+  }
+  .limites b{color:var(--ink)}
+  .limites ul{margin:8px 0 0;padding-left:20px}
+  .limites li{margin-bottom:6px}
+  .limites li:last-child{margin-bottom:0}
 </style>
 </head>
 <body>
@@ -101,6 +178,68 @@
   <div class="estado" id="estado" role="status" aria-live="polite"></div>
   <div class="guia" id="guia"></div>
   <p class="cuantos" id="cuantos"></p>
+
+  <!-- ------------------------------------------------- prueba de sonido -- -->
+  <details class="prueba" id="pruebaBox">
+    <summary>Probar si suena y anotar el resultado</summary>
+    <div class="cuerpo">
+      <p>Que el aviso <b>aparezca</b> y que el aviso <b>suene</b> son dos cosas
+         distintas, y pueden fallar por separado. Ac&aacute; se prueban las cuatro
+         situaciones de una y queda anotado qu&eacute; pas&oacute; en cada una.</p>
+
+      <p class="aparato" id="aparato"></p>
+
+      <h3>1. Mandar el aviso</h3>
+      <p>El aviso sale a <b>todos</b> los celulares anotados para este rol, no
+         solo a este. As&iacute; se puede disparar desde la computadora y mirar el
+         celular.</p>
+      <button type="button" class="btn btn-primary btn-block" id="diagAhora">
+        Mandar el aviso ahora
+      </button>
+      <button type="button" class="btn btn-secondary btn-block" id="diagLuego">
+        Mandarlo en 30 segundos (para bloquear el celular)
+      </button>
+      <p class="cuenta-atras" id="diagCuenta" role="status" aria-live="polite"></p>
+
+      <h3>2. Anotar qu&eacute; pas&oacute;</h3>
+      <p>Toc&aacute; cada casilla hasta que diga lo que viste. Se guarda solo en
+         este aparato.</p>
+      <table class="diag">
+        <thead>
+          <tr>
+            <th scope="col">Situaci&oacute;n</th>
+            <th scope="col" class="q">&iquest;Apareci&oacute;?</th>
+            <th scope="col" class="q">&iquest;Son&oacute;?</th>
+            <th scope="col" class="q">&iquest;Vibr&oacute;?</th>
+          </tr>
+        </thead>
+        <tbody id="diagFilas"></tbody>
+      </table>
+
+      <button type="button" class="btn btn-secondary btn-block" id="diagCopiar"
+              style="margin-top:12px">Copiar el resultado</button>
+      <textarea class="copiado" id="diagTexto" readonly hidden
+                aria-label="Resultado de la prueba"></textarea>
+
+      <div class="limites">
+        <b>Lo que s&iacute; y lo que no se puede hacer con el sonido</b>
+        <ul>
+          <li><b>S&iacute;:</b> que el panel abierto (cocina o mozo) repita el
+              sonido solo, una y otra vez, hasta que alguien toque la pantalla.</li>
+          <li><b>S&iacute;:</b> que el aviso del celular quede fijo en pantalla y no
+              se borre solo. Eso ya est&aacute; puesto.</li>
+          <li><b>No:</b> que el aviso del celular <b>suene sin parar</b> con la app
+              cerrada. Ni Android ni iPhone dejan que una p&aacute;gina web elija el
+              sonido de una notificaci&oacute;n ni que lo repita: lo decide el
+              sistema y suena una vez.</li>
+          <li><b>No:</b> en iPhone no hay forma de dar vuelta eso. La &uacute;nica
+              palanca real es poner La Positiva como notificaci&oacute;n
+              <i>Cr&iacute;tica</i> o con sonido propio, y eso pide una app de
+              verdad en la App Store, no una p&aacute;gina web.</li>
+        </ul>
+      </div>
+    </div>
+  </details>
 
   <div class="abajo">
     <a class="btn btn-secondary btn-block" href="cocina.html" id="irAlPanel">Ir a mi panel</a>
@@ -301,11 +440,178 @@ document.addEventListener('DOMContentLoaded', function () {
       });
   });
 
+  /* ===================== PRUEBA DE SONIDO (diagnostico) ===================
+     Es lo unico que fallo delante de la duenia: el aviso llega a la pantalla
+     del celular pero no suena, y en la computadora no llegaba nada.
+
+     Esto NO arregla el sonido: lo mide. Que suene o no depende del celular,
+     del navegador y de los ajustes del sistema operativo, y no se puede
+     probar desde una maquina de desarrollo: hace falta el aparato de verdad,
+     en las cuatro situaciones. La tabla se guarda en ESTE aparato y se puede
+     copiar como texto para pasarla.                                      */
+  var CASOS = [
+    { id: 'abierta',  que: 'App abierta y a la vista',
+      como: 'Con esta pantalla adelante, sin tocar nada.' },
+    { id: 'fondo',    que: 'App abierta pero en otra pantalla',
+      como: 'Sal&iacute; a la pantalla de inicio sin cerrar la app.' },
+    { id: 'bloqueado', que: 'Celular bloqueado',
+      como: 'Apret&aacute; el bot&oacute;n de apagar la pantalla y esper&aacute;.' },
+    { id: 'compu',    que: 'Computadora de escritorio',
+      como: 'Con el navegador abierto, aunque sea en otra pesta&ntilde;a.' }
+  ];
+  var PREGUNTAS = ['aparecio', 'sono', 'vibro'];
+  var DIAG_KEY = 'lp_diag_sonido_' + ROL;
+
+  var diag = {};
+  try { diag = JSON.parse(localStorage.getItem(DIAG_KEY) || '{}') || {}; } catch (e) { diag = {}; }
+
+  var filas = document.getElementById('diagFilas');
+  var diagCuenta = document.getElementById('diagCuenta');
+  var diagTexto = document.getElementById('diagTexto');
+
+  function valor(caso, preg) {
+    return (diag[caso] && diag[caso][preg]) || '';
+  }
+  function etiqueta(v) { return v === 'si' ? 'Sí' : v === 'no' ? 'No' : 'Sin probar'; }
+
+  function pintarTabla() {
+    filas.innerHTML = CASOS.map(function (c) {
+      return '<tr>' +
+        '<td class="caso">' + esc(c.que) + '<small>' + c.como + '</small></td>' +
+        PREGUNTAS.map(function (p) {
+          var v = valor(c.id, p);
+          return '<td class="q"><button type="button" class="tri" data-valor="' + v + '" ' +
+            'data-caso="' + c.id + '" data-preg="' + p + '" ' +
+            'aria-label="' + esc(c.que + ' - ' + p + ': ' + etiqueta(v)) + '">' +
+            esc(etiqueta(v)) + '</button></td>';
+        }).join('') +
+      '</tr>';
+    }).join('');
+  }
+
+  filas.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-caso]');
+    if (!b) return;
+    // Sin probar -> Si -> No -> sin probar. Tres estados, un solo toque.
+    var actual = valor(b.dataset.caso, b.dataset.preg);
+    var siguiente = actual === '' ? 'si' : actual === 'si' ? 'no' : '';
+    diag[b.dataset.caso] = diag[b.dataset.caso] || {};
+    diag[b.dataset.caso][b.dataset.preg] = siguiente;
+    try { localStorage.setItem(DIAG_KEY, JSON.stringify(diag)); } catch (e) {}
+    /* Se toca SOLO el boton tocado y no toda la tabla: rehacerla entera
+       destruye el boton que acaba de tocar y le saca el foco de encima. */
+    b.dataset.valor = siguiente;
+    b.textContent = etiqueta(siguiente);
+    b.setAttribute('aria-label',
+      b.parentNode.parentNode.querySelector('.caso').firstChild.nodeValue +
+      ' - ' + b.dataset.preg + ': ' + etiqueta(siguiente));
+  });
+
+  // Que aparato es este y si esta anotado: en la computadora, el problema mas
+  // probable es justamente que nunca quedo anotada.
+  function pintarAparato() {
+    var d = LP.describirDispositivo();
+    var caja = document.getElementById('aparato');
+    caja.innerHTML = '<b>' + esc(d.nombre) + '</b>' +
+      'Rol de los avisos: ' + esc(ROL) + '.';
+    return LP.estadoPush().then(function (st) {
+      if (st !== 'activo') {
+        caja.innerHTML += '<br>Este aparato <b>no</b> está recibiendo avisos ' +
+          '(' + esc(st) + '). Activalos arriba antes de probar.';
+        return;
+      }
+      return LP.pushRegistrado(sb, ROL).then(function (reg) {
+        caja.innerHTML += '<br>' + (reg === null
+          ? 'No pudimos comprobar si está anotado.'
+          : reg ? 'Está anotado en el sistema para este rol.'
+                : 'Tiene permiso pero <b>no</b> está anotado: no le va a llegar nada.');
+      });
+    });
+  }
+
+  function mandarPrueba(cuando) {
+    return LP.avisar(sb, ROL, 'Prueba de sonido',
+                     'Si lo escuchaste, anotá que sonó. ' + (cuando || ''),
+                     null, CFG.panel, true)
+      .then(function (r) {
+        if (r.ok) {
+          LP.toast('Aviso mandado a todos los aparatos del rol.', 'ok');
+          diagCuenta.textContent = 'Aviso mandado. Anotá abajo qué pasó.';
+        } else if (r.config) {
+          diagCuenta.textContent = 'Los avisos están sin configurar en el servidor. ' +
+            'No se arregla desde este celular.';
+        } else {
+          diagCuenta.textContent = r.motivo || 'No salió el aviso.';
+        }
+      });
+  }
+
+  document.getElementById('diagAhora').addEventListener('click', function () {
+    diagCuenta.textContent = 'Mandando...';
+    mandarPrueba('');
+  });
+
+  /* La cuenta atras corre en esta pagina. Si el celular congela la pagina al
+     bloquear la pantalla, el aviso puede salir mas tarde de los 30 segundos
+     -o recien cuando se desbloquea-. Se dice en pantalla en vez de esconderlo:
+     la forma segura de probar con el celular bloqueado es apretar el boton
+     desde la computadora.                                                */
+  var cuentaTimer = null;
+  document.getElementById('diagLuego').addEventListener('click', function () {
+    if (cuentaTimer) return;
+    var faltan = 30;
+    diagCuenta.textContent = 'Sale en ' + faltan + ' segundos. Bloqueá el celular ahora.';
+    cuentaTimer = setInterval(function () {
+      faltan--;
+      if (faltan > 0) {
+        diagCuenta.textContent = 'Sale en ' + faltan + ' segundos. Bloqueá el celular ahora.';
+        return;
+      }
+      clearInterval(cuentaTimer); cuentaTimer = null;
+      mandarPrueba('(prueba con el celular bloqueado)');
+    }, 1000);
+  });
+  LP.onCleanup(function () { if (cuentaTimer) clearInterval(cuentaTimer); });
+
+  document.getElementById('diagCopiar').addEventListener('click', function () {
+    var d = LP.describirDispositivo();
+    var lineas = ['Prueba de sonido - La Positiva',
+                  'Rol: ' + ROL,
+                  'Aparato: ' + d.nombre,
+                  'Fecha: ' + new Date().toLocaleString(),
+                  ''];
+    CASOS.forEach(function (c) {
+      lineas.push(c.que +
+        ' | apareció: ' + etiqueta(valor(c.id, 'aparecio')) +
+        ' | sonó: ' + etiqueta(valor(c.id, 'sono')) +
+        ' | vibró: ' + etiqueta(valor(c.id, 'vibro')));
+    });
+    var texto = lineas.join('\n');
+    diagTexto.value = texto;
+    diagTexto.hidden = false;
+    /* El portapapeles puede no estar disponible (sin https, o sin permiso).
+       Por eso el texto queda igual a la vista y seleccionado: siempre hay
+       forma de copiarlo a mano.                                          */
+    try { diagTexto.select(); } catch (e) {}
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(function () {
+        LP.toast('Resultado copiado.', 'ok');
+      }, function () {
+        LP.toast('No pudimos copiarlo solos: está abajo para copiar a mano.', 'err');
+      });
+    } else {
+      LP.toast('Está abajo para copiar a mano.', 'ok');
+    }
+  });
+
+  pintarTabla();
+
   if (!sb) {
     boton('Sin conexión', true);
     decir('err', 'No hay conexión con el sistema', 'Revisá la conexión y probá de nuevo.');
     return;
   }
+  pintarAparato();
   repasar();
 });
 </script>

@@ -1026,12 +1026,32 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     /* En vivo: si la cocina apaga un plato mientras el mozo esta cargando,
-       la carta de su celular se entera sin recargar. */
+       la carta de su celular se entera sin recargar.
+
+       Y lo mismo con los PRECIOS. La duenia cambia un precio desde su
+       pantalla y esta comanda, que puede llevar media hora abierta en el
+       celular del mozo, seguia con el numero viejo: la carta del comensal
+       (pedir.html) ya escuchaba esta tabla y esta no.
+
+       Ojo con lo que NO hace: no toca ningun pedido ya mandado. El precio
+       viaja adentro de lines[].price cuando se manda la comanda y ahi queda
+       congelado. Si la mesa pidio el bife a $35.000 y despues sube, se le
+       cobran $35.000. El cambio es para lo que se pida de ahora en mas.  */
     var canal = sb.channel('comanda-' + Date.now())
       .on('postgres_changes', { event: '*', schema: 'public', table: LP.AGOTADOS_TABLE },
           function () {
             LP.platosAgotados(sb).then(function (m) {
               agotados = m || {}; avisoDeAgotados(); pintarCarta();
+            });
+          })
+      .on('postgres_changes', { event: '*', schema: 'public', table: LP.PRECIOS_TABLE },
+          function () {
+            LP.preciosDePlatos(sb).then(function (m) {
+              LP.aplicarPrecios(MENU, m || {});
+              /* Se repintan tambien el pie y la hoja del carrito: el boton no
+                 puede decir un total y la comanda entrar con otro. */
+              pintarCarta(); pintarPie();
+              if (LP.isDialogOpen(hoja)) pintarHoja();
             });
           });
     canal.subscribe();

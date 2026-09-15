@@ -1730,6 +1730,105 @@
       }, function (e) { humanError(e); return null; });
   }
 
+  /* --- Las rondas de una mesa, juntas -------------------------------------
+     El duenio, mirando cocina y mozo: "es como que fueran separadas, pero en
+     realidad no lo son; la gente simplemente pidio a destiempo, la bebida, un
+     cubierto mas, alguien se sumo a la mesa".
+
+     Los pedidos YA traen sesion_id, que es la visita de la mesa. Lo unico que
+     faltaba era agruparlos para pintarlos. Esto NO toca estados: cada ronda
+     sigue con el suyo, y por eso el resultado lleva la lista de rondas cruda
+     y no un estado unico de la mesa. Una mesa puede tener una ronda en el
+     fuego y otra lista al mismo tiempo, y asi se tiene que ver.
+
+     'sesiones' es opcional: { id: fila }, para poder mostrar la mesa y cuanta
+     gente hay. Sin eso se cae al nombre de mesa que trae el pedido.      */
+  function agruparPorMesa(pedidos, sesiones) {
+    var mapa = sesiones || {};
+    var orden = [];
+    var cajas = Object.create(null);
+
+    (pedidos || []).forEach(function (p) {
+      /* Sin sesion, el pedido es su propia caja. Pasa con el mostrador y con
+         el pedido que entro cuando la cuenta no se pudo abrir (pedir.html lo
+         deja entrar igual a proposito). Agruparlos por nombre de mesa
+         juntaria dos visitas distintas de la misma mesa en un solo recuadro,
+         que es exactamente el error contrario al que estamos arreglando. */
+      var clave = p.sesion_id ? ('s' + p.sesion_id) : ('p' + p.id);
+      var caja = cajas[clave];
+      if (!caja) {
+        var ses = p.sesion_id ? (mapa[p.sesion_id] || null) : null;
+        var cuantos = ses && ses.comensales ? Number(ses.comensales) : null;
+        caja = cajas[clave] = {
+          clave: clave,
+          mesa: (ses && ses.mesa) || p.mesa,
+          sesion: ses,
+          sesionId: p.sesion_id || null,
+          comensales: isFinite(cuantos) && cuantos > 0 ? cuantos : null,
+          sinCuenta: !p.sesion_id,
+          rondas: [],
+          desde: p.created_at,
+          ultima: p.created_at
+        };
+        orden.push(caja);
+      }
+      caja.rondas.push(p);
+      if (new Date(p.created_at) < new Date(caja.desde)) caja.desde = p.created_at;
+      if (new Date(p.created_at) > new Date(caja.ultima)) caja.ultima = p.created_at;
+    });
+
+    // Adentro de la mesa, en el orden en que pidieron: ronda 1, ronda 2...
+    orden.forEach(function (c) {
+      c.rondas.sort(function (a, b) {
+        return new Date(a.created_at) - new Date(b.created_at);
+      });
+    });
+    return orden;
+  }
+
+  /* Las sesiones de una lista de ids, en UNA consulta. La cocina no carga el
+     salon entero -no le hace falta y seria una consulta cara cada 7 segundos-,
+     pero si necesita el nombre de la mesa y cuanta gente hay sentada.
+     Que falle devuelve {} y no rompe nada: se pierde el "4 personas".     */
+  function sesionesPorId(sb, ids) {
+    var limpios = [];
+    (ids || []).forEach(function (x) {
+      if (x && limpios.indexOf(x) === -1) limpios.push(x);
+    });
+    if (!sb || !limpios.length) return Promise.resolve({});
+    return sb.from(SESIONES_TABLE)
+      .select('id, mesa, estado, comensales, abierta_en, cerrada_en, qr_pedido_en, qr_pedido_por')
+      .in('id', limpios)
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return {}; }
+        var m = {};
+        (res.data || []).forEach(function (s) { m[s.id] = s; });
+        return m;
+      }, function (e) { humanError(e); return {}; });
+  }
+
+  /* Volver a avisarle al mozo que una ronda sigue esperando en el pase.
+     Se puede tocar las veces que haga falta: NO escribe nada en el pedido, no
+     cambia el estado y no genera una comanda nueva. Es el mismo push que ya
+     manda avisarEstado(), por el mismo canal, con otro texto.
+
+     El tag que arma el service worker sale del titulo, asi que el segundo
+     aviso PISA al primero en la pantalla del mozo en vez de acumular cuatro
+     notificaciones iguales -y con renotify vuelve a sonar igual.          */
+  function reavisarMozo(sb, pedido, quien) {
+    if (!sb || !pedido) {
+      return Promise.resolve({ ok: false, motivo: 'No hay conexión con el sistema.' });
+    }
+    var detalle = lineasDeComanda(pedido).map(function (l) {
+      return l.qty + 'x ' + l.name;
+    }).join(', ');
+    return avisar(sb, 'Mozo', 'Sigue esperando en el pase',
+                  pedido.mesa + (detalle ? ' - ' + detalle : '') +
+                  '. Está listo y todavía no lo llevaron.' +
+                  (quien ? ' Avisa ' + quien + '.' : ''),
+                  pedido.id, 'mozo.html', true);
+  }
+
   /* Cierra la cuenta. La mesa queda libre y el proximo pedido abre una nueva. */
   function cerrarSesion(sb, id, quien, forzar) {
     if (!sb || !id) return Promise.resolve(false);
@@ -2608,6 +2707,9 @@
     cuentaDeSesion: cuentaDeSesion,
     resumirCuenta: resumirCuenta,
     mesasAbiertas: mesasAbiertas,
+    agruparPorMesa: agruparPorMesa,
+    sesionesPorId: sesionesPorId,
+    reavisarMozo: reavisarMozo,
     cerrarSesion: cerrarSesion,
     fotosDePlatos: fotosDePlatos,
     fotoDePlato: fotoDePlato,

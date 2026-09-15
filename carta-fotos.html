@@ -537,6 +537,29 @@ document.addEventListener('DOMContentLoaded', function () {
     LP.aplicarPrecios(MENU, precios);   // deja precioCarta guardado en cada plato
     pintar();
   });
+
+  /* En vivo: esta pantalla la tienen abierta la cocina y la duenia al mismo
+     tiempo. Si ella cambia un precio o alguien marca un plato agotado, el
+     otro lo tiene que ver sin recargar a mano. Los pedidos ya mandados no se
+     tocan: el precio quedo congelado adentro de cada comanda. */
+  var canalCarta = sb.channel('carta-fotos-' + Date.now())
+    .on('postgres_changes', { event: '*', schema: 'public', table: LP.PRECIOS_TABLE },
+        function () {
+          LP.preciosDePlatos(sb).then(function (mapa) {
+            precios = mapa || {};
+            LP.aplicarPrecios(MENU, precios);
+            pintar();
+          });
+        })
+    .on('postgres_changes', { event: '*', schema: 'public', table: LP.AGOTADOS_TABLE },
+        function () {
+          LP.platosAgotados(sb).then(function (mapa) {
+            agotados = mapa || {};
+            pintar();
+          });
+        });
+  canalCarta.subscribe();
+  LP.onCleanup(function () { try { sb.removeChannel(canalCarta); } catch (e) {} });
 });
 </script>
 </body>
