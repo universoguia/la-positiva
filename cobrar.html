@@ -213,6 +213,35 @@ document.addEventListener('DOMContentLoaded', function () {
   var etiquetas = {};   // id de pedido -> a quien corresponde (nombre o "Comensal N")
   var soy = LP.quienSoy();
   var YO = (soy && soy.nombre) || 'Cobro';
+  var MI_ROL = (soy && soy.rol) || '';
+
+  /* AJ-006: quien puede CONFIRMAR un pago desde acá. No es "quien entra a
+     esta pantalla" -el mozo entra y tiene que entrar, es el que muestra el
+     QR en la mesa-, es quien mira el posnet: la caja y la dueña. Se pregunta
+     por caja.html y no por una lista nueva, para que el día que cambie la
+     matriz de permisos esto cambie con ella. */
+  var PUEDE_CONFIRMAR = LP.puedeEditar('caja.html');
+
+  /* Cuándo avisó el salón que esta cuenta ya se pagó. Devuelve la fecha o
+     null. Con "Toda la mesa" mira todas sus rondas. */
+  function yaAvisado(p) {
+    if (!p) return null;
+    var ids = p._ids || [p.id];
+    var cuando = null;
+    pendientes.forEach(function (x) {
+      if (ids.indexOf(x.id) === -1 || !x.pago_avisado_en) return;
+      if (!cuando || new Date(x.pago_avisado_en) > new Date(cuando)) cuando = x.pago_avisado_en;
+    });
+    return cuando;
+  }
+
+  /* Las filas reales detrás de lo elegido: "Toda la mesa" es un resumen
+     inventado en pantalla, no una fila de la base. */
+  function filasDe(p) {
+    if (!p) return [];
+    var ids = p._ids || [p.id];
+    return pendientes.filter(function (x) { return ids.indexOf(x.id) !== -1; });
+  }
 
   /* Si el local desglosa el renglon del cubierto o lo deja incluido en el
      total. Arranca en true -desglosado, como venia- y solo lo apaga el
@@ -500,11 +529,36 @@ document.addEventListener('DOMContentLoaded', function () {
         /* Mostrar el QR y confirmar que entro la plata son dos momentos
            distintos. Se dice aca, justo arriba del boton verde: el QR ya
            esta en pantalla y la tentacion es darlo por cobrado. */
+        /* AJ-006. Aca habia UN boton para todos: "Ya pago: confirmar", y
+           escribia pagado=true. El mozo, parado en la mesa y sin ver el
+           posnet, cerraba la cuenta con su palabra.
+
+           Ahora son dos botones distintos segun el puesto:
+
+             caja y duenia -> confirman de verdad, porque son los que miran
+                              el posnet. El cierre sigue viviendo aca.
+             el resto      -> avisan. Deja la marca "avisaron que pago" y
+                              manda el push a la caja. NO cambia el estado.
+
+           El permiso sale de la misma matriz de la fase 5 que usa el portero
+           de caja.html: una sola verdad, no dos listas paralelas.       */
         (elegido
-          ? '<p class="dos-momentos">Confirm&aacute; reci&eacute;n cuando el posnet muestre que ' +
-              'entr&oacute; la plata. Mostrar el QR no es haber cobrado.</p>' +
-            '<button type="button" class="btn btn-ok btn-block" id="cobradoBtn">' +
-            'Ya pag\u00f3: confirmar ' + money(LP.cobrable(elegido)) + '</button>'
+          ? (PUEDE_CONFIRMAR
+              ? '<p class="dos-momentos">Confirm&aacute; reci&eacute;n cuando el posnet muestre que ' +
+                  'entr&oacute; la plata. Mostrar el QR no es haber cobrado.</p>' +
+                '<button type="button" class="btn btn-ok btn-block" id="cobradoBtn">' +
+                'Ya pag\u00f3: confirmar ' + money(LP.cobrable(elegido)) + '</button>'
+              : '<p class="dos-momentos">El pago lo confirma la caja, que es la que ve el ' +
+                  'posnet. Vos avis&aacute;, y ellos cierran la cuenta.</p>' +
+                '<button type="button" class="btn btn-primary btn-block" id="avisoPagoBtn">' +
+                  (yaAvisado(elegido)
+                    ? 'Volver a avisarle a la caja'
+                    : 'Avisarle a la caja que ya pag\u00f3') + '</button>' +
+                '<p class="dos-momentos" id="avisoPagoEstado" role="status" aria-live="polite">' +
+                  (yaAvisado(elegido)
+                    ? 'Ya avisaste ' + esc(LP.timeAgo(yaAvisado(elegido))) +
+                      '. La caja lo tiene en pantalla.'
+                    : '') + '</p>')
           : '') +
         // El link solo existe si el QR lo traia o si caja lo cargo a mano.
         (qr.link_pago
@@ -551,6 +605,57 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var cb = document.getElementById('cobradoBtn');
     if (cb) cb.addEventListener('click', confirmarCobro);
+
+    var ab = document.getElementById('avisoPagoBtn');
+    if (ab) ab.addEventListener('click', avisarQuePago);
+  }
+
+  /* AJ-006: el paso del medio. Esto NO cobra. Deja anotado en la base que el
+     salón avisó -con nombre, puesto y hora- y manda el push a la caja. La
+     caja lo ve como un renglón ámbar en la mesa y confirma ella, mirando el
+     posnet, que es lo único que cierra la cuenta.
+
+     Se puede tocar de nuevo: no hace daño, sólo refresca la marca y vuelve a
+     avisar. Una mesa que espera y una cajera que no vio el primer aviso es
+     exactamente el caso donde hay que poder insistir.                    */
+  function avisarQuePago() {
+    var b = document.getElementById('avisoPagoBtn');
+    if (!b || b.disabled || !elegido) return;
+    var filas = filasDe(elegido);
+    if (!filas.length) { LP.toast('No encontramos esa cuenta.', 'err'); return; }
+
+    b.disabled = true;
+    var antes = b.textContent;
+    b.textContent = 'Avisando a la caja...';
+    var est = document.getElementById('avisoPagoEstado');
+
+    LP.avisarQuePago(sb, filas, YO, MI_ROL).then(function (r) {
+      b.disabled = false;
+      if (!r.ok) {
+        b.textContent = antes;
+        if (est) est.textContent = '';
+        LP.toast(r.motivo, 'err');
+        return;
+      }
+      // La copia en pantalla se actualiza sola: si no, el boton seguiria
+      // diciendo "avisarle" despues de haber avisado.
+      var nuevos = {};
+      r.pedidos.forEach(function (p) { nuevos[p.id] = p; });
+      pendientes = pendientes.map(function (x) { return nuevos[x.id] || x; });
+      b.textContent = 'Volver a avisarle a la caja';
+      var aviso = r.aviso || {};
+      if (aviso.ok) {
+        if (est) est.textContent = 'Listo: la caja ya sabe que ' + nombreMesa() + ' pagó. ' +
+          'Ellos lo confirman cuando lo vean en el posnet.';
+        LP.toast('Aviso enviado a la caja.', 'ok');
+      } else {
+        /* El aviso quedo anotado; lo que no salio es el push. Se dice tal
+           cual: la caja lo ve igual en su pantalla, pero no le sono. */
+        if (est) est.textContent = 'Quedó anotado para la caja, pero el aviso al celular no salió. ' +
+          'Lo ven igual en su pantalla.';
+        LP.toast('Quedó anotado, pero el aviso no llegó al celular de la caja.', 'err');
+      }
+    });
   }
 
   /* ---------------------------------------------- ticket de confirmado --
@@ -694,6 +799,13 @@ document.addEventListener('DOMContentLoaded', function () {
   function confirmarCobro() {
     var btn = document.getElementById('cobradoBtn');
     if (!elegido || btn.disabled) return;
+    /* Candado de verdad y no solo el boton escondido (AJ-006): si alguien
+       llega a esta funcion sin ser caja -otra pantalla, la consola-, no
+       escribe. El boton que ve el mozo llama a avisarQuePago(). */
+    if (!PUEDE_CONFIRMAR) {
+      LP.toast('El pago lo confirma la caja. Avisales y ellos lo cierran.', 'err');
+      return;
+    }
     var id = elegido.id;
     btn.disabled = true;
     var textoOriginal = btn.textContent;
@@ -703,7 +815,12 @@ document.addEventListener('DOMContentLoaded', function () {
        se muestra el QR y el cliente termina de pagar pueden pasar dos minutos,
        y en el medio el mozo puede haber sacado el plato. Filtrar solo la
        consulta que pinta la pantalla no alcanza: hay que filtrar la escritura. */
-    sb.from(LP.TABLE).update({ pagado: true, updated_at: new Date().toISOString() })
+    sb.from(LP.TABLE).update({ pagado: true,
+                               // AJ-006: queda escrito quien cerro y de que puesto.
+                               pagado_en: new Date().toISOString(),
+                               pagado_por: YO.slice(0, 40),
+                               pagado_rol: String(MI_ROL).slice(0, 20),
+                               updated_at: new Date().toISOString() })
       .in('id', elegido._ids || [id]).eq('pagado', false)
       .not('estado', 'in', LP.NO_SE_COBRA_SQL)
       .select()

@@ -220,6 +220,110 @@
   }
   global.addEventListener('pagehide', runCleanup);
 
+  /* --- El aviso que suena (AJ-003) ----------------------------------------
+     Esto ya existia, pero escrito DOS VECES a mano: una en cocina.html y otra
+     en mozo.html. La caja se habia quedado sin nada -ni una linea de audio en
+     todo el archivo-, asi que un pago pendiente entraba mudo y el reporte del
+     duenio ("no suena, ni en caja ni en el celular") era literal de ese lado.
+
+     Aca queda la version compartida. NO se toco la de cocina ni la de mozo:
+     andan y estan probadas en servicio. Esta la usa la caja.
+
+     Lo que hay que saber y no se promete de mas: el navegador NO deja sonar
+     hasta que alguien toca la pantalla una vez. El AudioContext nace
+     'suspended' y ahi se queda. Por eso hay un enganche al primer toque y un
+     estado 'falta-toque' para poder DECIRLO en pantalla en vez de fingir que
+     el sonido esta activo. En iPhone, ademas, con la pestania en segundo
+     plano no suena nada: eso lo decide el sistema y no hay codigo que lo
+     arregle.                                                              */
+  function Sonador(opciones) {
+    var o = opciones || {};
+    this.notas = o.notas || [880, 1174.7];
+    this.volumen = o.volumen || 0.3;
+    this.alCambiar = o.alCambiar || function () {};
+    this.ctx = null;
+    this.encendido = true;
+    this.clave = o.clave || 'lp_sonido';
+    try { this.encendido = localStorage.getItem(this.clave) !== '0'; } catch (e) {}
+  }
+
+  /* Devuelve 'listo' | 'falta-toque' | 'no-soportado'. Nunca miente: se lee
+     el estado de verdad del AudioContext, no el que nos gustaria. */
+  Sonador.prototype.armar = function () {
+    var self = this;
+    if (!this.ctx) {
+      var AC = global.AudioContext || global.webkitAudioContext;
+      if (!AC) return 'no-soportado';
+      try { this.ctx = new AC(); } catch (e) { return 'no-soportado'; }
+      /* resume() es asincronico: leer .state en la linea de abajo devuelve
+         'suspended' aunque el gesto haya servido. Se repinta cuando el
+         estado cambia de verdad. */
+      try { this.ctx.onstatechange = function () { self.alCambiar(); }; } catch (e) {}
+    }
+    if (this.ctx.state === 'suspended') {
+      try {
+        var pr = this.ctx.resume();
+        if (pr && pr.then) pr.then(function () {
+          if (self.ctx.state === 'running') self.alCambiar();
+        }, function () {});
+      } catch (e) {}
+    }
+    return this.ctx.state === 'running' ? 'listo' : 'falta-toque';
+  };
+
+  Sonador.prototype.estado = function () {
+    return this.encendido ? this.armar() : 'apagado';
+  };
+
+  // true = sono de verdad. false = no sono, y el que llama tiene que caerse
+  // a la capa de abajo (aviso del sistema) en vez de dar el aviso por dado.
+  Sonador.prototype.sonar = function (fuerte) {
+    if (!this.encendido) return false;
+    if (this.armar() !== 'listo') return false;
+    try {
+      var ctx = this.ctx;
+      var t0 = ctx.currentTime;
+      var notas = fuerte ? this.notas.concat(this.notas) : this.notas;
+      var vol = fuerte ? Math.min(0.45, this.volumen + 0.15) : this.volumen;
+      notas.forEach(function (hz, i) {
+        var t = t0 + i * 0.17;
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = hz;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(t); osc.stop(t + 0.32);
+      });
+      return true;
+    } catch (e) { return false; }
+  };
+
+  Sonador.prototype.prender = function (v) {
+    this.encendido = !!v;
+    try { localStorage.setItem(this.clave, this.encendido ? '1' : '0'); } catch (e) {}
+    if (this.encendido) this.armar();
+    this.alCambiar();
+  };
+
+  /* Un toque en cualquier parte de la pantalla destraba el audio. Es el
+     gesto que pide el navegador y nadie tiene que saber que existe. */
+  Sonador.prototype.engancharPrimerToque = function () {
+    var self = this;
+    function destrabar() {
+      var st = self.armar();
+      if (st === 'listo' || st === 'no-soportado') {
+        document.removeEventListener('pointerdown', destrabar, true);
+        document.removeEventListener('keydown', destrabar, true);
+      }
+      self.alCambiar();
+    }
+    document.addEventListener('pointerdown', destrabar, true);
+    document.addEventListener('keydown', destrabar, true);
+  };
+
   /* --- Web Push -----------------------------------------------------------
      La clave publica VAPID es publica por definicion: identifica al emisor
      y viaja al navegador. La privada vive solo en la Edge Function.      */
@@ -870,6 +974,7 @@
       { url: 'qr-mesa.html',     texto: 'Los QR de las mesas' },
       { url: 'propinas.html',    texto: 'Las propinas de los mozos' },
       { url: 'diseno.html',      texto: 'El diseño del local' },
+      { url: 'alta.html',        texto: 'Activar los avisos' },
       /* Ultimo y con el nombre de lo que es. No se esconde: la duenia tiene
          que poder llegar sin que nadie le pase la direccion por WhatsApp. */
       { url: 'tecnico.html',     texto: 'Panel técnico' }
@@ -889,18 +994,25 @@
       { url: 'mozo.html',     texto: 'Los pedidos de las mesas' },
       { url: 'mesas.html',    texto: 'Gestionar mesas' },
       { url: 'cobrar.html',   texto: 'Cobrar con QR' },
-      { url: 'propinas.html', texto: 'Mis propinas' }
+      { url: 'propinas.html', texto: 'Mis propinas' },
+      /* AJ-008: entro a la lista de cada puesto cuando se saco "Todas las
+         pantallas" de la portada. Sin esto, esconder esa lista dejaba al
+         mozo, a la cocina y a la caja sin ninguna puerta a la pantalla que
+         activa los avisos en su celular: se les apagaba el telefono. */
+      { url: 'alta.html',     texto: 'Activar los avisos' }
     ],
     Caja: [
       { url: 'caja.html',   texto: 'Los pagos' },
-      { url: 'cobrar.html', texto: 'Mostrar el QR de cobro' }
+      { url: 'cobrar.html', texto: 'Mostrar el QR de cobro' },
+      { url: 'alta.html',   texto: 'Activar los avisos' }
     ],
     Cocina: [
       { url: 'cocina.html',      texto: 'Las comandas' },
       /* Va a la carta entera y NO al filtro de agotados: si preseleccionara
          "solo los que se terminaron", el cocinero caeria en una lista vacia
          justo cuando todavia no marco nada, que es siempre la primera vez. */
-      { url: 'carta-fotos.html', texto: 'Marcar lo que se termin\u00f3' }
+      { url: 'carta-fotos.html', texto: 'Marcar lo que se termin\u00f3' },
+      { url: 'alta.html',        texto: 'Activar los avisos' }
     ]
   };
 
@@ -919,6 +1031,14 @@
     var base = FUNCIONES_POR_ROL[rol] || [];
     try {
       return base.filter(function (f) {
+        /* Dos filtros y hacen cosas distintas. El interruptor apaga una
+           funcion para TODO el local; el permiso dice si ESTE puesto entra.
+           El segundo es de la fase 5 y antes no se consultaba aca: la lista
+           de la portada y el portero de cada pantalla eran dos verdades
+           separadas, y bastaba un renglon mal copiado para que el menu
+           ofreciera una puerta que despues rebotaba (AJ-008).            */
+        var p = permisoDe(f.url, rol);
+        if (p !== 'edita' && p !== 've') return false;
         var llave = LLAVE_DE_PANTALLA[f.url];
         return !llave || func(llave);
       }).map(function (f) {
@@ -2657,6 +2777,95 @@
     return !!(sesion && sesion.qr_pedido_en);
   }
 
+  /* --- Avisar que pagaron NO es haber cobrado (AJ-006) --------------------
+     Tres estados, y son tres cosas distintas:
+
+       pendiente  -> nadie dijo nada todavia
+       avisado    -> el mozo (o el comensal por el QR) dice que ya pago
+       confirmado -> la CAJA lo vio entrar en el posnet
+
+     El paso del medio es el que faltaba. Antes, el mozo parado en la mesa
+     tocaba "ya pago" en cobrar.html y eso escribia pagado=true: la palabra
+     de quien no esta mirando el posnet cerraba la cuenta. Ahora ese boton,
+     desde un puesto que no es caja, deja la marca 'avisado' y manda el push
+     -nada mas-. Confirmar sigue siendo una accion de caja, adentro de la
+     cuenta abierta, y ahora deja escrito QUE PUESTO la hizo.
+
+     La marca va en la base y no solo en el push: un aviso depende de que la
+     cajera haya activado las notificaciones, y esto no se puede perder.   */
+  function avisarQuePago(sb, pedidos, quien, rol) {
+    var lista = [].concat(pedidos || []).filter(Boolean);
+    if (!sb || !lista.length) {
+      return Promise.resolve({ ok: false, motivo: 'No hay conexión con el sistema.' });
+    }
+    var ids = lista.map(function (p) { return p.id; });
+    var mesa = lista[0].mesa || 'Una mesa';
+    var cuanto = lista.reduce(function (t, p) { return t + cobrable(p); }, 0);
+
+    return sb.from(TABLE)
+      .update({ pago_avisado_en: new Date().toISOString(),
+                pago_avisado_por: (quien || '').slice(0, 40) || null,
+                pago_avisado_rol: (rol || '').slice(0, 20) || null })
+      .in('id', ids).eq('pagado', false)
+      .select()
+      .then(function (res) {
+        if (res.error) {
+          humanError(res.error);
+          return { ok: false, motivo: 'No pudimos avisarle a la caja. Probá de nuevo.' };
+        }
+        if (!res.data || !res.data.length) {
+          return { ok: false, motivo: 'Esa cuenta ya figura cobrada.' };
+        }
+        /* Mismo destino que el aviso de pago y que el pedido de QR: el rol
+           'Jonathan' es el que comparten Caja y Duenio. insistir=true porque
+           hay plata sin confirmar y alguien esperando.                    */
+        return avisar(sb, 'Jonathan', 'Avisan que una mesa pagó',
+                      mesa + ' dice que ya pagó ' + money(cuanto) +
+                      '. Confirmalo recién cuando lo veas en el posnet.' +
+                      (quien ? ' Avisa ' + quien + '.' : ''),
+                      lista[0].id, 'caja.html', true)
+          .then(function (r) {
+            return { ok: true, pedidos: res.data, aviso: r };
+          });
+      }, function (e) {
+        humanError(e);
+        return { ok: false, motivo: 'No pudimos avisarle a la caja. Probá de nuevo.' };
+      });
+  }
+
+  function pagoAvisado(pedido) {
+    return !!(pedido && pedido.pago_avisado_en && !pedido.pagado);
+  }
+
+  /* Un aviso de pago por MESA, no uno por ronda. La mesa 9 con dos rondas
+     mandaba dos push identicos, y el importe de cada uno era medio total. */
+  function avisarPagoMesa(sb, pedidos) {
+    var lista = [].concat(pedidos || []).filter(Boolean);
+    if (!lista.length) return Promise.resolve({ ok: false, motivo: 'Sin pedido.' });
+    if (lista.length === 1) return avisarPago(sb, lista[0]);
+
+    liberarSiPagado(sb, lista[0]);
+    var mesa = lista[0].mesa;
+    var cuanto = lista.reduce(function (t, p) { return t + cobrable(p); }, 0);
+    var cuerpo = mesa + ' pagó ' + money(cuanto) + ' (' + lista.length +
+                 ' rondas). Ya podés seguir.';
+
+    avisarWhatsapp(sb, {
+      rol: 'Jonathan',
+      texto: 'Pago confirmado - ' + mesa + '\nTotal: ' + money(cuanto) +
+             '\nRondas: ' + lista.length
+    });
+
+    return avisar(sb, 'Jonathan', 'Pago confirmado', cuerpo, lista[0].id, 'caja.html', false)
+      .then(function (r) {
+        if (!r.ok && r.codigo !== 'sin-destinos') {
+          console.warn('[La Positiva] aviso de pago no llegó: ' +
+                       (r.motivo || 'motivo desconocido'));
+        }
+        return r;
+      });
+  }
+
   /* --- Deshacer un pago confirmado por error ------------------------------
      El duenio: "afuera puede provocarse un error, que en realidad no pago y
      marco como pagado". Confirmar se endurecio (solo adentro del detalle),
@@ -3283,6 +3492,9 @@
     guardarLink: guardarLink,
     pedirQRaCaja: pedirQRaCaja,
     hayPedidoDeQR: hayPedidoDeQR,
+    avisarQuePago: avisarQuePago,
+    pagoAvisado: pagoAvisado,
+    avisarPagoMesa: avisarPagoMesa,
     MOTIVOS_REVERTIR: MOTIVOS_REVERTIR,
     revertirPago: revertirPago,
     client: client,
@@ -3296,6 +3508,7 @@
     isDialogOpen: isDialogOpen,
     ConnBadge: ConnBadge,
     onCleanup: onCleanup,
+    Sonador: Sonador,
     registerSW: registerSW,
     VAPID_PUBLIC: VAPID_PUBLIC,
     pushSoportado: pushSoportado,

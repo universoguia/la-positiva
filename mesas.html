@@ -98,39 +98,83 @@
     fill:var(--muted);pointer-events:none;
   }
 
-  /* La madera dice "aca hay una mesa"; el borde dice como esta.
-     Se separan a proposito: si el estado fuera el color de la tapa, el plano
-     se volveria un semaforo y dejaria de parecer el salon. */
+  /* --------------------------------------- los cinco estados (AJ-002) ---
+     El dueño, mirando el plano: los estados "no se diferencian ni son
+     intuitivos". Tenía razón y se puede explicar: libre y reservada
+     compartían la MISMA tapa (--wood-pale) y ocupada, falta cobrar y para
+     limpiar compartían la otra (--wood). Lo único que las separaba era el
+     color de un borde de 1,7 de ancho, y encima reservada y falta cobrar
+     usaban el mismo ámbar. Cinco estados, dos colores de tapa y un borde
+     finito: de lejos, cinco manchas marrones.
+
+     Lo que se hace ahora, sin sacar la madera ni volver el salón un semáforo:
+
+       1. un HALO del color del estado alrededor de la mesa. Es lo que se ve
+          de lejos y desde arriba: el marrón sigue siendo la mesa y el color
+          rodea, no la pinta.
+       2. una MARCA de forma distinta en la esquina: círculo lleno, triángulo,
+          cuadrado, aro. Quien no distingue bien los colores lee la forma.
+       3. el texto de abajo, que ya estaba y no se toca ("libre", "reservada",
+          "$3.400", "limpiar").
+
+     Semántica de fases anteriores, respetada: verde = listo/libre para
+     vender, ámbar = en curso / falta cobrar, rojo = urgente.           */
+  .mesa-halo{fill:none;pointer-events:none;transition:fill .3s ease,opacity .3s ease}
+  .mesa-marca{pointer-events:none;transition:fill .3s ease,stroke .3s ease}
+
+  /* Libre: la más clara de todas y sin marca. Nada que hacer, nada que
+     mirar: es la única que no lleva ningún adorno, y eso ya la distingue. */
   .e-libre .mesa-f{fill:var(--wood-pale);stroke:#c4b298;stroke-dasharray:2.2 1.8;stroke-width:.8}
   .e-libre .mesa-n{fill:var(--muted)}
   .e-libre .mesa-i{fill:var(--muted-soft)}
 
-  .e-ocupada .mesa-f{fill:var(--wood);stroke:var(--wood-dark);stroke-width:.9}
-  .e-ocupada .mesa-n{fill:#fdf6ea}
-  .e-ocupada .mesa-i{fill:#fdf6ea}
-
-  .e-debe .mesa-f{fill:var(--wood);stroke:var(--warn);stroke-width:1.7}
-  .e-debe .mesa-n{fill:#fdf6ea}
-  .e-debe .mesa-i{fill:#fdf6ea}
-
-  /* Debe plata Y la ronda mas vieja sin pagar lleva 15+ min (mismo umbral
-     que "urgente" en cocina.html): mismo color de alerta que el resto de
-     los paneles, en vez del ambar generico de "falta cobrar". */
-  .e-debe-urgente .mesa-f{fill:var(--wood);stroke:var(--err);stroke-width:1.7}
-  .e-debe-urgente .mesa-n{fill:#fdf6ea}
-  .e-debe-urgente .mesa-i{fill:#fdf6ea}
-
+  /* Reservada: tapa clara como libre -todavía no hay nadie- pero con halo y
+     marca en ámbar, y en TRIÁNGULO, que no se repite en ningún otro estado. */
   .e-reservada .mesa-f{fill:var(--wood-pale);stroke:var(--warn);stroke-dasharray:2.6 1.8;stroke-width:1.2}
   .e-reservada .mesa-n{fill:var(--warn)}
   .e-reservada .mesa-i{fill:var(--warn)}
+  .e-reservada .mesa-halo{fill:var(--warn);opacity:.20}
+  .e-reservada .mesa-marca{fill:var(--warn)}
 
-  .e-limpieza .mesa-f{fill:var(--wood);stroke:var(--ok);stroke-width:1.7}
+  /* Ocupada: comiendo, todo en orden, nada que hacer. Madera llena, sin
+     halo de color y con un punto crema discreto. Es el estado "normal" y
+     por eso es el más callado de los cinco. */
+  .e-ocupada .mesa-f{fill:var(--wood);stroke:var(--wood-dark);stroke-width:1.1}
+  .e-ocupada .mesa-n{fill:#fdf6ea}
+  .e-ocupada .mesa-i{fill:#fdf6ea}
+  .e-ocupada .mesa-halo{fill:var(--wood-dark);opacity:.16}
+  .e-ocupada .mesa-marca{fill:#fdf6ea;opacity:.75}
+
+  /* Falta cobrar: hay plata en la mesa. Halo ámbar fuerte, borde grueso y
+     marca CUADRADA. El importe ya va escrito abajo. */
+  .e-debe .mesa-f{fill:var(--wood);stroke:var(--warn);stroke-width:2.1}
+  .e-debe .mesa-n{fill:#fdf6ea}
+  .e-debe .mesa-i{fill:#fff3dc}
+  .e-debe .mesa-halo{fill:var(--warn);opacity:.34}
+  .e-debe .mesa-marca{fill:var(--warn)}
+
+  /* Debe plata Y la ronda mas vieja sin pagar lleva 15+ min (mismo umbral
+     que "urgente" en cocina.html): mismo color de alerta que el resto de
+     los paneles, en vez del ambar generico de "falta cobrar". Misma forma
+     cuadrada -sigue siendo "falta cobrar"- y el rojo dice que ya es tarde. */
+  .e-debe-urgente .mesa-f{fill:var(--wood);stroke:var(--err);stroke-width:2.4}
+  .e-debe-urgente .mesa-n{fill:#fdf6ea}
+  .e-debe-urgente .mesa-i{fill:#ffe6e0}
+  .e-debe-urgente .mesa-halo{fill:var(--err);opacity:.40}
+  .e-debe-urgente .mesa-marca{fill:var(--err)}
+
+  /* Para limpiar: ya pagó, es la única que se puede volver a vender. Verde,
+     marca en ARO (hueco, distinto del punto lleno de ocupada) y el latido
+     suave que ya tenía. */
+  .e-limpieza .mesa-f{fill:var(--wood);stroke:var(--ok);stroke-width:2.1}
   .e-limpieza .mesa-n{fill:#fdf6ea}
-  .e-limpieza .mesa-i{fill:#fdf6ea}
+  .e-limpieza .mesa-i{fill:#e6f2ec}
+  .e-limpieza .mesa-halo{fill:var(--ok);opacity:.34}
+  .e-limpieza .mesa-marca{fill:none;stroke:var(--ok);stroke-width:1.1}
 
-  .mesa-g:hover .mesa-f{stroke-width:2.2}
+  .mesa-g:hover .mesa-f{stroke-width:2.6}
   .mesa-g:focus-visible{outline:none}
-  .mesa-g:focus-visible .mesa-f{stroke:var(--accent);stroke-width:2}
+  .mesa-g:focus-visible .mesa-f{stroke:var(--accent);stroke-width:2.4}
 
   /* Late suave: la que ya pago y hay que levantar es la unica que se puede
      volver a vender, asi que es la unica que llama. */
@@ -143,12 +187,34 @@
     padding-top:11px;border-top:1px dashed var(--border);
   }
   .leyenda span{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted);white-space:nowrap}
-  .leyenda i{width:13px;height:13px;border-radius:4px;border:1.5px solid;flex:none}
+  /* La muestra de la leyenda repite lo que se ve en el plano: la tapa de
+     madera, el halo de color alrededor (box-shadow) y la forma de la marca.
+     Si la leyenda no se parece a la mesa, la leyenda no sirve. */
+  .leyenda i{
+    width:13px;height:13px;border-radius:4px;border:1.5px solid;flex:none;
+    position:relative;
+  }
+  .leyenda i::after{
+    content:'';position:absolute;top:1px;right:1px;width:4px;height:4px;
+  }
   .l-libre{background:var(--wood-pale);border-color:#c4b298;border-style:dashed}
-  .l-reservada{background:var(--wood-pale);border-color:var(--warn);border-style:dashed}
+  .l-reservada{
+    background:var(--wood-pale);border-color:var(--warn);border-style:dashed;
+    box-shadow:0 0 0 2px rgba(107,70,16,.20);
+  }
+  /* Triangulo, igual que en el plano. */
+  .l-reservada::after{
+    width:0;height:0;border-left:2.5px solid transparent;border-right:2.5px solid transparent;
+    border-bottom:4.5px solid var(--warn);
+  }
   .l-ocupada{background:var(--wood);border-color:var(--wood-dark)}
-  .l-debe{background:var(--wood);border-color:var(--warn)}
-  .l-limpieza{background:var(--wood);border-color:var(--ok)}
+  .l-ocupada::after{border-radius:50%;background:rgba(253,246,234,.8)}
+  .l-debe{background:var(--wood);border-color:var(--warn);box-shadow:0 0 0 2px rgba(107,70,16,.34)}
+  .l-debe::after{background:var(--warn)}           /* cuadrado */
+  .l-debe-urgente{background:var(--wood);border-color:var(--err);box-shadow:0 0 0 2px rgba(154,47,28,.40)}
+  .l-debe-urgente::after{background:var(--err)}    /* mismo cuadrado, otro color */
+  .l-limpieza{background:var(--wood);border-color:var(--ok);box-shadow:0 0 0 2px rgba(20,81,54,.34)}
+  .l-limpieza::after{border-radius:50%;border:1.2px solid var(--ok)}   /* aro */
 
   /* ----------------------------------------------------------- la hoja -- */
   .hoja-sub{font-size:14px;color:var(--muted);margin:-6px 0 14px}
@@ -246,11 +312,15 @@
   <div class="plano-caja" id="planoCaja" hidden>
     <svg class="plano" id="plano" viewBox="-8 -8 116 150" role="group"
          aria-label="Plano del sal&oacute;n: cada mesa es un bot&oacute;n"></svg>
+    <!-- AJ-002: la leyenda ahora muestra lo mismo que el plano -tapa, halo y
+         forma de la marca-, y dice la sexta lectura que antes no estaba en
+         ningún lado: cuando el ámbar se pone rojo. -->
     <div class="leyenda">
       <span><i class="l-libre"></i>Libre</span>
       <span><i class="l-reservada"></i>Reservada</span>
       <span><i class="l-ocupada"></i>Ocupada</span>
       <span><i class="l-debe"></i>Falta cobrar</span>
+      <span><i class="l-debe-urgente"></i>Falta cobrar hace rato</span>
       <span><i class="l-limpieza"></i>Para limpiar</span>
     </div>
   </div>
@@ -568,6 +638,43 @@ document.addEventListener('DOMContentLoaded', function () {
       deLaPlanta.map(mesaSVG).join('');
   }
 
+  /* AJ-002, la segunda mitad: que el estado NO dependa solo del color.
+     Una marca chica en la esquina de arriba a la derecha, y cada estado usa
+     una FORMA distinta:
+
+       libre      nada           (no hay nada que hacer)
+       reservada  triangulo
+       ocupada    punto lleno crema
+       falta cobrar / urgente   cuadrado  (el color dice si ya es tarde)
+       para limpiar             aro hueco
+
+     El que no distingue bien ambar de verde -entre el 5 y el 8% de los
+     varones- lee la forma. El color queda como refuerzo, no como el dato. */
+  function marcaDeEstado(t, x, y, an, al) {
+    var cual = claseDe(t);
+    if (cual === 'e-libre') return '';
+    // Pegada al borde de la tapa, adentro: no se pisa con el numero (centro)
+    // ni con el pie (abajo).
+    var mx = x + an / 2 - 2.1;
+    var my = y - al / 2 + 2.1;
+    var r = 1.5;
+
+    if (cual === 'e-reservada') {
+      return '<path class="mesa-marca" d="M' + mx + ' ' + (my - r) +
+             'L' + (mx + r) + ' ' + (my + r * 0.8) +
+             'L' + (mx - r) + ' ' + (my + r * 0.8) + 'Z"/>';
+    }
+    if (cual === 'e-debe' || cual === 'e-debe-urgente') {
+      return '<rect class="mesa-marca" x="' + (mx - r) + '" y="' + (my - r) +
+             '" width="' + (r * 2) + '" height="' + (r * 2) + '" rx="0.4"/>';
+    }
+    if (cual === 'e-limpieza') {   // aro hueco
+      return '<circle class="mesa-marca" cx="' + mx + '" cy="' + my + '" r="' + r + '"/>';
+    }
+    // Ocupada: punto lleno, el mas discreto de todos.
+    return '<circle class="mesa-marca" cx="' + mx + '" cy="' + my + '" r="' + (r * 0.8) + '"/>';
+  }
+
   function mesaSVG(t) {
     var m = t.mesa;
     var x = Number(m.x), y = Number(m.y);
@@ -583,6 +690,18 @@ document.addEventListener('DOMContentLoaded', function () {
       : '<rect class="mesa-f' + late + '" x="' + (x - an / 2) + '" y="' + (y - al / 2) +
           '" width="' + an + '" height="' + al + '" rx="2.5"/>';
 
+    /* AJ-002: el halo. Es la misma forma un poco mas grande, dibujada DEBAJO
+       de la mesa, con el color del estado. Desde arriba se lee como un aro
+       de color alrededor de la madera: la tapa sigue siendo madera y el
+       plano sigue pareciendo el salon. Sin estado no se pinta nada (el CSS
+       lo deja en fill:none), asi que libre y ocupada no ganan ruido. */
+    var G = 1.9;                                   // cuanto sobresale el halo
+    var halo = redonda
+      ? '<ellipse class="mesa-halo" cx="' + x + '" cy="' + y +
+          '" rx="' + (an / 2 + G) + '" ry="' + (al / 2 + G) + '"/>'
+      : '<rect class="mesa-halo" x="' + (x - an / 2 - G) + '" y="' + (y - al / 2 - G) +
+          '" width="' + (an + G * 2) + '" height="' + (al + G * 2) + '" rx="4"/>';
+
     var pie = t.estado === 'Libre'
       ? (m.capacidad ? m.capacidad + ' pers.' : '')
       : (t.cuenta && t.cuenta.debe > 0 ? money(t.cuenta.debe)
@@ -593,7 +712,9 @@ document.addEventListener('DOMContentLoaded', function () {
         'role="button" tabindex="0" ' +
         'aria-label="' + esc(t.etiqueta + ', ' + textoEstado(t)) + '">' +
         sillas(m, x, y, an, al) +
+        halo +
         figura +
+        marcaDeEstado(t, x, y, an, al) +
         '<text class="mesa-n" x="' + x + '" y="' + (y - (pie ? 1.6 : 0)) + '">' +
           esc(m.numero) + '</text>' +
         (pie ? '<text class="mesa-i" x="' + x + '" y="' + (y + al / 2 - 3.2) + '">' +

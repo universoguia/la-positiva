@@ -253,7 +253,22 @@
     <p class="demo-nota">Es una mesa de ejemplo. Las mesas de verdad entran por su c&oacute;digo QR.</p>
   </div>
 
-  <details class="todas">
+  <!-- AJ-008: esta lista abre TODAS las pantallas del sistema, y estaba al pie
+       de la portada para cualquiera. El mozo entraba y tenia ahi abajo la
+       caja, el panel tecnico y los QR de las mesas.
+
+       Ahora la decide el puesto, desde el JS de abajo: la ve la duenia y la ve
+       el que todavia no dijo quien es (la puerta de la demo, que tiene que
+       poder mostrar el sistema entero). Los puestos operativos -mozo, cocina,
+       caja- ven arriba sus accesos y nada mas.
+
+       Esto es la capa de adentro, no el candado: el candado es
+       LP.guardaDeSeccion(), que corre arriba de todo en cada pantalla y rebota
+       al que entra escribiendo la direccion a mano.
+
+       Nace escondido y lo muestra el JS: al reves, el que entra como mozo
+       veria la lista un instante antes de que se la saquen. -->
+  <details class="todas" id="todasBox" hidden>
     <summary><span>Todas las pantallas del sistema</span><span class="mas">Ver</span></summary>
     <div class="cuerpo">
       <ul>
@@ -299,18 +314,43 @@ document.addEventListener('DOMContentLoaded', function () {
     return p.rol === 'Duenio' ? ' duenio' : (p.rol === 'Cocina' ? ' cocina' : '');
   }
 
+  /* AJ-001: tocar tu nombre YA NO te tira adentro de una pantalla.
+
+     Antes esto hacia location.href = pantallaDe(rol), asi que el mozo tocaba
+     "Jonathan" y aparecia de cabeza en la lista de pedidos de las mesas, sin
+     haber visto nunca su panel ni sus otros accesos. "Los pedidos" es UNA de
+     las cosas que hace, no la puerta.
+
+     Ahora queda en la misma portada, que pasa al estado "ya se quien sos": su
+     nombre, su puesto y sus accesos, con el principal lleno. Un toque mas y
+     entra donde quiere. El archivo ya decia esto arriba ("No entra sola a
+     ninguna") y era cierto solo a la segunda visita.                      */
   function entrar(p) {
     LP.entrarComo(p);
-    location.href = LP.pantallaDe(p.rol);
+    previo = p;
+    pintarPuerta();
+    try { window.scrollTo(0, 0); } catch (e) {}
   }
 
   var elYo = document.getElementById('yo');
   var misCosas = document.getElementById('misCosas');
+  var todasBox = document.getElementById('todasBox');
+
+  /* AJ-008: quien ve la lista de todas las pantallas. La duenia si -entra a
+     todo por definicion- y el que todavia no dijo quien es tambien, porque
+     esa es la puerta con la que se muestra el sistema. Mozo, cocina y caja
+     no: arriba tienen sus accesos. */
+  function pintarTodas(yo) {
+    if (!todasBox) return;
+    todasBox.hidden = !!(yo && yo.rol && yo.rol !== 'Duenio');
+    if (todasBox.hidden) todasBox.open = false;
+  }
 
   /* Dibuja la puerta segun si el telefono ya sabe quien sos. Se llama al
      entrar y cada vez que eso cambia (al salir).                        */
   function pintarPuerta() {
     var yo = LP.quienSoy();
+    pintarTodas(yo);
     if (!yo) {
       elYo.hidden = true;
       cont.hidden = false;

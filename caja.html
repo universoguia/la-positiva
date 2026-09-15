@@ -58,12 +58,52 @@
   }
   .plines div{font-size:15px;padding:3px 0;display:flex;gap:8px}
   .plines .q{font-weight:600;min-width:26px;font-variant-numeric:tabular-nums}
+
+  /* Una mesa, un recuadro, y adentro sus rondas (AJ-004). La ronda se separa
+     con una linea fina y su propia cabecera: se tiene que poder decir "esto
+     lo pidieron a las nueve y esto a las diez" sin abrir nada.
+
+     El display:block NO es decorativo: la regla de arriba pone flex a TODOS
+     los div de .plines, y sin esto el bloque de la ronda se volvia una fila
+     y la cabecera terminaba al lado de los platos en vez de arriba. */
+  .plines .pronda{display:block}
+  .pronda + .pronda{margin-top:9px;padding-top:9px;border-top:1px dotted var(--border)}
+  .pronda-top{
+    display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+    font-size:13px;color:var(--muted);padding:0 0 2px;
+  }
+  .pronda-top b{color:var(--muted-strong);font-variant-numeric:tabular-nums;flex:none}
+  /* La ronda que ya se cobro se ve, pero apagada: sigue siendo parte de la
+     cuenta de la mesa y no se puede esconder. */
+  .pronda.pagada{opacity:.62}
+  .det-ronda{
+    font-size:13px;color:var(--muted);margin:10px 0 2px;
+    padding-top:8px;border-top:1px dotted var(--border);
+  }
+  .det-lineas > .det-ronda:first-child{margin-top:0;padding-top:0;border-top:0}
   .ptotal{font-weight:600;font-size:18px;text-align:right;font-variant-numeric:tabular-nums}
   .pfoot{margin-top:12px}
   .pnote{font-size:14px;margin-top:8px}
   .pnote.ok{color:var(--ok)}
   .pnote.warn{color:var(--warn)}
   .pnote:empty{display:none}
+
+  /* -------------------------------------------------- aviso que suena ---
+     AJ-003. Esta pantalla no tenia una sola linea de audio: en caja no
+     sonaba nada porque no habia nada que sonara. La barra aparece cuando el
+     aviso NO va a funcionar, que es el unico momento en que sirve decirlo. */
+  .alerta-barra{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    margin:0 0 16px;padding:13px 16px;border-radius:var(--r-md);
+    background:var(--warn-soft);border:1px solid var(--warn-border);
+    color:var(--warn);font-size:15px;line-height:1.45;
+  }
+  .alerta-barra p{margin:0;flex:1;min-width:220px}
+  .alerta-barra strong{display:block;color:var(--ink);margin-bottom:2px}
+  .alerta-barra .btn{flex:none;padding:9px 18px;font-size:15px}
+  .alerta-barra[hidden]{display:none}
+  #sonidoBtn.on{border-color:var(--ok-border);color:var(--ok);background:var(--ok-soft)}
+  #sonidoBtn.off{border-color:var(--warn-border);color:var(--warn);background:var(--warn-soft)}
 
   /* Esqueleto de carga a la altura de una ficha real (medida: 249px).
      Pendientes ademas reserva ese alto de forma permanente: si encogiera
@@ -88,7 +128,7 @@
   /* El vacio se lee como "vacio a proposito": tarjeta punteada, no un
      hueco gris. La reserva de alto se mantiene (anti-salto). */
   .cards .estado-vacio{grid-column:1/-1}
-  .qr-link + .btn,.pdevolver + .btn{margin-top:10px}
+  .pdevolver + .btn{margin-top:10px}
   .pnote + .btn{margin-top:8px}
   [data-body="pend"] .estado-vacio{min-height:249px;display:flex;align-items:center;justify-content:center}
 
@@ -115,10 +155,8 @@
     background:#fff;border:1px solid var(--border);
     border-radius:var(--r-md);padding:12px;margin-bottom:14px;
   }
-  .qr-actual img{
-    width:96px;height:96px;flex:none;object-fit:contain;
-    background:#fff;border-radius:var(--r-sm);border:1px solid var(--border);
-  }
+  /* La imagen ya no es un <img> suelto: vive adentro del boton .qr-mini de
+     "ver grande" (AJ-005), y el tamanio lo pone esa regla. */
   .qr-actual .meta{min-width:0}
   .qr-actual .meta strong{display:block;font-size:16px}
   .qr-actual .meta span{display:block;color:var(--muted);font-size:14px;margin-top:2px}
@@ -129,23 +167,34 @@
   /* Alto reservado: el aviso vacio y la ficha del QR cargado ocupan casi lo
      mismo, asi que pasar de uno a otro no mueve nada debajo. */
   #qrEstado{min-height:136px}
-  /* ------------------------------------------------ link del QR ------- */
-  .qr-link{margin-top:16px;padding-top:14px;border-top:1px dashed var(--border-strong)}
-  .qr-link label{display:block;font-size:16px;color:var(--muted-strong);margin-bottom:4px}
-  /* Alto reservado: el texto cambia segun el caso y este panel esta arriba
-     de las listas, asi que crecer moveria todo lo de abajo. */
-  .qr-link-nota{margin:0 0 10px;color:var(--muted);font-size:14px;line-height:1.45;min-height:40px}
-  .qr-link-nota.aviso{color:var(--warn)}
-  .qr-link-row{display:flex;gap:8px;flex-wrap:wrap}
-  .qr-link-row input{
-    flex:999 1 220px;min-width:0;min-height:var(--tap);padding:11px 12px;
-    border-radius:var(--r-sm);border:1px solid var(--border-strong);
-    background:#fff;color:var(--ink);
-  }
-  .qr-link-row input[aria-invalid="true"]{border-color:var(--err);background:var(--err-bg)}
-  /* Si no entra al lado del input (celular), baja y ocupa todo el ancho. */
-  .qr-link-row .btn{flex:1 0 120px}
 
+  /* -------------------------------------------- ver el QR grande (AJ-005) */
+  .qr-mini{
+    flex:none;padding:0;border:0;background:none;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+  }
+  .qr-mini img{
+    width:96px;height:96px;object-fit:contain;display:block;
+    background:#fff;border-radius:var(--r-sm);border:1px solid var(--border);
+    transition:border-color .15s;
+  }
+  .qr-mini .lupa{font-size:12.5px;color:var(--accent);text-decoration:underline}
+  @media (hover:hover){
+    .qr-mini:hover img{border-color:var(--accent)}
+  }
+  .qr-mini:focus-visible img{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* Grande de verdad: se lee desde el otro lado del mostrador. Se acota con
+     la altura de la ventana para que el titulo y la X no queden afuera. */
+  .qr-grande-panel{max-width:560px;text-align:center}
+  .qr-grande-img{
+    display:block;margin:6px auto 4px;background:#fff;border-radius:var(--r-sm);
+    width:min(78vw, 420px, calc(100svh - 230px));
+    height:auto;aspect-ratio:1/1;object-fit:contain;
+    border:1px solid var(--border);
+  }
+  /* Los estilos del bloque "Link de pago" se fueron con el bloque (AJ-007).
+     Sobrevive .qr-link-label, que lo usa el selector de mesa de abajo. */
   /* ------------------------------------------- elegir la mesa del QR --- */
   /* Un renglón por mesa abierta, de 52px, que se toca entero. Lo mismo que
      usa cobrar.html para elegir a quién se le cobra: un gesto solo en todo
@@ -252,9 +301,20 @@
       <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
         <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
       </span>
+      <!-- AJ-003: la caja no tenia ningun aviso sonoro. Ahora lo tiene, y se
+           prende y se apaga desde acá, como en cocina y en el salón. -->
+      <button type="button" class="btn btn-secondary" id="sonidoBtn"
+              aria-pressed="true">Sonido</button>
       <a class="back-link" href="./">Volver al inicio</a>
     </div>
   </header>
+
+  <!-- Solo aparece cuando el aviso NO va a sonar: o falta el toque que pide
+       el navegador, o alguien lo apagó. Si anda, no dice nada. -->
+  <div class="alerta-barra" id="alertaBarra" role="status" aria-live="polite" hidden>
+    <p><strong id="alertaTitulo"></strong><span id="alertaTexto"></span></p>
+    <button type="button" class="btn btn-primary" id="alertaBtn"></button>
+  </div>
 
   <!-- El QR ya NO es del local: es de cada mesa, y por mesa quiere decir por
        visita. La mesa 5 de hoy y la mesa 5 de mañana son dos cuentas y no
@@ -303,20 +363,16 @@
       <input type="file" id="qrFile" accept="image/*" class="visually-hidden">
       <p class="qr-msg" id="qrMsg" role="status" aria-live="polite"></p>
 
-      <!-- Bloque fijo en el HTML: si lo creara el JS, el panel creceria
-           despues del primer pintado y empujaria las listas de abajo. -->
-      <div class="qr-link">
-        <label for="qrLinkInput">Link de pago (opcional)</label>
-        <p class="qr-link-nota" id="qrLinkNota">
-          Sirve para mandárselo por mensaje a alguien que esta en otra mesa o en el piso de arriba.
-        </p>
-        <div class="qr-link-row">
-          <input id="qrLinkInput" type="url" inputmode="url" autocomplete="off"
-                 placeholder="https://mpago.la/..." aria-describedby="qrLinkNota">
-          <button type="button" class="btn btn-secondary" id="qrLinkSave">Guardar</button>
-        </div>
-        <p class="qr-msg" id="qrLinkMsg" role="status" aria-live="polite"></p>
-      </div>
+      <!-- AJ-007: acá vivía "Link de pago (opcional)", con su campo y su
+           botón Guardar. El dueño pidió sacarlo de este flujo: la cajera
+           está subiendo la foto del QR de una mesa, y el campo del link era
+           un segundo trabajo metido en el medio que casi nunca se hace.
+
+           Se saca la INTERFAZ, no la función. La columna link_pago sigue en
+           la base, LP.guardarLink() sigue en app.js, y el link que el propio
+           QR trae adentro se sigue leyendo solo al subirlo (subirQR lo
+           decodifica) y se sigue usando en la pantalla de cobro. Si mañana
+           vuelve a hacer falta cargarlo a mano, es devolver este bloque. -->
 
       <!-- Dos momentos distintos y se dice acá, en la pantalla donde se hace
            el primero: cargar el QR no es haber cobrado. -->
@@ -390,6 +446,20 @@
   </div>
 </div>
 
+<!-- AJ-005: el QR de la mesa, grande y legible a distancia.
+     Solo muestra. No reemplaza el QR, no confirma ningún pago y no escribe
+     una sola fila: cerrarla deja todo exactamente como estaba. -->
+<div class="sheet" id="qrGrande" hidden role="dialog" aria-modal="true" aria-labelledby="qrGrandeTit">
+  <div class="sheet-panel qr-grande-panel">
+    <div class="sheet-head">
+      <h2 id="qrGrandeTit">QR de la mesa</h2>
+      <button type="button" class="close-x" id="qrGrandeX" aria-label="Cerrar">&#10005;</button>
+    </div>
+    <p class="det-sub" id="qrGrandeSub"></p>
+    <img id="qrGrandeImg" class="qr-grande-img" src="" alt="" decoding="async">
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
 <script src="config.js" defer></script>
 <script src="app.js" defer></script>
@@ -410,52 +480,151 @@ document.addEventListener('DOMContentLoaded', function () {
   var wrap = document.querySelector('.wrap');
 
   var orders = [];
+  var sesiones = {};                      // sesion_id -> fila, para agrupar
   var loaded = false;
   var soy = LP.quienSoy();
   var YO = (soy && soy.nombre) || 'Caja';
+  var MI_ROL = (soy && soy.rol) || 'Caja';
 
   var devoluciones = [];                  // fichas con plata para devolver
   var devolviendo = Object.create(null);
 
   var pending = Object.create(null);      // confirmacion de pago en curso
-  var notifyState = Object.create(null);  // id -> 'ok' | 'fail'
+  var notifyState = Object.create(null);  // clave de mesa -> 'ok' | 'fail'
   var notifying = Object.create(null);
+
+  /* ------------------------------------------- una mesa, un recuadro ----
+     AJ-004. La cocina y el salon ya agrupaban las rondas por mesa desde la
+     fase 2; la caja se habia quedado afuera. El resultado, en el testing:
+     la mesa 9 aparecia DOS VECES en "Pagos pendientes" -pedido #128 y pedido
+     #129-, cada una con su propio "Abrir la cuenta para cobrar". Dos
+     recuadros con el mismo nombre parecen dos cuentas distintas, y cobrar
+     una y dejar la otra es exactamente lo que pasa cuando parecen dos.
+
+     Se reusa LP.agruparPorMesa(), la misma de la fase 2: una mesa es una
+     VISITA (la sesion), no un nombre. La mesa 9 de hoy y la mesa 9 de
+     maniana no se juntan nunca. Nada se deduplica: si pidieron dos veces la
+     misma milanesa, van las dos.
+
+     El total se calcula como UNA mesa y el cobro no se divide: se confirman
+     todas las rondas sin pagar de esa mesa en una sola escritura.       */
+  function gruposDe(lista) { return LP.agruparPorMesa(lista, sesiones); }
+
+  // Las rondas de esa mesa que todavia no se cobraron.
+  function porCobrar(caja) {
+    return caja.rondas.filter(function (p) { return !p.pagado; });
+  }
+
+  // Lo que hay que cobrarle a la mesa: la suma de sus rondas impagas, ya
+  // descontado lo que el mozo saco de cada una.
+  function totalDe(caja) {
+    return porCobrar(caja).reduce(function (t, p) { return t + LP.cobrable(p); }, 0);
+  }
+
+  function totalCobrado(caja) {
+    return caja.rondas.filter(function (p) { return p.pagado; })
+      .reduce(function (t, p) { return t + LP.cobrable(p); }, 0);
+  }
+
+  function estaPaga(caja) { return porCobrar(caja).length === 0; }
+
+  // Alguien del salon dijo "esta mesa ya pago" y la caja todavia no lo vio
+  // entrar. Es el estado del medio de AJ-006: avisado, no confirmado.
+  function avisadoDe(caja) {
+    var cual = null;
+    porCobrar(caja).forEach(function (p) {
+      if (!LP.pagoAvisado(p)) return;
+      if (!cual || new Date(p.pago_avisado_en) > new Date(cual.pago_avisado_en)) cual = p;
+    });
+    return cual;
+  }
 
   /* Mismo criterio de "urgente" que cocina.html (15 min): un pago pendiente
      que lleva ese tiempo sin cobrarse se marca con el mismo rojo de alerta
      que el resto de los paneles, en vez de quedar igual que uno recien
-     llegado. */
+     llegado. Sobre la mesa: manda la ronda impaga mas vieja. */
   var ESPERA_URGENTE_MIN = 15;
   function minutesOld(o) {
     return Math.max(0, Math.round((Date.now() - new Date(o.created_at).getTime()) / 60000));
   }
-  function esUrgente(o, modo) {
-    return modo !== 'dev' && !o.pagado && minutesOld(o) >= ESPERA_URGENTE_MIN;
+  function esUrgente(caja, modo) {
+    if (modo === 'dev' || estaPaga(caja)) return false;
+    return porCobrar(caja).some(function (p) {
+      return minutesOld(p) >= ESPERA_URGENTE_MIN;
+    });
   }
 
   /* -------------------------------------------------------- tarjetas -- */
-  function signature(o) {
-    return [o.id, o.pagado, o.updated_at, LP.timeAgo(o.created_at), pending[o.id] ? 1 : 0,
-            notifying[o.id] ? 1 : 0, notifyState[o.id] || '',
-            LP.pendienteDeDevolver(o), devolviendo[o.id] ? 1 : 0].join('|');
+  var METODOS = {
+    Efectivo: 'Efectivo al mozo',
+    QR: 'QR desde el celular',
+    Tarjeta: 'Tarjeta (simulado)'
+  };
+
+  /* Como paga la mesa. Casi siempre es uno solo; si dos rondas entraron por
+     caminos distintos se dicen los dos, porque la cajera los tiene que
+     buscar en dos lugares. */
+  function metodoDe(caja) {
+    var vistos = [];
+    caja.rondas.forEach(function (p) {
+      var m = METODOS[p.metodo_pago] || 'Sin especificar';
+      if (vistos.indexOf(m) === -1) vistos.push(m);
+    });
+    return vistos.join(' y ');
   }
 
-  function cardHTML(o, modo) {
-    // Los platos que el mozo saco se muestran tachados, no escondidos: la
-    // caja tiene que poder decirle al cliente que fue lo que no se le cobra.
-    var lines = LP.lineasDe(o).map(function (l) {
+  /* Los platos que el mozo saco se muestran tachados, no escondidos: la caja
+     tiene que poder decirle al cliente que fue lo que no se le cobra. */
+  function lineasHTML(p) {
+    return LP.lineasDe(p).map(function (l) {
       var fuera = LP.lineaSacada(l);
       return '<div' + (fuera ? ' class="fuera"' : '') + '>' +
         '<span class="q">' + esc(l.qty) + '&times;</span><span>' + esc(l.name) + '</span></div>';
     }).join('');
-    var METODOS = {
-      Efectivo: 'Efectivo al mozo',
-      QR: 'QR desde el celular',
-      Tarjeta: 'Tarjeta (simulado)'
-    };
-    var metodo = METODOS[o.metodo_pago] || 'Sin especificar';
-    var busy = !!pending[o.id];
-    var nstate = notifyState[o.id];
+  }
+
+  /* El detalle de la mesa, ronda por ronda. Con una sola ronda no se pone
+     titulo: escribir "Ronda 1" arriba de la unica ronda es ruido. */
+  function rondasHTML(caja) {
+    var una = caja.rondas.length === 1;
+    return caja.rondas.map(function (p, i) {
+      if (una) return lineasHTML(p);
+      return '<div class="pronda' + (p.pagado ? ' pagada' : '') + '">' +
+          '<div class="pronda-top">' +
+            '<span>Ronda ' + (i + 1) + ' &middot; #' + esc(p.id) +
+              ' &middot; ' + esc(LP.timeAgo(p.created_at)) +
+              (p.cliente ? ' &middot; ' + esc(p.cliente) : '') + '</span>' +
+            '<b>' + money(LP.cobrable(p)) + (p.pagado ? ' &middot; paga' : '') + '</b>' +
+          '</div>' +
+          lineasHTML(p) +
+        '</div>';
+    }).join('');
+  }
+
+  // Envuelve un pedido suelto como si fuera una mesa de una sola ronda. Lo
+  // usan las devoluciones, que siguen siendo por pedido y no por mesa.
+  function cajaDeUno(o) {
+    return { clave: 'd' + o.id, mesa: o.mesa, rondas: [o], sesionId: o.sesion_id || null,
+             comensales: null, sinCuenta: !o.sesion_id, desde: o.created_at,
+             ultima: o.created_at, uno: o };
+  }
+
+  function signature(caja) {
+    var k = caja.clave;
+    return [k, caja.rondas.map(function (p) {
+      return p.id + ':' + p.pagado + ':' + p.updated_at + ':' + (p.pago_avisado_en || '') +
+             ':' + LP.timeAgo(p.created_at) + ':' + LP.pendienteDeDevolver(p) +
+             ':' + (devolviendo[p.id] ? 1 : 0);
+    }).join(','), pending[k] ? 1 : 0, notifying[k] ? 1 : 0, notifyState[k] || ''].join('|');
+  }
+
+  function cardHTML(caja, modo) {
+    var k = caja.clave;
+    var busy = !!pending[k];
+    var nstate = notifyState[k];
+    var paga = estaPaga(caja);
+    var cuantas = caja.rondas.length;
+    var o = caja.uno || caja.rondas[0];
 
     var foot;
     if (modo === 'dev') {
@@ -474,7 +643,7 @@ document.addEventListener('DOMContentLoaded', function () {
         '<button type="button" class="btn btn-primary btn-block" data-devuelto="' + esc(o.id) + '"' +
           (devolviendo[o.id] ? ' disabled' : '') + '>' +
           (devolviendo[o.id] ? 'Anotando...' : 'Ya se lo devolví') + '</button>';
-    } else if (o.pagado) {
+    } else if (paga) {
       // Confirmacion persistente en la ficha, ademas del mensaje temporal.
       var nota = '';
       /* Se saco 'Aviso enviado a Jonathan.': era un mensaje de exito que
@@ -482,14 +651,14 @@ document.addEventListener('DOMContentLoaded', function () {
          FALLA, que es la unica de las dos que pide hacer algo. */
       if (nstate === 'fail') {
         nota = '<p class="pnote warn">El pago quedó confirmado, pero el aviso no salió.</p>' +
-          '<button type="button" class="btn btn-secondary btn-block" data-retry="' + esc(o.id) + '"' +
-          (notifying[o.id] ? ' disabled' : '') + '>' +
-          (notifying[o.id] ? 'Reintentando...' : 'Reintentar aviso') + '</button>';
+          '<button type="button" class="btn btn-secondary btn-block" data-retry="' + esc(k) + '"' +
+          (notifying[k] ? ' disabled' : '') + '>' +
+          (notifying[k] ? 'Reintentando...' : 'Reintentar aviso') + '</button>';
       }
       /* Deshacer tampoco vive en la fila: se entra a la cuenta, igual que
          para confirmar. Misma puerta para las dos acciones de plata. */
       foot = '<span class="badge b-ok">Pago confirmado</span>' + nota +
-        '<button type="button" class="btn btn-secondary btn-block" data-ver="' + esc(o.id) + '">' +
+        '<button type="button" class="btn btn-secondary btn-block" data-ver="' + esc(k) + '">' +
           'Ver la cuenta</button>';
     } else {
       /* El botón de confirmar YA NO está acá, y es a propósito.
@@ -499,47 +668,105 @@ document.addEventListener('DOMContentLoaded', function () {
          scrolleando entre diez fichas iguales, daba mesas por cobradas que
          no habían pagado. Ahora hay que abrir la cuenta y ver el importe y
          el detalle. Es una traba deliberada: no se le agregan atajos.      */
-      foot = '<button type="button" class="btn btn-primary btn-block" data-ver="' + esc(o.id) + '"' +
+      var aviso = avisadoDe(caja);
+      /* El ultimo pago deshecho de la mesa. Se dice por que, o la caja cobra
+         dos veces creyendo que nunca se cobro. */
+      var revertida = null;
+      caja.rondas.forEach(function (p) {
+        if (!p.pago_revertido_en) return;
+        if (!revertida || new Date(p.pago_revertido_en) > new Date(revertida.pago_revertido_en)) {
+          revertida = p;
+        }
+      });
+      foot =
+        /* AJ-006: el aviso del salon se ve, pero NO cobra. Va en ambar y no
+           en verde a proposito: todavia no entro la plata. */
+        (aviso
+          ? '<p class="pnote warn">Avisaron que ya pagó (' +
+              esc(aviso.pago_avisado_por || 'sin nombre') +
+              (aviso.pago_avisado_rol ? ', ' + esc(aviso.pago_avisado_rol) : '') +
+              ', ' + esc(LP.timeAgo(aviso.pago_avisado_en)) +
+              '). Falta que lo confirmes vos cuando lo veas en el posnet.</p>'
+          : '') +
+        '<button type="button" class="btn btn-primary btn-block" data-ver="' + esc(k) + '"' +
         (busy ? ' disabled' : '') + '>' +
         (busy ? 'Confirmando...' : 'Abrir la cuenta para cobrar') + '</button>' +
-        /* Un pago que se deshizo vuelve acá. Se dice por qué, o la caja
-           cobra dos veces creyendo que nunca se cobró. */
-        (o.pago_revertido_en
+        (revertida
           ? '<p class="pnote warn">Se deshizo el pago ' +
-              esc(LP.timeAgo(o.pago_revertido_en)) +
-              (o.pago_revertido_por ? ' (' + esc(o.pago_revertido_por) + ')' : '') +
-              ': ' + esc(o.pago_revertido_motivo || 'sin motivo') + '.</p>'
+              esc(LP.timeAgo(revertida.pago_revertido_en)) +
+              (revertida.pago_revertido_por ? ' (' + esc(revertida.pago_revertido_por) + ')' : '') +
+              ': ' + esc(revertida.pago_revertido_motivo || 'sin motivo') + '.</p>'
           : '') +
-        '<p class="pnote warn" data-err="' + esc(o.id) + '" role="alert"></p>';
+        '<p class="pnote warn" data-err="' + esc(k) + '" role="alert"></p>';
     }
+
+    /* La cabecera dice MESA, no pedido. El numero de pedido no desaparece:
+       baja al detalle de cada ronda, que es donde sirve para buscar algo
+       puntual. Arriba, lo que la cajera necesita saber es a que mesa le
+       cobra y cuantas rondas entran en esa cuenta. */
+    var meta = (modo === 'dev')
+      ? 'Pedido #' + esc(o.id) + ' &middot; ' + esc(LP.timeAgo(o.created_at))
+      : (cuantas === 1
+          ? 'Pedido #' + esc(caja.rondas[0].id) +
+            (caja.rondas[0].cliente ? ' &middot; ' + esc(caja.rondas[0].cliente) : '')
+          : cuantas + ' rondas en una sola cuenta') +
+        (caja.comensales ? ' &middot; ' + caja.comensales +
+          (caja.comensales === 1 ? ' persona' : ' personas') : '') +
+        ' &middot; desde ' + esc(LP.timeAgo(caja.desde)) +
+        (esUrgente(caja, modo) ? ' &middot; demorado' : '') +
+        (caja.sinCuenta ? ' &middot; sin cuenta de mesa' : '');
+
+    /* Mesa cobrada a medias: se dice, o el total de abajo no cierra con la
+       suma de las rondas que se ven arriba. */
+    var yaPago = (modo !== 'dev' && !paga && totalCobrado(caja) > 0)
+      ? '<div class="pmetodo">Ya pagó ' + money(totalCobrado(caja)) +
+        ' de rondas anteriores</div>'
+      : '';
 
     return '<div class="pcard-top">' +
         '<div>' +
-          '<div class="pmesa">' + esc(o.mesa) + '</div>' +
-          '<div class="pmeta">Pedido #' + esc(o.id) +
-            (o.cliente ? ' &middot; ' + esc(o.cliente) : '') +
-            ' &middot; ' + esc(LP.timeAgo(o.created_at)) +
-            (esUrgente(o, modo) ? ' &middot; demorado' : '') + '</div>' +
-          '<div class="pmetodo">' + esc(metodo) + '</div>' +
+          '<div class="pmesa">' + esc(caja.mesa) + '</div>' +
+          '<div class="pmeta">' + meta + '</div>' +
+          '<div class="pmetodo">' + esc(metodoDe(caja)) + '</div>' + yaPago +
         '</div>' +
       '</div>' +
-      '<div class="plines">' + lines + '</div>' +
+      '<div class="plines">' +
+        (modo === 'dev' ? lineasHTML(o) : rondasHTML(caja)) +
+      '</div>' +
       /* Lo que se cobra, no el total del insert: si el mozo saco un plato,
-         la caja tiene que cobrar lo que quedo. */
-      '<div class="ptotal">' + money(modo === 'dev' ? o.total : LP.cobrable(o)) + '</div>' +
+         la caja tiene que cobrar lo que quedo. Y es el total de la MESA:
+         el cobro no se divide por ronda. */
+      '<div class="ptotal">' +
+        money(modo === 'dev' ? o.total : (paga ? totalCobrado(caja) : totalDe(caja))) +
+      '</div>' +
       '<div class="pfoot">' + foot + '</div>';
   }
 
   /* -------------------------------------------- render sin pisar el DOM -- */
+  /* Las mesas que hay en pantalla ahora mismo, por clave. Es lo que mira la
+     hoja abierta para repintarse con lo que acaba de llegar. */
+  var cajasPorClave = Object.create(null);
+
   function render() {
-    var pend = orders.filter(function (o) { return !o.pagado; });
-    var todosPag = orders.filter(function (o) { return o.pagado; });
-    var pag = todosPag.slice(0, VISIBLES_PAGADOS);
+    /* Se agrupa TODO junto y despues se clasifica. Al reves -partir por
+       pagado y agrupar cada mitad- la mesa 9 con una ronda paga y otra no
+       volvia a salir dos veces, una en cada seccion: el mismo error de
+       siempre corrido de lugar. Una mesa esta en pendientes mientras le
+       falte cobrar aunque sea una ronda. */
+    var todas = gruposDe(orders);
+    cajasPorClave = Object.create(null);
+    todas.forEach(function (c) { cajasPorClave[c.clave] = c; });
+
+    var pend = todas.filter(function (c) { return !estaPaga(c); });
+    var todasPag = todas.filter(estaPaga);
+    var pag = todasPag.slice(0, VISIBLES_PAGADOS);
+
     // Sin recorte: las devoluciones son pocas y ninguna se puede perder.
     document.getElementById('devoluciones').hidden = !devoluciones.length;
-    paint('dev', devoluciones, '', 'dev');
+    paint('dev', devoluciones.map(cajaDeUno), '', 'dev');
     paint('pend', pend, 'No hay pagos pendientes.');
-    paint('pag', pag, 'Todav\u00eda no se confirm\u00f3 ning\u00fan pago.', null, todosPag.length);
+    paint('pag', pag, 'Todav\u00eda no se confirm\u00f3 ning\u00fan pago.', null, todasPag.length);
+    repasarSonido(pend);
   }
 
   function paint(key, list, emptyMsg, modo, total) {
@@ -556,21 +783,24 @@ document.addEventListener('DOMContentLoaded', function () {
     if (body.dataset.mode !== 'list') { body.dataset.mode = 'list'; body.innerHTML = ''; }
 
     var seen = Object.create(null);
-    list.forEach(function (o, i) {
-      seen[o.id] = true;
-      var el = body.querySelector('[data-card="' + o.id + '"]');
-      var sig = (modo || '') + '|' + signature(o);
+    list.forEach(function (caja, i) {
+      var k = caja.clave;
+      seen[k] = true;
+      var el = body.querySelector('[data-card="' + k + '"]');
+      var sig = (modo || '') + '|' + signature(caja);
+      var clases = 'pcard' + (modo !== 'dev' && estaPaga(caja) ? ' is-paid' : '') +
+                   (esUrgente(caja, modo) ? ' pcard-urgente' : '');
       if (!el) {
         el = document.createElement('article');
-        el.dataset.card = o.id;
+        el.dataset.card = k;
         el.dataset.sig = sig;
-        el.className = 'pcard' + (o.pagado ? ' is-paid' : '') + (esUrgente(o, modo) ? ' pcard-urgente' : '');
-        el.innerHTML = cardHTML(o, modo);
+        el.className = clases;
+        el.innerHTML = cardHTML(caja, modo);
       } else if (el.dataset.sig !== sig) {
         // Solo se repinta la ficha que cambio, nunca la lista entera.
         el.dataset.sig = sig;
-        el.className = 'pcard' + (o.pagado ? ' is-paid' : '') + (esUrgente(o, modo) ? ' pcard-urgente' : '');
-        el.innerHTML = cardHTML(o, modo);
+        el.className = clases;
+        el.innerHTML = cardHTML(caja, modo);
       }
       if (body.children[i] !== el) body.insertBefore(el, body.children[i] || null);
     });
@@ -578,6 +808,130 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!seen[el.dataset.card]) el.remove();
     });
   }
+
+  /* ================================ AJ-003: que suene ====================
+     Lo que encontramos: caja.html NO tenia audio. Ni un AudioContext, ni un
+     oscilador, ni un archivo. Cocina y mozo lo tenian desde la fase 2 y la
+     caja se habia quedado afuera, asi que "no suena en caja" no era un
+     problema del dispositivo: no habia nada que sonar.
+
+     Lo que se agrega es la misma capa que ya usan los otros dos paneles
+     (LP.Sonador, que salio de ahi): suena cuando entra un pago nuevo o
+     cuando el salon avisa que una mesa pago, e insiste cada minuto mientras
+     quede plata sin cobrar.
+
+     Lo que NO se promete, porque no depende de nosotros: el navegador no
+     deja sonar hasta que alguien toca la pantalla una vez -por eso la barra
+     ambar de arriba-, y con la pantalla apagada o la pestania en segundo
+     plano el que tiene que sonar es el aviso push, no esto.             */
+  var sonido = new LP.Sonador({
+    clave: 'lp_caja_sonido',
+    notas: [740, 988],            // distinto de cocina (880) y mozo (660)
+    volumen: 0.3,
+    alCambiar: function () { pintarSonido(); }
+  });
+
+  var sonidoBtn = document.getElementById('sonidoBtn');
+  var barra = document.getElementById('alertaBarra');
+  var barraBtn = document.getElementById('alertaBtn');
+  var accionBarra = null;
+
+  var clavesVistas = null;        // null = primera carga, no suena nada
+  var insistTimer = null, insistCount = 0;
+  var INSIST_CADA = 60000, INSIST_TOPE = 20;
+  var hayPendientes = false;
+
+  function pintarSonido() {
+    var st = sonido.estado();
+    sonidoBtn.classList.toggle('on', st === 'listo');
+    sonidoBtn.classList.toggle('off', st !== 'listo');
+    sonidoBtn.setAttribute('aria-pressed', sonido.encendido ? 'true' : 'false');
+    sonidoBtn.textContent = sonido.encendido ? 'Sonido' : 'Sin sonido';
+
+    if (st === 'falta-toque') {
+      mostrarBarra('Falta un toque para que suene',
+        'El navegador no deja sonar hasta que alguien toque la pantalla.',
+        'Probar el sonido', function () { sonido.sonar(false); pintarSonido(); });
+    } else if (st === 'no-soportado') {
+      mostrarBarra('Este navegador no puede reproducir el aviso',
+        'Los pagos igual entran en la lista, pero no vas a escuchar nada.', '', null);
+    } else if (st === 'apagado') {
+      mostrarBarra('El sonido está apagado',
+        'Un pago puede entrar y quedar esperando sin que te enteres.',
+        'Activar el sonido', function () { sonido.prender(true); });
+    } else {
+      barra.hidden = true; accionBarra = null;
+    }
+  }
+
+  function mostrarBarra(titulo, texto, etq, fn) {
+    document.getElementById('alertaTitulo').textContent = titulo;
+    document.getElementById('alertaTexto').textContent = texto;
+    barraBtn.textContent = etq;
+    barraBtn.hidden = !etq;
+    accionBarra = fn;
+    barra.hidden = false;
+  }
+
+  barraBtn.addEventListener('click', function () { if (accionBarra) accionBarra(); });
+  sonidoBtn.addEventListener('click', function () { sonido.prender(!sonido.encendido); });
+
+  /* Que hay para cobrar ahora. La "firma" de una mesa incluye si el salon ya
+     aviso que pago: pasar de "pendiente" a "avisado" tambien es novedad y
+     tambien tiene que sonar, mas fuerte, porque hay alguien esperando. */
+  function firmaDe(caja) {
+    return caja.clave + (avisadoDe(caja) ? '!' : '');
+  }
+
+  function repasarSonido(pend) {
+    hayPendientes = pend.length > 0;
+    var ahora = pend.map(firmaDe);
+    // Cuantas mesas hay por cobrar, en la pestania. Se escribe siempre,
+    // tambien en la primera carga: es el aviso que funciona sin permisos.
+    document.title = (pend.length ? '(' + pend.length + ') ' : '') + 'La Positiva - Caja';
+
+    if (clavesVistas === null) {      // primera carga: no se canta lo viejo
+      clavesVistas = ahora;
+      insistir();
+      pintarSonido();
+      return;
+    }
+    var nuevas = ahora.filter(function (f) { return clavesVistas.indexOf(f) === -1; });
+    clavesVistas = ahora;
+
+    if (nuevas.length) {
+      insistCount = 0;
+      clearTimeout(insistTimer); insistTimer = null;
+      // Fuerte si alguna de las nuevas es un "ya pagué" del salón.
+      sonido.sonar(nuevas.some(function (f) { return f.charAt(f.length - 1) === '!'; }));
+    }
+    insistir();
+    pintarSonido();
+  }
+
+  /* Un aviso que suena una sola vez y nadie escucho es plata sin cobrar. Se
+     repite cada minuto mientras quede algo pendiente, con tope: veinte
+     recordatorios y para, para no convertirse en ruido de fondo. */
+  function insistir() {
+    if (!hayPendientes) {
+      clearTimeout(insistTimer); insistTimer = null; insistCount = 0;
+      return;
+    }
+    if (insistTimer) return;
+    insistTimer = setTimeout(function () {
+      insistTimer = null;
+      if (!hayPendientes || insistCount >= INSIST_TOPE) return;
+      // El tope cuenta avisos DADOS, no intentos: si el navegador todavia no
+      // deja sonar, no se gasta el presupuesto en silencio.
+      if (sonido.sonar(false)) insistCount++;
+      pintarSonido();
+      insistir();
+    }, INSIST_CADA);
+  }
+
+  sonido.engancharPrimerToque();
+  pintarSonido();
+  LP.onCleanup(function () { clearTimeout(insistTimer); });
 
   /* ------------------------------------------------------- interaccion -- */
   wrap.addEventListener('click', function (ev) {
@@ -587,10 +941,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (retry && !retry.disabled) { avisar(retry.dataset.retry, true); }
   });
 
-  function findOrder(id) {
-    for (var i = 0; i < orders.length; i++) if (String(orders[i].id) === String(id)) return orders[i];
-    return null;
-  }
+  function findCaja(clave) { return cajasPorClave[clave] || null; }
 
   /* ------------------------------------------ la cuenta abierta (AJ-016) --
      Una sola hoja con dos vistas: la cuenta -donde se confirma el pago- y
@@ -601,63 +952,98 @@ document.addEventListener('DOMContentLoaded', function () {
   var detSub = document.getElementById('detSub');
   var detCuerpo = document.getElementById('detCuerpo');
   var detBack = document.getElementById('detBack');
-  var detId = null;              // el pedido abierto en la hoja
+  var detClave = null;           // la MESA abierta en la hoja, no un pedido
   var detVista = 'cuenta';       // 'cuenta' | 'deshacer'
   var deshaciendo = false;
-
-  var METODOS_LARGO = {
-    Efectivo: 'Efectivo al mozo',
-    QR: 'QR desde el celular',
-    Tarjeta: 'Tarjeta (simulado)'
-  };
 
   function cerrarDet() {
     LP.closeDialog(hoja);
     detCuerpo.innerHTML = '';
-    detId = null;
+    detClave = null;
     detVista = 'cuenta';
     detBack.hidden = true;
   }
 
-  function verDetalle(id) {
-    var o = findOrder(id);
-    if (!o) { LP.toast('Ese pedido ya no está en la lista.', 'err'); return; }
-    detId = o.id;
+  /* La cuenta de la MESA, con sus rondas adentro. Es la misma traba de
+     siempre -confirmar solo se puede desde acá-, ahora sobre la cuenta
+     entera: se ve todo lo que se pidió, en cuántas veces, y un solo total. */
+  function verDetalle(clave) {
+    var caja = findCaja(clave);
+    if (!caja) { LP.toast('Esa cuenta ya no está en la lista.', 'err'); return; }
+    detClave = clave;
     detVista = 'cuenta';
     detBack.hidden = true;
     if (!LP.isDialogOpen(hoja)) LP.openDialog(hoja, { persistent: true, focus: '#detX' });
 
-    var cobra = LP.cobrable(o);
-    var salioAlgo = cobra < (Number(o.total) || 0);
-    var busy = !!pending[o.id];
+    var paga = estaPaga(caja);
+    var falta = porCobrar(caja);
+    var cobra = paga ? totalCobrado(caja) : totalDe(caja);
+    var pedido = falta.length ? falta.reduce(function (t, p) { return t + (Number(p.total) || 0); }, 0)
+                              : caja.rondas.reduce(function (t, p) { return t + (Number(p.total) || 0); }, 0);
+    var salioAlgo = cobra < pedido;
+    var busy = !!pending[clave];
+    var una = caja.rondas.length === 1;
 
-    detTit.textContent = o.mesa;
-    detSub.textContent = 'Pedido #' + o.id + (o.cliente ? ' · ' + o.cliente : '') +
-      ' · ' + LP.timeAgo(o.created_at);
+    detTit.textContent = caja.mesa;
+    detSub.textContent = (una
+        ? 'Pedido #' + caja.rondas[0].id
+        : caja.rondas.length + ' rondas, una sola cuenta') +
+      (caja.comensales ? ' · ' + caja.comensales +
+        (caja.comensales === 1 ? ' persona' : ' personas') : '') +
+      ' · desde ' + LP.timeAgo(caja.desde);
 
-    var lineas = LP.lineasDe(o).map(function (l) {
-      var fuera = LP.lineaSacada(l);
-      return '<div' + (fuera ? ' class="fuera"' : '') + '>' +
-        '<span class="q">' + esc(l.qty) + '&times;</span>' +
-        '<span>' + esc(l.name) + '</span>' +
-        '<span class="imp">' + money(LP.importeDeLinea(l)) + '</span></div>';
+    /* Las rondas NO se funden en una lista sola. Dos milanesas pedidas en
+       dos momentos distintos son dos lineas, cada una en su ronda: si se
+       sumaran, la cajera no podria decirle al cliente cuando pidio que. */
+    var lineas = caja.rondas.map(function (p, i) {
+      var cab = una ? '' :
+        '<div class="det-ronda">Ronda ' + (i + 1) + ' &middot; #' + esc(p.id) +
+          ' &middot; ' + esc(LP.timeAgo(p.created_at)) +
+          (p.cliente ? ' &middot; ' + esc(p.cliente) : '') +
+          (p.pagado ? ' &middot; ya paga' : '') + '</div>';
+      return cab + LP.lineasDe(p).map(function (l) {
+        var fuera = LP.lineaSacada(l);
+        return '<div' + (fuera ? ' class="fuera"' : '') + '>' +
+          '<span class="q">' + esc(l.qty) + '&times;</span>' +
+          '<span>' + esc(l.name) + '</span>' +
+          '<span class="imp">' + money(LP.importeDeLinea(l)) + '</span></div>';
+      }).join('');
     }).join('') || '<div>Sin detalle cargado</div>';
+
+    var estados = [];
+    caja.rondas.forEach(function (p) {
+      if (estados.indexOf(p.estado) === -1) estados.push(p.estado);
+    });
 
     var cabeza =
       '<div class="det-lineas">' + lineas + '</div>' +
       '<div class="det-total"><span>' +
-        (o.pagado ? 'Se cobró' : 'Hay que cobrar') + '</span>' +
+        (paga ? 'Se cobró' : 'Hay que cobrar') + '</span>' +
         '<b>' + money(cobra) + '</b></div>' +
+      (!paga && totalCobrado(caja) > 0
+        ? '<div class="det-dato"><span>Ya pagado</span><span>' +
+          money(totalCobrado(caja)) + ' de rondas anteriores</span></div>'
+        : '') +
       (salioAlgo
-        ? '<div class="det-dato"><span>Se pidió</span><span>' + money(o.total) +
-          ' · salió de la cuenta ' + money((Number(o.total) || 0) - cobra) + '</span></div>'
+        ? '<div class="det-dato"><span>Se pidió</span><span>' + money(pedido) +
+          ' · salió de la cuenta ' + money(pedido - cobra) + '</span></div>'
         : '') +
       '<div class="det-dato"><span>C&oacute;mo paga</span><span>' +
-        esc(METODOS_LARGO[o.metodo_pago] || 'Sin especificar') + '</span></div>' +
-      '<div class="det-dato"><span>Estado del pedido</span><span>' + esc(o.estado) + '</span></div>';
+        esc(metodoDe(caja)) + '</span></div>' +
+      '<div class="det-dato"><span>Estado</span><span>' + esc(estados.join(', ')) + '</span></div>';
 
-    if (o.pagado) {
+    if (paga) {
+      /* Quien confirmo, y desde que puesto (AJ-006). Antes esto no quedaba
+         escrito en ningun lado: se sabia que estaba pago y nada mas. */
+      var quien = null;
+      caja.rondas.forEach(function (p) { if (p.pagado_en && !quien) quien = p; });
       detCuerpo.innerHTML = cabeza +
+        (quien
+          ? '<div class="det-dato"><span>Lo confirmó</span><span>' +
+            esc(quien.pagado_por || 'sin nombre') +
+            (quien.pagado_rol ? ' (' + esc(quien.pagado_rol) + ')' : '') +
+            ' · ' + esc(LP.timeAgo(quien.pagado_en)) + '</span></div>'
+          : '') +
         '<div class="det-ok" style="margin-top:14px">Este pago ya est&aacute; confirmado.</div>' +
         '<button type="button" class="btn-deshacer" id="detDeshacer">' +
           'Deshacer: no hab&iacute;a entrado la plata</button>';
@@ -665,21 +1051,33 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
+    var aviso = avisadoDe(caja);
+
     /* El aviso va ARRIBA del botón verde y no abajo: es lo que hay que leer
        antes de tocarlo, no después. Dice la única regla que importa acá:
        el QR en pantalla no es plata cobrada. */
     detCuerpo.innerHTML = cabeza +
+      (aviso
+        ? '<div class="det-dato"><span>Avisaron que pagó</span><span>' +
+          esc(aviso.pago_avisado_por || 'sin nombre') +
+          (aviso.pago_avisado_rol ? ' (' + esc(aviso.pago_avisado_rol) + ')' : '') +
+          ' · ' + esc(LP.timeAgo(aviso.pago_avisado_en)) + '</span></div>'
+        : '') +
       '<div class="det-peligro" style="margin-top:14px">' +
         '<b>Confirm&aacute; reci&eacute;n cuando el posnet lo muestre</b>' +
-        'Cargar el QR y confirmar que entr&oacute; la plata son dos momentos distintos. ' +
-        'Esto avisa al encargado de que ' + esc(o.mesa) + ' pag&oacute; ' + money(cobra) + '.' +
+        (aviso
+          ? 'Que el sal&oacute;n avise que pag&oacute; no es plata cobrada. '
+          : 'Cargar el QR y confirmar que entr&oacute; la plata son dos momentos distintos. ') +
+        'Esto cierra ' +
+        (una ? 'la cuenta' : 'las ' + falta.length + ' rondas sin pagar') +
+        ' de ' + esc(caja.mesa) + ' por ' + money(cobra) + ' y avisa al encargado.' +
       '</div>' +
       '<button type="button" class="btn btn-ok btn-block" id="detCobrar"' +
         (busy ? ' disabled' : '') + '>' +
         (busy ? 'Confirmando...' : 'Sí, entró ' + money(cobra) + ': confirmar') + '</button>' +
       '<p class="pnote warn" id="detErr" role="alert"></p>';
     document.getElementById('detCobrar').addEventListener('click', function () {
-      confirmarPago(o.id);
+      confirmarPago(clave);
     });
   }
 
@@ -687,18 +1085,20 @@ document.addEventListener('DOMContentLoaded', function () {
      igual que al sacar un plato: sin "¿estás seguro?" de más, pero sin poder
      hacerlo de un solo toque distraído tampoco. */
   function verDeshacer() {
-    var o = findOrder(detId);
-    if (!o) { cerrarDet(); return; }
+    var caja = findCaja(detClave);
+    if (!caja) { cerrarDet(); return; }
     detVista = 'deshacer';
     detBack.hidden = false;
-    var cobra = LP.cobrable(o);
+    var cobra = totalCobrado(caja);
+    var cuantas = caja.rondas.length;
 
     detTit.textContent = '¿Por qué lo deshacés?';
-    detSub.textContent = o.mesa + ' · ' + money(cobra);
+    detSub.textContent = caja.mesa + ' · ' + money(cobra);
     detCuerpo.innerHTML =
       '<div class="det-peligro">' +
-        '<b>' + esc(o.mesa) + ' vuelve a deber ' + money(cobra) + '</b>' +
-        'El pedido vuelve a los pagos pendientes. No se borra nada: queda anotado ' +
+        '<b>' + esc(caja.mesa) + ' vuelve a deber ' + money(cobra) + '</b>' +
+        (cuantas === 1 ? 'El pedido vuelve' : 'Las ' + cuantas + ' rondas vuelven') +
+        ' a los pagos pendientes. No se borra nada: queda anotado ' +
         'que lo deshiciste vos (' + esc(YO) + ') y a qu&eacute; hora.' +
       '</div>' +
       LP.MOTIVOS_REVERTIR.map(function (m) {
@@ -712,37 +1112,57 @@ document.addEventListener('DOMContentLoaded', function () {
     if (b && !b.disabled) ejecutarDeshacer(b, b.dataset.motivo);
   });
 
+  /* Se deshace la MESA entera, no una ronda suelta: si se confirmo de mas,
+     se confirmo de mas la cuenta. Van de a una y en orden -son dos o tres
+     filas, no cien- y alcanza con que una pegue para que la mesa vuelva a
+     los pendientes. */
   function ejecutarDeshacer(boton, motivo) {
     if (deshaciendo) return;
-    var o = findOrder(detId);
-    if (!o) { cerrarDet(); return; }
+    var caja = findCaja(detClave);
+    if (!caja) { cerrarDet(); return; }
+    var abierta = detClave;
+    var pagas = caja.rondas.filter(function (p) { return p.pagado; });
+    if (!pagas.length) { cerrarDet(); return; }
+
     deshaciendo = true;
     [].forEach.call(detCuerpo.querySelectorAll('button'), function (x) { x.disabled = true; });
     boton.textContent = 'Deshaciendo...';
 
-    LP.revertirPago(sb, o, motivo, YO).then(function (r) {
+    var hechos = 0, falla = null;
+    var cadena = pagas.reduce(function (antes, p) {
+      return antes.then(function () {
+        return LP.revertirPago(sb, p, motivo, YO).then(function (r) {
+          if (r.ok) {
+            hechos++;
+            orders = orders.map(function (x) {
+              return String(x.id) === String(p.id) ? r.pedido : x;
+            });
+          } else if (!falla) { falla = r.motivo; }
+        });
+      });
+    }, Promise.resolve());
+
+    cadena.then(function () {
       deshaciendo = false;
-      if (!r.ok) {
-        LP.toast(r.motivo, 'err');
+      if (!hechos) {
+        LP.toast(falla || 'No se pudo deshacer el pago.', 'err');
         // Choque: lo deshizo otro. Se recarga y se muestra como quedo.
-        load(true).then(function () { if (detId) verDetalle(detId); });
+        load(true).then(function () { if (detClave) verDetalle(detClave); });
         return;
       }
       /* El aviso de "pago confirmado" de esta ficha ya no vale: se limpia
          para que la tarjeta no siga diciendo que el aviso falló. */
-      delete notifyState[o.id];
-      orders = orders.map(function (x) {
-        return String(x.id) === String(o.id) ? r.pedido : x;
-      });
+      delete notifyState[abierta];
       cerrarDet();
       render();
-      LP.toast(r.pedido.mesa + ' vuelve a los pagos pendientes.', 'ok');
+      LP.toast(caja.mesa + ' vuelve a los pagos pendientes.' +
+               (falla ? ' Una de las rondas no se pudo: ' + falla : ''), falla ? 'err' : 'ok');
       load(true);
     });
   }
 
   detBack.addEventListener('click', function () {
-    if (detVista === 'deshacer' && detId) { verDetalle(detId); return; }
+    if (detVista === 'deshacer' && detClave) { verDetalle(detClave); return; }
     cerrarDet();
   });
   document.getElementById('detX').addEventListener('click', cerrarDet);
@@ -754,25 +1174,44 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* Solo se llega acá desde adentro de la hoja: el botón de la fila ya no
      existe. Lo demás quedó igual, incluido el .eq('pagado', false), que es
-     el candado contra dos puestos confirmando el mismo pago.            */
-  function confirmarPago(id) {
-    if (pending[id]) return;                 // sin doble confirmacion
-    var o = findOrder(id);
-    if (!o || o.pagado) return;
+     el candado contra dos puestos confirmando el mismo pago.
+
+     AJ-004: lo que cambio es el ALCANCE. Se cobra LA MESA, o sea todas sus
+     rondas sin pagar, en UNA sola escritura. El cobro no se divide por
+     defecto; si alguna vez hiciera falta dividir, sera una funcion que se
+     pida, no lo que hace al arrancar. El .eq('pagado', false) ademas filtra:
+     si otro puesto cobro una de las rondas mientras esta cuenta estaba
+     abierta, esa no se vuelve a escribir y las otras si.                 */
+  function confirmarPago(clave) {
+    if (pending[clave]) return;              // sin doble confirmacion
+    var caja = findCaja(clave);
+    if (!caja) return;
+    var falta = porCobrar(caja);
+    if (!falta.length) return;
     if (!sb) { LP.toast('No hay conexi\u00f3n con el sistema.', 'err'); return; }
 
-    pending[id] = true;
+    var ids = falta.map(function (p) { return p.id; });
+    var mesa = caja.mesa;
+
+    pending[clave] = true;
     var enCurso = document.getElementById('detCobrar');
     if (enCurso) { enCurso.disabled = true; enCurso.textContent = 'Confirmando...'; }
     render();
 
     sb.from(LP.TABLE)
-      .update({ pagado: true, updated_at: new Date().toISOString() })
-      .eq('id', id).eq('pagado', false)      // no reconfirma lo ya cobrado
+      /* AJ-006: queda escrito QUIEN confirmo y desde QUE PUESTO. Sin esto,
+         un pago confirmado era un booleano sin dueno: no se podia saber si
+         lo cerro la caja mirando el posnet o alguien de paso. */
+      .update({ pagado: true,
+                pagado_en: new Date().toISOString(),
+                pagado_por: YO.slice(0, 40),
+                pagado_rol: String(MI_ROL).slice(0, 20),
+                updated_at: new Date().toISOString() })
+      .in('id', ids).eq('pagado', false)     // no reconfirma lo ya cobrado
       .select()
       .then(function (res) {
-        delete pending[id];
-        if (res.error) { falloPago(id, res.error); return; }
+        delete pending[clave];
+        if (res.error) { falloPago(clave, res.error); return; }
         if (!res.data || !res.data.length) {
           // Otro puesto lo confirmo primero: es una carrera, no un error.
           LP.toast('Ese pago ya había sido confirmado en otro puesto.', 'ok');
@@ -780,20 +1219,22 @@ document.addEventListener('DOMContentLoaded', function () {
           load(true);
           return;
         }
-        orders = orders.map(function (x) {
-          return String(x.id) === String(id) ? res.data[0] : x;
-        });
+        var nuevos = {};
+        res.data.forEach(function (p) { nuevos[p.id] = p; });
+        orders = orders.map(function (x) { return nuevos[x.id] || x; });
         /* Se cierra la hoja: el trabajo de esa cuenta terminó. Quedarse
            adentro con el botón a la vista invita a tocarlo de nuevo. */
         cerrarDet();
         render();
-        LP.toast('Pago confirmado.', 'ok');
-        avisar(id, false);                   // el aviso es un paso aparte
-      }, function (e) { delete pending[id]; falloPago(id, e); });
+        LP.toast(res.data.length === 1
+          ? 'Pago confirmado.'
+          : 'Pago de ' + mesa + ' confirmado: ' + res.data.length + ' rondas.', 'ok');
+        avisar(clave, false, res.data);      // el aviso es un paso aparte
+      }, function (e) { delete pending[clave]; falloPago(clave, e); });
   }
 
-  function falloPago(id, err) {
-    delete pending[id];
+  function falloPago(clave, err) {
+    delete pending[clave];
     render();
     var msg = LP.humanError(err, 'No se pudo confirmar el pago. Probá de nuevo.');
     /* La hoja está abierta y es donde está mirando: el error va adentro, y
@@ -803,25 +1244,29 @@ document.addEventListener('DOMContentLoaded', function () {
     var btn = document.getElementById('detCobrar');
     if (btn) {
       btn.disabled = false;
-      var o = findOrder(id);
-      btn.textContent = o ? 'Sí, entró ' + money(LP.cobrable(o)) + ': confirmar'
-                          : 'Confirmar el pago';
+      var caja = findCaja(clave);
+      btn.textContent = caja ? 'Sí, entró ' + money(totalDe(caja)) + ': confirmar'
+                             : 'Confirmar el pago';
     }
-    var box = document.querySelector('[data-err="' + id + '"]');
+    var box = document.querySelector('[data-err="' + clave + '"]');
     if (box) box.textContent = msg;
     LP.toast(msg, 'err');
   }
 
-  // El aviso se trata por separado del cobro: si falla, el pago sigue confirmado.
-  function avisar(id, isRetry) {
-    var o = findOrder(id);
-    if (!o || notifying[id]) return;
-    notifying[id] = true;
+  /* El aviso se trata por separado del cobro: si falla, el pago sigue
+     confirmado. Es UNO por mesa, no uno por ronda: la mesa 9 con dos rondas
+     mandaba dos push iguales, cada uno con medio importe. */
+  function avisar(clave, isRetry, recien) {
+    var caja = findCaja(clave);
+    var cuales = recien ||
+      (caja ? caja.rondas.filter(function (p) { return p.pagado; }) : []);
+    if (!cuales.length || notifying[clave]) return;
+    notifying[clave] = true;
     render();
 
     var done = function (state, msg, kind) {
-      delete notifying[id];
-      notifyState[id] = state;
+      delete notifying[clave];
+      notifyState[clave] = state;
       render();
       if (msg) LP.toast(msg, kind);
     };
@@ -833,7 +1278,7 @@ document.addEventListener('DOMContentLoaded', function () {
        asi que confirmar un pago notificaba o no segun donde lo hicieras.
        El texto de cada falla se decide con el codigo estable que devuelve el
        servidor, no leyendo el mensaje.                                    */
-    LP.avisarPago(sb, o).then(function (r) {
+    LP.avisarPagoMesa(sb, cuales).then(function (r) {
       if (r.ok) {
         done('ok', isRetry ? 'Aviso enviado al encargado.'
                            : 'Pago confirmado y aviso enviado al encargado.', 'ok');
@@ -907,24 +1352,43 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         loaded = true;
         elState.innerHTML = '';
-        render();
-        /* Si la cuenta esta abierta en la hoja, se repinta con lo que acaba
-           de llegar: el mozo puede haber sacado un plato mientras la cajera
-           la miraba, y confirmar el importe viejo seria cobrar de mas.
-           Solo en la vista de la cuenta: en el paso de deshacer se esta
-           eligiendo un motivo y repintar le sacaria los botones de abajo. */
-        if (detId && detVista === 'cuenta' && LP.isDialogOpen(hoja) && !pending[detId]) {
-          if (findOrder(detId)) {
-            verDetalle(detId);
-          } else {
-            /* Desaparecio de la lista: la anularon entera mientras estaba
-               abierta. Se cierra y se dice, en vez de dejar en pantalla un
-               importe que ya no se cobra. */
-            cerrarDet();
-            LP.toast('Esa cuenta se anuló recién. No la cobres.', 'err');
-          }
-        }
+
+        /* Las sesiones de las mesas que quedaron en pantalla, en UNA consulta
+           (AJ-004). Es lo que hace que dos rondas de la misma visita caigan
+           en el mismo recuadro y lo que permite escribir "4 personas".
+           Que falle no puede tumbar la caja: sin el mapa se agrupa igual
+           -sesion_id ya viene en el pedido- y se pierde el nombre lindo. */
+        var ids = [];
+        orders.forEach(function (p) {
+          if (p.sesion_id && ids.indexOf(p.sesion_id) === -1) ids.push(p.sesion_id);
+        });
+        // Se devuelve la promesa: load(true).then(...) tiene que esperar a
+        // que la pantalla este pintada de verdad, no a media carga.
+        return LP.sesionesPorId(sb, ids).then(function (mapa) {
+          sesiones = mapa || {};
+          pintarDespuesDeCargar();
+        }, function () { pintarDespuesDeCargar(); });
       }, function (e) { inFlight = false; showError(e, quiet); });
+  }
+
+  function pintarDespuesDeCargar() {
+    render();
+    /* Si la cuenta esta abierta en la hoja, se repinta con lo que acaba de
+       llegar: el mozo puede haber sacado un plato mientras la cajera la
+       miraba, y confirmar el importe viejo seria cobrar de mas. Solo en la
+       vista de la cuenta: en el paso de deshacer se esta eligiendo un motivo
+       y repintar le sacaria los botones de abajo. */
+    if (detClave && detVista === 'cuenta' && LP.isDialogOpen(hoja) && !pending[detClave]) {
+      if (findCaja(detClave)) {
+        verDetalle(detClave);
+      } else {
+        /* Desaparecio de la lista: la anularon entera mientras estaba
+           abierta. Se cierra y se dice, en vez de dejar en pantalla un
+           importe que ya no se cobra. */
+        cerrarDet();
+        LP.toast('Esa cuenta se anuló recién. No la cobres.', 'err');
+      }
+    }
   }
 
   /* Sin datos no hay listas que mostrar: si no, el mensaje de error quedaba
@@ -1192,10 +1656,23 @@ document.addEventListener('DOMContentLoaded', function () {
       elQrLabel.textContent = 'Subir el QR de ' + nombre;
       return;
     }
+    /* AJ-005: la miniatura ES el boton de "verlo grande". Antes era una
+       imagen muerta de 96px y lo unico que se ofrecia debajo era
+       "Reemplazar el QR", asi que para mostrarselo al cliente habia que
+       cambiarlo o irse a otra pantalla.
+
+       Va en un <button> propio y NO adentro del <label for="qrFile">: si
+       estuviera adentro, tocar para mirar abriria el selector de archivos y
+       un toque distraido reemplazaria el QR de la mesa. Son dos botones
+       separados a proposito, y el de mirar no escribe nada.             */
     elQrEstado.innerHTML =
       '<div class="qr-actual">' +
-        '<img src="' + esc(qr.imagen_url) + '" alt="QR de cobro de ' + esc(nombre) + '" ' +
-             'width="96" height="96" decoding="async">' +
+        '<button type="button" class="qr-mini" data-qr-grande ' +
+                'aria-label="Ver grande el QR de ' + esc(nombre) + '">' +
+          '<img src="' + esc(qr.imagen_url) + '" alt="QR de cobro de ' + esc(nombre) + '" ' +
+               'width="96" height="96" decoding="async">' +
+          '<span class="lupa">Ver grande</span>' +
+        '</button>' +
         '<div class="meta">' +
           '<strong>' + esc(qr.etiqueta) + '</strong>' +
           '<span>Cargado ' + esc(LP.timeAgo(qr.created_at)) +
@@ -1206,64 +1683,53 @@ document.addEventListener('DOMContentLoaded', function () {
     elQrLabel.textContent = 'Reemplazar el QR de ' + nombre;
   }
 
-  /* --- Link de pago -------------------------------------------------------
-     Un QR interoperable (EMVCo) no contiene una URL: su texto es un payload
-     que solo sirve escaneado. Solo los QR de "link de pago" traen una.    */
-  var elLinkInput = document.getElementById('qrLinkInput');
-  var elLinkNota = document.getElementById('qrLinkNota');
-  var elLinkSave = document.getElementById('qrLinkSave');
-  var elLinkMsg = document.getElementById('qrLinkMsg');
-  var qrActual = null;
+  /* ---------------------------------------------- el QR grande (AJ-005) --
+     Se abre tocando la miniatura y se cierra con la X, con Escape o tocando
+     al costado. Cerrar NO cambia el QR: esta hoja no escribe nada, solo
+     muestra. Es la misma idea que "Agrandar para el cliente" de cobrar.html,
+     resuelta acá con una hoja en vez de un modo de pantalla completa,
+     porque acá se vuelve a lo que se estaba haciendo.                    */
+  var hojaQR = document.getElementById('qrGrande');
+  var qrGrandeImg = document.getElementById('qrGrandeImg');
+  var qrGrandeSub = document.getElementById('qrGrandeSub');
 
-  function pintarLink(qr, lectura) {
-    qrActual = qr;
-    var hayQR = !!qr;
-    elLinkInput.disabled = !hayQR;
-    elLinkSave.disabled = !hayQR;
-    elLinkInput.value = (qr && qr.link_pago) || '';
+  function cerrarQrGrande() { LP.closeDialog(hojaQR); }
 
-    var nota, aviso = false;
-    if (!hayQR) {
-      nota = 'Primero elegí la mesa y subí su QR. Después, si tenés un link de pago, ' +
-             'se puede agregar acá.';
-    } else if (qr.link_pago) {
-      nota = 'Listo: este QR tiene link. Desde la pantalla de cobro se puede compartir por mensaje.';
-    } else if (lectura && lectura.soportado === false) {
-      nota = 'Este navegador no sabe leer codigos QR. Si tenés el link de pago, pegalo a mano.';
-      aviso = true;
-    } else if (lectura && lectura.texto) {
-      nota = 'Leimos el código, pero no es un link: es un QR interoperable y solo funciona ' +
-             'escaneandolo. Si tenés un link de pago, pegalo acá.';
-      aviso = true;
-    } else {
-      nota = 'Este QR no tiene un link asociado. Si tenés uno, pegalo acá.';
-    }
-    elLinkNota.textContent = nota;
-    elLinkNota.className = 'qr-link-nota' + (aviso ? ' aviso' : '');
-  }
-
-  elLinkSave.addEventListener('click', function () {
-    if (!qrActual || elLinkSave.disabled) return;
-    elLinkSave.disabled = true;
-    elLinkSave.textContent = 'Guardando...';
-    elLinkInput.removeAttribute('aria-invalid');
-    elLinkMsg.textContent = '';
-
-    LP.guardarLink(sb, qrActual.id, elLinkInput.value).then(function (qr) {
-      elLinkSave.disabled = false;
-      elLinkSave.textContent = 'Guardar';
-      pintarLink(qr, null);
-      elLinkMsg.textContent = qr.link_pago ? 'Link guardado.' : 'Link borrado.';
-      elLinkMsg.className = 'qr-msg ok';
-    }, function (e) {
-      elLinkSave.disabled = false;
-      elLinkSave.textContent = 'Guardar';
-      elLinkInput.setAttribute('aria-invalid', 'true');
-      // Solo el texto pensado para la cajera va tal cual; lo del servidor pasa por humanError.
-      elLinkMsg.textContent = (e && e.humano) ? e.message : LP.humanError(e, 'No se pudo guardar el link.');
-      elLinkMsg.className = 'qr-msg err';
-    });
+  elQrEstado.addEventListener('click', function (ev) {
+    if (!ev.target.closest('[data-qr-grande]')) return;
+    var qr = sesionQR ? (qrPorSesion[sesionQR] || null) : null;
+    if (!qr) return;
+    var m = sesionQR ? mesaDeSesion(sesionQR) : null;
+    var nombre = m ? m.mesa : 'la mesa';
+    qrGrandeImg.src = qr.imagen_url;
+    qrGrandeImg.alt = 'QR de cobro de ' + nombre;
+    document.getElementById('qrGrandeTit').textContent = nombre;
+    qrGrandeSub.textContent = 'Mostrale esta pantalla al cliente para que lo escanee.' +
+      (m && m.debe > 0 ? ' Debe ' + money(m.debe) + '.' : '');
+    LP.openDialog(hojaQR, { focus: '#qrGrandeX' });
   });
+
+  document.getElementById('qrGrandeX').addEventListener('click', cerrarQrGrande);
+  hojaQR.addEventListener('click', function (ev) {
+    if (ev.target === hojaQR) cerrarQrGrande();
+  });
+
+  /* --- Link de pago: SIN interfaz (AJ-007) --------------------------------
+     El bloque de "Link de pago (opcional)" -campo, boton Guardar y sus
+     mensajes- se retiro de esta pantalla a pedido del duenio. Queda esta
+     funcion como el unico rastro, y a proposito:
+
+       - el link que el propio QR trae adentro se sigue leyendo solo al
+         subirlo (LP.subirQR lo decodifica) y se sigue guardando en la fila;
+       - la columna link_pago no se toco;
+       - LP.guardarLink() sigue en app.js, entera, por si el campo vuelve;
+       - la pantalla de cobro sigue usando el link para "mandarlo por
+         mensaje" cuando el QR trae uno.
+
+     Lo unico que se fue es el trabajo manual de pegarlo aca. Se deja la
+     funcion en vez de borrar las tres llamadas para que el dia que vuelva
+     sea devolver el HTML y nada mas.                                     */
+  function pintarLink() { /* sin interfaz: ver el comentario de arriba */ }
 
   /* Una consulta de mesas abiertas y una de QR: no una por mesa. En un
      servicio con doce mesas eso serian doce viajes cada vez que alguien
