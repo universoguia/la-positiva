@@ -153,6 +153,27 @@
   /* Lo entregado y lo anulado pasan a segundo plano: ya no es trabajo. */
   .ronda.e-entregado{border-left-color:var(--done);background:var(--card);color:var(--muted-strong)}
   .ronda.e-anulada{border-left-color:var(--err);background:var(--err-bg)}
+
+  /* El renglon de la anulada. Todo en una linea y sin nada que apurar. */
+  .anul-min{padding:0}
+  .anul-min summary{
+    display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+    min-height:var(--tap);padding:6px 12px;cursor:pointer;list-style:none;
+  }
+  .anul-min summary::-webkit-details-marker{display:none}
+  .anul-min summary:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+  .anul-tag{
+    flex:none;padding:2px 9px;border-radius:var(--r-pill);
+    background:var(--err);color:#fff;font-size:11px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.06em;
+  }
+  .anul-qu{flex:1;min-width:0;font-size:14px;color:var(--muted-strong)}
+  .anul-hora{flex:none;font-size:12px;color:var(--muted-strong)}
+  .anul-min .klines{padding:0 12px 8px;opacity:.75}
+  .anul-motivo{
+    margin:0;padding:0 12px 10px;font-size:13px;color:var(--muted-strong);
+    font-style:italic;
+  }
   .ronda-top{
     display:flex;justify-content:space-between;align-items:flex-start;gap:8px;
   }
@@ -563,8 +584,37 @@ document.addEventListener('DOMContentLoaded', function () {
         '</span></p>';
     }
 
+    /* Una comanda anulada ocupaba lo mismo que una viva: tarjeta entera, con
+       todos los platos y el fondo rojo. Era lo mas grande de la pantalla para
+       decir lo unico que la cocina necesita saber -"esto no lo hagas mas"- y
+       le tapaba el trabajo de verdad.
+
+       Ahora es un renglon. Dice la mesa, que se anulo y hace cuanto, y lo que
+       tenia queda adentro de un desplegable por si el cocinero ya la habia
+       empezado y quiere ver que era. Se lee en un segundo y no roba altura.
+
+       Se sigue mostrando, y eso no se negocia: si desapareciera sin decir
+       nada, el que ya la empezo seguiria cocinando.                       */
+    if (anulada) {
+      var cuantos = (o.lines || []).reduce(function (n, l) { return n + Number(l.qty || 0); }, 0);
+      return '<div class="ronda e-anulada anul-min" data-ronda="' + esc(o.id) + '">' +
+        '<details>' +
+          '<summary>' +
+            '<span class="anul-tag">Anulada</span>' +
+            '<span class="anul-qu">Ronda ' + (indice + 1) +
+              (cuantos ? ' &middot; ' + cuantos + (cuantos === 1 ? ' plato' : ' platos') : '') +
+            '</span>' +
+            '<span class="anul-hora">' + esc(LP.timeAgo(o.updated_at || o.created_at)) + '</span>' +
+          '</summary>' +
+          '<div class="klines">' + lines + '</div>' +
+          (o.rechazado_motivo
+            ? '<p class="anul-motivo">' + esc(o.rechazado_motivo) + '</p>' : '') +
+        '</details>' +
+      '</div>';
+    }
+
     return '<div class="ronda ' +
-        (anulada ? 'e-anulada' : (CLASE_RONDA[o.estado] || '')) +
+        (CLASE_RONDA[o.estado] || '') +
         '" data-ronda="' + esc(o.id) + '">' +
       '<div class="ronda-top">' +
         '<div class="rnum">Ronda ' + (indice + 1) +
