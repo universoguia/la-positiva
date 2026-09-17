@@ -244,7 +244,46 @@ document.addEventListener('DOMContentLoaded', function () {
          'casi no tiene otra pantalla.' },
     { c: 'f_avisos', t: 'Avisos al celular',
       d: 'Los avisos push y los de WhatsApp. Nada dentro del sistema deja de andar: ' +
-         'lo único que pasa es que no suena ningún teléfono.' }
+         'lo único que pasa es que no suena ningún teléfono.' },
+
+    /* --- Las pantallas enteras -------------------------------------------
+       Los de arriba apagan una función. Estos apagan una PANTALLA para todo
+       el local: se va del menú de todos y rebota si alguien escribe la
+       dirección. Nada se borra: lo cargado vuelve entero al prenderla.
+
+       El texto dice a QUIÉN le saca la pantalla, que es lo que hay que
+       pensar antes de tocarlo. "Apagar la comanda" suena inofensivo hasta
+       que uno se entera de que deja a cuatro mozos sin poder trabajar. */
+    { c: 'p_comanda', t: 'Pantalla: Tomar comanda',
+      d: 'Se la saca a los mozos, al barman y a la encargada. Es donde cargan lo ' +
+         'que pide la mesa: sin esto no pueden tomar un pedido.' },
+    { c: 'p_mozo', t: 'Pantalla: Los pedidos de las mesas',
+      d: 'Se la saca a los mozos, al barman y a la encargada. Es donde aprueban lo ' +
+         'que pide el comensal por el QR y donde está la papelera.' },
+    { c: 'p_cocina', t: 'Pantalla: Las comandas',
+      d: 'Se la saca a la cocina, que se queda sin ninguna. Para un local donde la ' +
+         'comanda se canta y no se mira en pantalla.' },
+    { c: 'p_caja', t: 'Pantalla: Cobrar las mesas',
+      d: 'Se la saca a la caja. Es donde confirma los pagos: sin esto nadie puede ' +
+         'dar una mesa por cobrada.' },
+    { c: 'p_admin', t: 'Pantalla: Cómo viene el salón',
+      d: 'Se la saca a la dueña y a la encargada. Es el resumen del día: las mesas ' +
+         'abiertas, lo cobrado y lo que falta.' },
+    { c: 'p_carta', t: 'Pantalla: La carta y lo que se terminó',
+      d: 'Se la saca a la dueña y a la cocina. Sin esto nadie puede marcar un plato ' +
+         'agotado ni cambiar un precio desde el celular.' },
+    { c: 'p_mesas', t: 'Pantalla: El salón y las cuentas',
+      d: 'El plano del salón. Hoy no está en el menú de nadie, así que apagarlo no ' +
+         'le saca nada a nadie. Elegir una mesa al tomar la comanda sigue andando.' },
+    { c: 'p_qr_mesa', t: 'Pantalla: Los QR de las mesas',
+      d: 'La hoja para imprimir los doce QR. Hoy no está en el menú de nadie. Los QR ' +
+         'ya impresos siguen funcionando igual.' },
+    { c: 'p_diseno', t: 'Pantalla: El diseño del local',
+      d: 'El editor de nombre, color y letra. Hoy no está en el menú de nadie. Lo ' +
+         'elegido queda puesto: apagar el editor no devuelve los colores de fábrica.' },
+    { c: 'p_alta', t: 'Pantalla: Activar los avisos',
+      d: 'La pantalla suelta de activar avisos. Hoy no está en el menú de nadie ' +
+         'porque cada puesto tiene su propio control adentro de su pantalla.' }
   ];
 
   function pintarLlaves(valores) {

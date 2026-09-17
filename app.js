@@ -1187,10 +1187,24 @@
   /* Que pantalla depende de que interruptor. Si la funcion esta apagada, la
      pantalla no figura en el menu de nadie: dejar el link llevaria a una
      pantalla vacia, y eso se lee como "se rompio". */
+  /* Que pantalla depende de que llave. Estaba a medias -solo tres- asi que las
+     otras once no se podian apagar aunque el local no las usara. */
   var LLAVE_DE_PANTALLA = {
-    'propinas.html': 'f_propinas',
-    'cobrar.html': 'f_qr_pago',
-    'anotaciones.html': 'f_libreta'
+    'propinas.html':    'f_propinas',
+    'cobrar.html':      'f_qr_pago',
+    'anotaciones.html': 'f_libreta',
+    'comanda.html':     'p_comanda',
+    'mozo.html':        'p_mozo',
+    'admin.html':       'p_admin',
+    'caja.html':        'p_caja',
+    'cocina.html':      'p_cocina',
+    'carta-fotos.html': 'p_carta',
+    'mesas.html':       'p_mesas',
+    'qr-mesa.html':     'p_qr_mesa',
+    'diseno.html':      'p_diseno',
+    'alta.html':        'p_alta'
+    /* tecnico.html y taller.html no estan, y es a proposito: ver el comentario
+       de FUNCIONES_BASE. */
   };
 
   function funcionesDe(rol) {
@@ -3592,7 +3606,36 @@
     /* La libreta del local. Con esto apagado desaparece anotaciones.html del
        menu de todos; lo anotado NO se borra. Para un local que ya lleva su
        cuaderno de papel y no la quiere ver. */
-    f_libreta: true
+    f_libreta: true,
+
+    /* --- Una llave por pantalla ------------------------------------------
+       Las de arriba apagan una FUNCION (las fotos, las propinas, los avisos).
+       Estas apagan una PANTALLA entera, para el local que no la usa: una
+       parrilla chica sin plano de salon, o una que no quiere el panel de
+       estadisticas.
+
+       Apagada, la pantalla desaparece del menu de todos Y rebota si alguien
+       escribe la direccion: sale de la misma matriz que los permisos, asi que
+       no puede quedar media apagada.
+
+       NO se borra nada. Lo cargado sigue entero y vuelve al prenderla.
+
+       Tres pantallas no tienen llave nueva porque ya tenian la suya:
+       propinas (f_propinas), cobrar (f_qr_pago) y la libreta (f_libreta).
+
+       Y dos NO se pueden apagar a proposito: el panel tecnico -es desde donde
+       se prenden estas mismas llaves, apagarlo seria cerrarse la puerta con
+       la llave adentro- y el taller, que es la entrada de David.          */
+    p_comanda: true,
+    p_mozo: true,
+    p_admin: true,
+    p_caja: true,
+    p_cocina: true,
+    p_carta: true,
+    p_mesas: true,
+    p_qr_mesa: true,
+    p_diseno: true,
+    p_alta: true
   };
 
   var FUNCIONES_KEY = 'lp_funciones';
@@ -3881,6 +3924,12 @@
        pantalla o un boton preguntan si corresponde. Tocando un solo lugar,
        la puerta de atras no puede quedar a medias. */
     if (tallerPrendido()) return 'edita';
+    /* Pantalla apagada desde el panel tecnico: no entra nadie. Va ANTES de
+       mirar el rol, porque apagarla no es cuestion de puesto: no esta para
+       nadie. Sin esto, la pantalla se iba del menu pero seguia abriendose
+       escribiendo la direccion, que es media puerta. */
+    var llave = LLAVE_DE_PANTALLA[seccion];
+    if (llave && !func(llave)) return 'no';
     var fila = PERMISOS[seccion] || PERMISOS_FINOS[seccion];
     if (!fila) return 'edita';                    // pantalla sin regla: se ve
     if (!rol) return 'sin';
