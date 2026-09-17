@@ -12,3 +12,6 @@ VAPID-NUEVAS.txt
 # Y este repo se sirve tal cual en Vercel, asi que un JSON suelto aca queda
 # publico en la web. Van fuera del proyecto.
 respaldo-*.json
+
+# Permisos locales de Claude Code: son de esta maquina, no del proyecto.
+.claude/settings.local.json
