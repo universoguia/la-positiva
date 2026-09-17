@@ -191,8 +191,12 @@
     width:calc(100% / var(--lupa,1));
   }
   .lupa-caja{display:flex;align-items:center;gap:4px;flex:none}
+  /* 44 y no 32: son los dos botones mas chicos de toda la app, y justo los
+     usa el que vino a esta pantalla PORQUE no ve bien. Achicar el blanco del
+     dedo en el control del tamanio de letra era el peor lugar posible para
+     ahorrar doce pixeles. */
   .lupa-caja button{
-    width:32px;height:32px;border-radius:var(--r-sm,7px);
+    width:var(--tap,44px);height:var(--tap,44px);border-radius:var(--r-sm,7px);
     border:1px solid var(--border-strong);background:var(--card);
     color:var(--ink);font:inherit;font-size:18px;line-height:1;cursor:pointer;
     display:inline-flex;align-items:center;justify-content:center;
