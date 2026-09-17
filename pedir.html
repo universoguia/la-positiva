@@ -756,7 +756,7 @@ document.addEventListener('DOMContentLoaded', function () {
   elSearch.addEventListener('input', function () {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(function () {
-      query = elSearch.value.trim().toLowerCase();
+      query = LP.sinTildes(elSearch.value.trim());
       elSearchClear.hidden = !query;
       renderCats();
       renderMenu();
@@ -771,7 +771,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function visibleItems() {
     if (!query) return MENU.filter(function (d) { return d.cat === activeCat; });
     return MENU.filter(function (d) {
-      return (d.name + ' ' + (d.note || '') + ' ' + d.cat).toLowerCase().indexOf(query) !== -1;
+      return LP.sinTildes(d.name + ' ' + (d.note || '') + ' ' + d.cat).indexOf(query) !== -1;
     });
   }
 

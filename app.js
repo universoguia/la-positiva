@@ -55,6 +55,16 @@
     return String(v).replace(/[&<>"']/g, function (c) { return ENT[c]; });
   }
 
+  /* Buscar sin que las tildes estorben: el que escribe rapido en el celular
+     pone "limon" y tiene que encontrar "Limonata". Se saca el acento de los
+     dos lados (lo tipeado y el plato) antes de comparar. */
+  function sinTildes(t) {
+    return String(t === null || t === undefined ? '' : t)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '');
+  }
+
   /* --- Formato ------------------------------------------------------------ */
   function money(n) {
     var v = Number(n);
@@ -3852,6 +3862,7 @@
     revertirPago: revertirPago,
     client: client,
     esc: esc,
+    sinTildes: sinTildes,
     money: money,
     timeAgo: timeAgo,
     humanError: humanError,

@@ -1033,7 +1033,7 @@ document.addEventListener('DOMContentLoaded', function () {
   elBusc.addEventListener('input', function () {
     clearTimeout(tBusq);
     tBusq = setTimeout(function () {
-      query = elBusc.value.trim().toLowerCase();
+      query = LP.sinTildes(elBusc.value.trim());
       elLimpiar.hidden = !query;
       pintarCats(); pintarCarta();
     }, 150);
@@ -1048,7 +1048,7 @@ document.addEventListener('DOMContentLoaded', function () {
       return MENU.filter(function (d) { return d.cat === catActiva; });
     }
     return MENU.filter(function (d) {
-      return (d.name + ' ' + (d.note || '') + ' ' + d.cat).toLowerCase().indexOf(query) !== -1;
+      return LP.sinTildes(d.name + ' ' + (d.note || '') + ' ' + d.cat).indexOf(query) !== -1;
     });
   }
 

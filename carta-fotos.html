@@ -295,10 +295,9 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   /* ---------------------------------------------------------- filtrado -- */
-  function normalizar(t) {
-    // Sin acentos: buscar "milanesa" tiene que encontrar "Milanesas de ternera".
-    return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  }
+  /* La misma que usan la comanda y el cliente: vive en app.js para que no
+     haya dos versiones distintas de "buscar sin tildes". */
+  function normalizar(t) { return LP.sinTildes(t); }
 
   function filtrados() {
     var q = normalizar(inBuscar.value.trim());
