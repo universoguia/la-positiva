@@ -646,6 +646,33 @@ document.addEventListener('DOMContentLoaded', function () {
     if (CATS.indexOf(MENU[i].cat) === -1) CATS.push(MENU[i].cat);
     CUANTOS[MENU[i].cat] = (CUANTOS[MENU[i].cat] || 0) + 1;
   }
+  /* --- El orden de la tira, segun quien toma la comanda -------------------
+     La carta esta ordenada como un menu impreso: se arranca por las entradas
+     y las bebidas caen al final, despues de doce categorias de comida.
+
+     Para un mozo eso esta bien: recorre la mesa entero. Para el de la barra
+     no: el 90% de lo que carga son bebidas, tragos y cervezas, y las tenia a
+     seis arrastres de distancia, cada vez.
+
+     Asi que para el barman la tira arranca por la barra y la comida queda
+     atras. Es el MISMO menu, no se le esconde nada ni se le cambia un precio:
+     lo unico que cambia es por donde empieza.                             */
+  var LO_DE_LA_BARRA = [
+    'Bebidas', 'Tragos', 'Cervezas (litro)', 'Cervezas (porrón / lata)',
+    'Vinos blancos', 'Vinos tintos', 'Infusiones'
+  ];
+
+  if (LP.quienSoy() && LP.quienSoy().rol === 'Barman') {
+    var barra = [], resto = [];
+    /* Se respeta el orden de LO_DE_LA_BARRA, no el de la carta: primero lo que
+       mas sale -la gaseosa y la cerveza-, y los vinos despues. */
+    LO_DE_LA_BARRA.forEach(function (c) {
+      if (CATS.indexOf(c) !== -1) barra.push(c);
+    });
+    CATS.forEach(function (c) { if (barra.indexOf(c) === -1) resto.push(c); });
+    CATS = barra.concat(resto);
+  }
+
   catActiva = CATS[0];
 
   var PLATO = Object.create(null);

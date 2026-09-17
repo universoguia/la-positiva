@@ -1121,6 +1121,15 @@
     Caja:          ['caja.html', 'cobrar.html'],
     Cocina:        ['cocina.html', 'carta-fotos.html'],
     Mantenimiento: ['anotaciones.html'],
+    /* Lautaro paso de mantenimiento a la barra. Hace comandas igual que un
+       mozo, asi que tiene las mismas tres puertas.
+
+       Y conserva la libreta, que ya era su pantalla. No es un arrastre: un
+       barman es el primero que se entera de que se termina el fernet, y la
+       libreta es justamente donde se anota lo que hay que comprar. Sacarsela
+       al pasarlo a la barra habria apagado la funcion para todo el local,
+       porque hoy solo la ven el duenio y el. */
+    Barman:        ['comanda.html', 'mozo.html', 'cobrar.html', 'anotaciones.html'],
     Duenio:        ['admin.html', 'anotaciones.html', 'carta-fotos.html', 'tecnico.html']
   };
 
@@ -1401,7 +1410,8 @@
     Mozo: 'Mozo',
     Caja: 'Caja',
     Cocina: 'Cocina',
-    Mantenimiento: 'Mantenimiento'
+    Mantenimiento: 'Mantenimiento',
+    Barman: 'Barman'
   };
 
   function rotuloDeRol(persona) {
