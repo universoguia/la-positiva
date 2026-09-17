@@ -47,7 +47,20 @@ const CAMPOS = [
   ['COBROS_TABLE', 'LP_PUBLIC_COBROS_TABLE', false, 'la_positiva_cobros'],
   ['BUCKET', 'LP_PUBLIC_BUCKET', false, 'la-positiva'],
   ['IMG_BASE', 'LP_PUBLIC_IMG_BASE', true],
-  ['VAPID_PUBLIC', 'LP_PUBLIC_VAPID', true]
+  ['VAPID_PUBLIC', 'LP_PUBLIC_VAPID', true],
+  /* La puerta del taller (taller.html), la de David.
+
+     Ojo con que dice HASH: lo que viaja al navegador es el sha-256 de la
+     clave, NUNCA la clave. De un hash no se saca la clave de vuelta, asi que
+     puede vivir en config.js como el resto.
+
+     El hash se genera con:  node scripts/hash-taller.js
+     y se pega en Vercel como LP_PUBLIC_TALLER_HASH.
+
+     Si no esta configurada, taller.html solo abre en localhost. En
+     produccion, sin hash, no deja entrar a nadie: es a proposito, porque una
+     puerta sin cerradura no es una puerta.                             */
+  ['TALLER_HASH', 'LP_PUBLIC_TALLER_HASH', false, '']
 ];
 
 const valores = {};

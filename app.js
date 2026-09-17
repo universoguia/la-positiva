@@ -3539,7 +3539,98 @@
     'carta.agotados': { Duenio: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'edita', Mantenimiento: 'no' }
   };
 
+  /* --- El taller: la puerta de atras de David -----------------------------
+     Todo lo de arriba ordena el trabajo del LOCAL. Esto es otra cosa: es la
+     llave del que construye el sistema, para poder entrar a diseno, al panel
+     tecnico y a cualquier pantalla sin tener que cambiarse el puesto ni
+     tocarle los permisos al equipo.
+
+     Se prende en taller.html, que no figura en ningun menu de ningun rol.
+     Mientras esta prendido, permisoDe() devuelve 'edita' para todo y arriba
+     de la pantalla queda una cinta que lo dice, para que nadie -ni el mismo
+     David- se olvide de que esta viendo mas de lo que ve el equipo.
+
+     Que tan fuerte es: lo mismo que el resto de esta app. La clave viaja
+     hasheada y no se lee del codigo, pero el que sepa escribir una linea en
+     la consola del navegador entra igual. Filtra al curioso, no al que
+     sabe. Para que fuera un candado de verdad hace falta Supabase Auth.  */
+  var TALLER_KEY = 'lp_modo_taller';
+
+  function tallerPrendido() {
+    try { return localStorage.getItem(TALLER_KEY) === '1'; } catch (e) { return false; }
+  }
+
+  function prenderTaller() {
+    try { localStorage.setItem(TALLER_KEY, '1'); } catch (e) {}
+  }
+
+  function apagarTaller() {
+    try { localStorage.removeItem(TALLER_KEY); } catch (e) {}
+  }
+
+  /* El sha-256 de lo que se tipeo, igual que scripts/hash-taller.js. */
+  function hashTaller(texto) {
+    if (!global.crypto || !global.crypto.subtle) {
+      return Promise.reject(new Error('Este navegador no puede comprobar la clave.'));
+    }
+    var bytes = new TextEncoder().encode(String(texto));
+    return global.crypto.subtle.digest('SHA-256', bytes).then(function (buf) {
+      var a = Array.prototype.slice.call(new Uint8Array(buf));
+      return a.map(function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+    });
+  }
+
+  function esLocal() {
+    var h = location.hostname;
+    return h === 'localhost' || h === '127.0.0.1' || h === '' || /^192\.168\./.test(h);
+  }
+
+  /* Resuelve 'ok' | 'mal' | 'sin-clave'. En localhost entra sin clave: es la
+     maquina donde se programa y pedirla ahi solo molesta. */
+  function abrirTaller(clave) {
+    var esperado = (CFG && CFG.TALLER_HASH) || '';
+    if (!esperado) {
+      if (esLocal()) { prenderTaller(); return Promise.resolve('ok'); }
+      return Promise.resolve('sin-clave');
+    }
+    return hashTaller(clave).then(function (h) {
+      if (h !== esperado) return 'mal';
+      prenderTaller();
+      return 'ok';
+    });
+  }
+
+  /* La cinta de arriba. Se pinta en TODA pantalla mientras el taller este
+     prendido, y el boton la apaga. Sin esto es facil quedarse adentro del
+     modo y creer que el mozo ve lo mismo que vos. */
+  function cintaTaller() {
+    if (!tallerPrendido() || !document.body) return;
+    if (document.getElementById('cintaTaller')) return;
+    var d = document.createElement('div');
+    d.id = 'cintaTaller';
+    d.setAttribute('role', 'status');
+    d.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:9999;' +
+      'background:#7b2d12;color:#fff;font:600 13px/1.3 system-ui,sans-serif;' +
+      'padding:8px 12px;display:flex;gap:10px;align-items:center;' +
+      'justify-content:center;box-shadow:0 -2px 10px rgba(0,0,0,.35)';
+    var t = document.createElement('span');
+    t.textContent = 'MODO TALLER — estás viendo todas las pantallas';
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = 'Salir del taller';
+    b.style.cssText = 'min-height:32px;padding:0 12px;border-radius:999px;border:0;' +
+      'background:#fff;color:#7b2d12;font:600 13px system-ui,sans-serif;cursor:pointer';
+    b.addEventListener('click', function () { apagarTaller(); location.reload(); });
+    d.appendChild(t); d.appendChild(b);
+    document.body.appendChild(d);
+  }
+
   function permisoDe(seccion, rol) {
+    /* El taller primero: mientras este prendido, David entra a todo. Va aca
+       arriba a proposito, porque este es el unico camino por el que una
+       pantalla o un boton preguntan si corresponde. Tocando un solo lugar,
+       la puerta de atras no puede quedar a medias. */
+    if (tallerPrendido()) return 'edita';
     var fila = PERMISOS[seccion] || PERMISOS_FINOS[seccion];
     if (!fila) return 'edita';                    // pantalla sin regla: se ve
     if (!rol) return 'sin';
@@ -4019,6 +4110,9 @@
     rotuloDeRol: rotuloDeRol,
     mostrarRol: mostrarRol,
     podarEnlaces: podarEnlaces,
+    tallerPrendido: tallerPrendido,
+    abrirTaller: abrirTaller,
+    apagarTaller: apagarTaller,
     navegacionFija: navegacionFija,
     navDonde: navDonde,
     rolDeAvisos: rolDeAvisos,
@@ -4094,6 +4188,7 @@
     /* Ultimo: cuando ya estan todos los links en la pagina, incluidos los
        que arma la barra fija y la pastilla de abajo. */
     try { podarEnlaces(); } catch (e) {}
+    try { cintaTaller(); } catch (e) {}
   }
 
   if (document.readyState === 'loading') {

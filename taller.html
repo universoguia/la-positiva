@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Que ningun buscador la indexe. No es seguridad -la URL la sabe el que la
+     sabe-, es no aparecer en Google cuando alguien busque el restaurante. -->
+<meta name="robots" content="noindex, nofollow">
+<title>La Positiva - Taller</title>
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+<script src="tema.js"></script>
+<style>
+  .taller-wrap{max-width:460px;margin:0 auto;padding:28px 16px 60px}
+  .taller-caja{
+    background:var(--dark-card);border:1px solid var(--dark-border);
+    border-radius:var(--r-card);padding:22px 18px;
+  }
+  .taller-caja h1{margin:0 0 4px;font-size:26px}
+  .taller-caja .sub{margin:0 0 18px;color:var(--dark-muted);font-size:15px}
+  .taller-caja label{display:block;margin:0 0 6px;font-size:14px;font-weight:600}
+  .taller-caja input{
+    width:100%;min-height:var(--tap);padding:0 14px;font-size:17px;
+    border-radius:var(--r-pill);border:1px solid var(--dark-border);
+    background:var(--dark-bg);color:var(--dark-ink);
+  }
+  .taller-caja input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .taller-msg{margin:12px 0 0;font-size:14px;min-height:20px}
+  .taller-msg.mal{color:var(--err)}
+  .taller-msg.ok{color:var(--ok)}
+  .taller-nota{
+    margin:18px 0 0;padding:12px 14px;border-radius:var(--r-card);
+    background:rgba(255,255,255,.04);color:var(--dark-muted);
+    font-size:13px;line-height:1.5;
+  }
+  .taller-nota code{
+    background:rgba(0,0,0,.35);padding:1px 5px;border-radius:5px;
+    font-size:12px;word-break:break-all;
+  }
+  .puertas{margin:22px 0 0;padding:0;list-style:none;display:grid;gap:8px}
+  .puertas a{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    min-height:var(--tap);padding:10px 14px;border-radius:var(--r-card);
+    background:var(--dark-card);border:1px solid var(--dark-border);
+    color:var(--dark-ink);text-decoration:none;font-size:15px;
+  }
+  .puertas a:hover{background:var(--dark-card-hover)}
+  .puertas em{font-style:normal;color:var(--dark-muted);font-size:12px}
+</style>
+</head>
+<body>
+<div class="taller-wrap">
+
+  <!-- Estado 1: pedir la clave. -->
+  <section class="taller-caja" id="puerta">
+    <h1>Taller</h1>
+    <p class="sub">La entrada de atr&aacute;s. No figura en el men&uacute; de nadie.</p>
+
+    <form id="form" autocomplete="off">
+      <label for="clave">Clave</label>
+      <input type="password" id="clave" name="clave" inputmode="text"
+             autocomplete="current-password" enterkeyhint="go">
+      <p class="taller-msg" id="msg" role="status" aria-live="polite"></p>
+      <button type="submit" class="btn btn-primary btn-block" id="entrar">Entrar</button>
+    </form>
+
+    <p class="taller-nota" id="notaSinClave" hidden>
+      <strong>Falta configurar la clave.</strong><br>
+      Gener&aacute; el hash con <code>node scripts/hash-taller.js</code>, pegalo en
+      Vercel como <code>LP_PUBLIC_TALLER_HASH</code> y volv&eacute; a deployar.
+      Mientras tanto, desde <code>localhost</code> entra sin clave.
+    </p>
+  </section>
+
+  <!-- Estado 2: ya adentro. -->
+  <section class="taller-caja" id="adentro" hidden>
+    <h1>Estás en el taller</h1>
+    <p class="sub">Entr&aacute;s a todas las pantallas, sin cambiarte el puesto.</p>
+
+    <ul class="puertas" id="puertas"></ul>
+
+    <button type="button" class="btn btn-secondary btn-block" id="salir"
+            style="margin-top:16px">Salir del taller</button>
+
+    <p class="taller-nota">
+      Esto ordena el acceso, no lo cierra con llave: la app entera se usa
+      tocando un nombre, sin contrase&ntilde;a. Filtra al curioso, no al que sabe.
+    </p>
+  </section>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+<script src="menu-data.js" defer></script>
+<script src="config.js" defer></script>
+<script src="app.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  /* Sin guardaDeSeccion a proposito: esta ES la puerta. Si se pidiera permiso
+     para entrar aca, haria falta otra puerta para abrir esta. */
+  var puerta = document.getElementById('puerta');
+  var adentro = document.getElementById('adentro');
+  var msg = document.getElementById('msg');
+  var form = document.getElementById('form');
+  var clave = document.getElementById('clave');
+
+  /* Las mismas de siempre. No se inventa la lista: sale de la constante que
+     ya usa el resto del sistema, asi que si maniana entra una pantalla nueva
+     aparece aca sola. */
+  var PANTALLAS = [
+    ['index.html', 'La portada'],
+    ['comanda.html', 'Tomar comanda'],
+    ['mozo.html', 'Los pedidos de las mesas'],
+    ['cocina.html', 'Las comandas'],
+    ['caja.html', 'Los pagos'],
+    ['cobrar.html', 'Cobrar con QR'],
+    ['mesas.html', 'El salón y las cuentas'],
+    ['admin.html', 'Cómo viene el salón'],
+    ['carta-fotos.html', 'La carta y lo que se terminó'],
+    ['qr-mesa.html', 'Los QR de las mesas'],
+    ['propinas.html', 'Las propinas'],
+    ['anotaciones.html', 'La libreta del local'],
+    ['diseno.html', 'El diseño del local'],
+    ['tecnico.html', 'Panel técnico'],
+    ['alta.html', 'Activar los avisos'],
+    ['pedir.html', 'La carta del cliente']
+  ];
+
+  function pintarAdentro() {
+    puerta.hidden = true;
+    adentro.hidden = false;
+    var ul = document.getElementById('puertas');
+    ul.innerHTML = '';
+    PANTALLAS.forEach(function (p) {
+      var li = document.createElement('li');
+      var a = document.createElement('a');
+      a.href = p[0];
+      var b = document.createElement('b');
+      b.textContent = p[1];
+      var em = document.createElement('em');
+      em.textContent = p[0];
+      a.appendChild(b); a.appendChild(em);
+      li.appendChild(a); ul.appendChild(li);
+    });
+  }
+
+  if (LP.tallerPrendido()) { pintarAdentro(); }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    msg.className = 'taller-msg';
+    msg.textContent = 'Comprobando...';
+    LP.abrirTaller(clave.value).then(function (r) {
+      if (r === 'ok') {
+        msg.className = 'taller-msg ok';
+        msg.textContent = 'Listo.';
+        clave.value = '';
+        pintarAdentro();
+        return;
+      }
+      if (r === 'sin-clave') {
+        msg.textContent = '';
+        document.getElementById('notaSinClave').hidden = false;
+        return;
+      }
+      msg.className = 'taller-msg mal';
+      msg.textContent = 'Esa no es.';
+      clave.select();
+    }, function (err) {
+      msg.className = 'taller-msg mal';
+      msg.textContent = (err && err.message) || 'No se pudo comprobar.';
+    });
+  });
+
+  document.getElementById('salir').addEventListener('click', function () {
+    LP.apagarTaller();
+    location.reload();
+  });
+});
+</script>
+</body>
+</html>
