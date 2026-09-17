@@ -108,6 +108,11 @@
     return toastRegion;
   }
   function toast(msg, kind, ms) {
+    /* El que apago el aviso en pantalla no lo ve mas. Los errores SI pasan
+       igual: si algo se rompio hay que enterarse, lo hayas pedido o no. */
+    try {
+      if (kind !== 'err' && localStorage.getItem('lp_av_globo') === '0') return;
+    } catch (e) {}
     var region = ensureToastRegion();
     var el = document.createElement('div');
     el.className = 'toast' + (kind ? ' is-' + kind : '');
@@ -1381,6 +1386,162 @@
 
     document.body.appendChild(barra);
     document.body.classList.add('con-acceso');
+  }
+
+  /* --- Los avisos, uno por uno -------------------------------------------
+     Antes era todo o nada: un boton "Apagar el sonido" adentro de cada
+     pantalla, y el globo que aparecia siempre sin que nadie pudiera callarlo.
+
+     Son DOS cosas distintas y molestan distinto. En una cocina con ruido el
+     pitido es lo unico que se escucha y el cartel no lo ve nadie; en un salon
+     tranquilo el pitido queda mal delante del cliente y el cartel alcanza.
+     Que cada uno elija, en SU celular.
+
+     Las preferencias viven en el telefono y no en la base, a proposito: son
+     del aparato, no de la persona. El mismo mozo en su celular y en el del
+     local puede querer cosas distintas.                                   */
+  var AVISO_SONIDO = 'lp_av_sonido';
+  var AVISO_GLOBO  = 'lp_av_globo';
+
+  /* Las pantallas ya tenian su propia llave de sonido antes de que esto
+     existiera. Se siguen escribiendo para no romperles nada: manda el control
+     nuevo, y ellas leen lo que leyeron siempre. */
+  var LLAVES_VIEJAS_SONIDO = ['lp_mozo_sonido', 'lp_cocina_sonido', 'lp_caja_sonido'];
+
+  function avisoPrendido(clave) {
+    /* Vienen PRENDIDOS: el que no toco nada tiene que enterarse igual de que
+       una mesa pidio algo. Solo el '0' explicito apaga. */
+    try { return localStorage.getItem(clave) !== '0'; } catch (e) { return true; }
+  }
+
+  function ponerAviso(clave, valor) {
+    try {
+      localStorage.setItem(clave, valor ? '1' : '0');
+      if (clave === AVISO_SONIDO) {
+        LLAVES_VIEJAS_SONIDO.forEach(function (k) {
+          try { localStorage.setItem(k, valor ? '1' : '0'); } catch (e) {}
+        });
+      }
+    } catch (e) {}
+  }
+
+  function sonidoPrendido() { return avisoPrendido(AVISO_SONIDO); }
+  function globoPrendido()  { return avisoPrendido(AVISO_GLOBO); }
+
+  /* Donde tiene sentido: en las pantallas a las que LLEGA un aviso. En la
+     carta o en la libreta no suena nada, y ofrecer el control ahi seria
+     ruido. */
+  var CON_AVISOS = ['mozo.html', 'cocina.html', 'caja.html'];
+
+  var CAMPANA =
+    '<svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" fill="none" ' +
+    'stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M18 8.6a6 6 0 1 0-12 0c0 6-2.2 7.4-2.2 7.4h16.4S18 14.6 18 8.6"/>' +
+    '<path d="M10.2 19.3a2 2 0 0 0 3.6 0"/></svg>';
+
+  var CAMPANA_MUDA =
+    '<svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" fill="none" ' +
+    'stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M18 8.6a6 6 0 1 0-12 0c0 6-2.2 7.4-2.2 7.4h16.4S18 14.6 18 8.6"/>' +
+    '<path d="M10.2 19.3a2 2 0 0 0 3.6 0"/><path d="M3.5 3.5l17 17"/></svg>';
+
+  var OPCIONES_AVISO = [
+    [AVISO_SONIDO, 'Sonido', 'Suena cuando llega algo nuevo'],
+    [AVISO_GLOBO,  'Aviso en pantalla', 'El cartelito que aparece arriba']
+  ];
+
+  function controlDeAvisos() {
+    if (!document.body || document.getElementById('avisosFlot')) return;
+    if (CON_AVISOS.indexOf(paginaActual()) === -1) return;
+    if (!quienSoy()) return;
+
+    var caja = document.createElement('div');
+    caja.id = 'avisosFlot';
+    caja.className = 'avisos-flot';
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'avisos-btn';
+    btn.setAttribute('aria-expanded', 'false');
+
+    var panel = document.createElement('div');
+    panel.className = 'avisos-panel';
+    panel.hidden = true;
+
+    function pintarBoton() {
+      var algo = sonidoPrendido() || globoPrendido();
+      btn.innerHTML = (algo ? CAMPANA : CAMPANA_MUDA) +
+        '<span>' + (algo ? 'Avisos' : 'Sin avisos') + '</span>';
+      btn.setAttribute('aria-label',
+        algo ? 'Avisos prendidos. Toca para elegir cuales.'
+             : 'Avisos apagados. Toca para prenderlos.');
+      btn.classList.toggle('mudo', !algo);
+    }
+
+    var todo = document.createElement('button');
+    todo.type = 'button';
+    todo.className = 'avisos-todo';
+
+    function pintarTodo() {
+      todo.textContent = (sonidoPrendido() || globoPrendido()) ? 'Apagar todo' : 'Prender todo';
+    }
+
+    /* Un interruptor por cosa, cada uno con su explicacion de un renglon. Sin
+       eso, "globo" no quiere decir nada para el que lo lee la primera vez. */
+    function pintarFilas() {
+      panel.innerHTML = '';
+      OPCIONES_AVISO.forEach(function (o) {
+        var f = document.createElement('button');
+        f.type = 'button';
+        f.className = 'avisos-fila';
+        f.setAttribute('aria-pressed', avisoPrendido(o[0]) ? 'true' : 'false');
+        f.innerHTML = '<span class="avisos-txt"><b>' + esc(o[1]) + '</b>' +
+          '<em>' + esc(o[2]) + '</em></span>' +
+          '<span class="avisos-sw" aria-hidden="true"></span>';
+        f.addEventListener('click', function () {
+          ponerAviso(o[0], !avisoPrendido(o[0]));
+          pintarFilas(); pintarTodo(); pintarBoton();
+          /* El globo se prueba solo: al prenderlo aparece uno diciendo que
+             quedo prendido. Es la unica forma de entender que es "el globo"
+             sin que nadie te lo explique. */
+          if (o[0] === AVISO_GLOBO && globoPrendido()) {
+            toast('Asi se ve un aviso en pantalla.', 'ok');
+          }
+        });
+        panel.appendChild(f);
+      });
+      panel.appendChild(todo);
+    }
+
+    todo.addEventListener('click', function () {
+      var prender = !(sonidoPrendido() || globoPrendido());
+      ponerAviso(AVISO_SONIDO, prender);
+      ponerAviso(AVISO_GLOBO, prender);
+      pintarFilas(); pintarTodo(); pintarBoton();
+    });
+
+    btn.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      var abierto = !panel.hidden;
+      panel.hidden = abierto;
+      btn.setAttribute('aria-expanded', abierto ? 'false' : 'true');
+    });
+
+    /* Tocar afuera lo cierra: en un celular no hay otra forma obvia de salir
+       de un panelito flotante. */
+    document.addEventListener('click', function (ev) {
+      if (!caja.contains(ev.target) && !panel.hidden) {
+        panel.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    pintarFilas();
+    pintarTodo();
+    pintarBoton();
+    caja.appendChild(panel);
+    caja.appendChild(btn);
+    document.body.appendChild(caja);
   }
 
   /* El rotulo de la pastilla. Se respeta el renombre del panel tecnico solo
@@ -4182,6 +4343,9 @@
     rotuloDeRol: rotuloDeRol,
     mostrarRol: mostrarRol,
     podarEnlaces: podarEnlaces,
+    sonidoPrendido: sonidoPrendido,
+    globoPrendido: globoPrendido,
+    ponerAviso: ponerAviso,
     tallerPrendido: tallerPrendido,
     abrirTaller: abrirTaller,
     apagarTaller: apagarTaller,
@@ -4257,6 +4421,7 @@
     /* Y la pastilla de abajo, aparte otra vez y por la misma razon: si
        fallara, la barra de arriba y el resto de la pantalla siguen enteras. */
     try { accesoRapido(); } catch (e) {}
+    try { controlDeAvisos(); } catch (e) {}
     /* Ultimo: cuando ya estan todos los links en la pagina, incluidos los
        que arma la barra fija y la pastilla de abajo. */
     try { podarEnlaces(); } catch (e) {}

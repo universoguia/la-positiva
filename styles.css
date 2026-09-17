@@ -358,6 +358,82 @@ body.con-nav .container{padding-top:var(--nav-h)}
 body.con-acceso{--acceso-h:calc(62px + var(--sa-b))}
 body.con-acceso .wrap{padding-bottom:calc(var(--acceso-h) + 18px)}
 
+/* --- El control de avisos -------------------------------------------------
+   La pastilla de la campana, arriba del acceso rapido y del mismo lado. Son
+   dos barras flotantes y NO se pisan: esta va mas arriba, con el mismo
+   z-index, y la otra le deja el lugar con su propio bottom.
+
+   Pegada a la derecha y no al centro: el acceso rapido ya ocupa el centro y
+   se toca cien veces por turno; esto se toca una vez al arrancar el turno y
+   no puede quedar en el camino del pulgar.                                */
+.avisos-flot{
+  position:fixed;z-index:41;
+  right:calc(12px + var(--sa-r));
+  bottom:calc(66px + var(--sa-b));
+  display:flex;flex-direction:column;align-items:flex-end;gap:8px;
+  max-width:calc(100% - 24px);
+}
+.avisos-btn{
+  display:flex;align-items:center;gap:8px;
+  min-height:var(--tap);padding:0 16px;
+  border-radius:var(--r-pill);cursor:pointer;
+  background:var(--ink);border:1px solid var(--dark-border);color:#fff;
+  font-family:var(--font-cuerpo);font-size:13px;font-weight:600;
+  box-shadow:0 8px 26px rgba(20,16,14,.42);
+}
+.avisos-btn svg{flex:none;color:var(--gold)}
+/* Apagado se ve apagado: la campana tachada y el dorado se va. Si el estado
+   no se distingue de un vistazo, el control no sirve de nada. */
+.avisos-btn.mudo{color:var(--dark-muted)}
+.avisos-btn.mudo svg{color:var(--dark-muted)}
+.avisos-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+@media (hover:hover){ .avisos-btn:hover{background:var(--dark-card-hover)} }
+
+.avisos-panel{
+  width:270px;max-width:100%;padding:6px;
+  border-radius:var(--r-lg);
+  background:var(--ink);border:1px solid var(--dark-border);
+  box-shadow:0 10px 30px rgba(20,16,14,.5);
+}
+.avisos-panel[hidden]{display:none}
+
+.avisos-fila{
+  display:flex;align-items:center;gap:12px;width:100%;
+  min-height:var(--tap);padding:9px 10px;
+  background:none;border:0;border-radius:var(--r-md);cursor:pointer;
+  color:#fff;text-align:left;font-family:var(--font-cuerpo);
+}
+.avisos-fila:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+@media (hover:hover){ .avisos-fila:hover{background:var(--dark-card-hover)} }
+.avisos-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.avisos-txt b{font-size:14px;font-weight:600;line-height:1.2}
+.avisos-txt em{font-style:normal;font-size:11px;color:var(--dark-muted);line-height:1.3}
+
+/* El interruptor. Es un dibujo y no un checkbox del sistema para que se vea
+   igual en Android y en iPhone, que los pintan distinto. */
+.avisos-sw{
+  flex:none;width:40px;height:24px;border-radius:999px;
+  background:var(--dark-border);position:relative;
+  transition:background-color .16s;
+}
+.avisos-sw::after{
+  content:'';position:absolute;top:3px;left:3px;
+  width:18px;height:18px;border-radius:50%;background:#fff;
+  transition:transform .16s;
+}
+.avisos-fila[aria-pressed="true"] .avisos-sw{background:var(--ok)}
+.avisos-fila[aria-pressed="true"] .avisos-sw::after{transform:translateX(16px)}
+
+.avisos-todo{
+  width:100%;min-height:var(--tap);margin-top:2px;
+  background:none;border:0;border-top:1px solid var(--dark-border);
+  border-radius:0 0 var(--r-md) var(--r-md);
+  color:var(--dark-muted);cursor:pointer;
+  font-family:var(--font-cuerpo);font-size:13px;font-weight:600;
+}
+@media (hover:hover){ .avisos-todo:hover{color:#fff} }
+.avisos-todo:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+
 .acceso-rapido{
   position:fixed;z-index:40;
   left:50%;transform:translateX(-50%);
