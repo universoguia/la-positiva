@@ -1076,93 +1076,68 @@
 
      Los textos son la funcion en castellano, no el nombre del archivo: la
      persona busca "los pagos", no "caja.html".                          */
-  var FUNCIONES_POR_ROL = {
-    Duenio: [
-      { url: 'admin.html',       texto: 'C\u00f3mo viene el sal\u00f3n' },
-      { url: 'comanda.html',     texto: 'Tomar comanda' },
-      { url: 'mesas.html',       texto: 'El sal\u00f3n y las cuentas' },
-      { url: 'mozo.html',        texto: 'Los pedidos de las mesas' },
-      { url: 'cocina.html',      texto: 'Las comandas' },
-      { url: 'caja.html',        texto: 'Los pagos' },
-      { url: 'cobrar.html',      texto: 'Cobrar con QR' },
-      { url: 'carta-fotos.html', texto: 'La carta y lo que se termin\u00f3' },
-      { url: 'qr-mesa.html',     texto: 'Los QR de las mesas' },
-      { url: 'propinas.html',    texto: 'Las propinas de los mozos' },
-      { url: 'diseno.html',      texto: 'El diseño del local' },
-      { url: 'anotaciones.html', texto: 'La libreta del local' },
-      { url: 'alta.html',        texto: 'Activar los avisos' },
-      /* Ultimo y con el nombre de lo que es. No se esconde: la duenia tiene
-         que poder llegar sin que nadie le pase la direccion por WhatsApp. */
-      { url: 'tecnico.html',     texto: 'Panel técnico' }
-    ],
-    /* El mozo tiene cuatro caminos, en el orden del servicio: tomar la
-       comanda EL MISMO (comanda.html: elige mesa, cuanta gente y carga los
-       platos de la carta), mirar los pedidos que ya estan dando vueltas
-       -los que manda el comensal desde el QR y los que ya salieron-,
-       gestionar las mesas y cobrar.
+  /* =====================================================================
+     LA MATRIZ. Este es el UNICO lugar donde se decide quien entra a que.
 
-       'Tomar comanda' apuntaba a mozo.html, que es la pantalla de APROBAR lo
-       que ya pidio el comensal: el mozo entraba a tomar un pedido y se
-       encontraba con una lista de pedidos ajenos y ningun lugar donde cargar
-       un plato.                                                          */
-    Mozo: [
-      { url: 'comanda.html',  texto: 'Tomar comanda' },
-      { url: 'mozo.html',     texto: 'Los pedidos de las mesas' },
-      { url: 'mesas.html',    texto: 'Gestionar mesas' },
-      { url: 'cobrar.html',   texto: 'Cobrar con QR' },
-      { url: 'propinas.html', texto: 'Mis propinas' },
-      /* AJ-008: entro a la lista de cada puesto cuando se saco "Todas las
-         pantallas" de la portada. Sin esto, esconder esa lista dejaba al
-         mozo, a la cocina y a la caja sin ninguna puerta a la pantalla que
-         activa los avisos en su celular: se les apagaba el telefono. */
-      { url: 'anotaciones.html', texto: 'La libreta del local' },
-      { url: 'alta.html',     texto: 'Activar los avisos' }
-    ],
-    Caja: [
-      { url: 'caja.html',   texto: 'Los pagos' },
-      { url: 'cobrar.html', texto: 'Mostrar el QR de cobro' },
-      { url: 'anotaciones.html', texto: 'La libreta del local' },
-      { url: 'alta.html',   texto: 'Activar los avisos' }
-    ],
-    Cocina: [
-      { url: 'cocina.html',      texto: 'Las comandas' },
-      /* Va a la carta entera y NO al filtro de agotados: si preseleccionara
-         "solo los que se terminaron", el cocinero caeria en una lista vacia
-         justo cuando todavia no marco nada, que es siempre la primera vez. */
-      { url: 'carta-fotos.html', texto: 'Marcar lo que se termin\u00f3' },
-      { url: 'anotaciones.html', texto: 'La libreta del local' },
-      { url: 'alta.html',        texto: 'Activar los avisos' }
-    ],
-    /* Betty de maniana y Cintia de noche: administran todo el local, asi que
-       su menu es el de la duenia SIN el panel tecnico. Este renglon faltaba:
-       el permiso ya las dejaba entrar a todo, pero funcionesDe('Encargada')
-       devolvia una lista vacia y en la portada no les aparecia ni una puerta. */
-    Encargada: [
-      { url: 'admin.html',       texto: 'C\u00f3mo viene el sal\u00f3n' },
-      { url: 'comanda.html',     texto: 'Tomar comanda' },
-      { url: 'mesas.html',       texto: 'El sal\u00f3n y las cuentas' },
-      { url: 'mozo.html',        texto: 'Los pedidos de las mesas' },
-      { url: 'cocina.html',      texto: 'Las comandas' },
-      { url: 'caja.html',        texto: 'Los pagos' },
-      { url: 'cobrar.html',      texto: 'Cobrar con QR' },
-      { url: 'carta-fotos.html', texto: 'La carta y lo que se termin\u00f3' },
-      { url: 'qr-mesa.html',     texto: 'Los QR de las mesas' },
-      { url: 'propinas.html',    texto: 'Las propinas de los mozos' },
-      { url: 'diseno.html',      texto: 'El dise\u00f1o del local' },
-      { url: 'anotaciones.html', texto: 'La libreta del local' },
-      { url: 'alta.html',        texto: 'Activar los avisos' }
-    ],
-    /* Lautaro. La libreta va PRIMERA porque es su pantalla: ahi ve lo que hay
-       que limpiar y arreglar, y ahi lo marca hecho. El salon lo mira para
-       saber que mesa se desocupo. Nada de la operacion le corresponde.
-       El orden importa: el primero de la lista se pinta como boton grande
-       ('principal') en la portada. */
-    Mantenimiento: [
-      { url: 'anotaciones.html', texto: 'La libreta del local' },
-      { url: 'mesas.html',       texto: 'Mirar el sal\u00f3n' },
-      { url: 'alta.html',        texto: 'Activar los avisos' }
-    ]
+     De aca salen las dos cosas a la vez: los botones que ve cada uno en la
+     portada Y el portero que rebota al que escribe la direccion a mano. Antes
+     eran dos listas separadas y bastaba un renglon mal copiado para que el
+     menu ofreciera una puerta que despues rebotaba.
+
+     Para dar o sacar un acceso se toca UN renglon de MATRIZ y nada mas.
+
+     Decision de David del 17/09: cada puesto ve solo lo suyo, y el duenio
+     dejo de ser la excepcion. Antes Nelly y Oscar veian las catorce
+     pantallas por ser duenios; ahora tienen dos, como todos.
+
+     Los modulos que no le tocan a nadie NO se borraron: siguen enteros, con
+     su codigo y sus datos. Estan fuera de MATRIZ, nada mas. Devolverle una
+     pantalla a un puesto es agregar su nombre a la lista de abajo.      */
+  var MODULOS = {
+    'comanda.html':     'Tomar comanda',
+    'mozo.html':        'Los pedidos de las mesas',
+    'cobrar.html':      'Cobrar con QR',
+    'admin.html':       'Cómo viene el salón',
+    'caja.html':        'Los pagos',
+    'cocina.html':      'Las comandas',
+    'carta-fotos.html': 'Marcar lo que se terminó',
+    'anotaciones.html': 'La libreta del local',
+    'mesas.html':       'El salón y las cuentas',
+    'qr-mesa.html':     'Los QR de las mesas',
+    'propinas.html':    'Las propinas de los mozos',
+    'diseno.html':      'El diseño del local',
+    'tecnico.html':     'Panel técnico',
+    'alta.html':        'Activar los avisos'
   };
+
+  /* El orden importa: el primero de cada lista se pinta como boton grande en
+     la portada, asi que va la pantalla con la que arranca el turno. */
+  var MATRIZ = {
+    Mozo:          ['comanda.html', 'mozo.html', 'cobrar.html'],
+    Encargada:     ['comanda.html', 'mozo.html', 'cobrar.html', 'admin.html'],
+    Caja:          ['cobrar.html', 'caja.html'],
+    Cocina:        ['cocina.html', 'carta-fotos.html'],
+    Mantenimiento: ['anotaciones.html'],
+    Duenio:        ['admin.html', 'anotaciones.html']
+  };
+
+  /* El mismo modulo se llama distinto segun quien entra: el mozo va a cobrar,
+     la caja va a mostrar el QR. Es la misma pantalla y dos trabajos. */
+  var ROTULO_POR_ROL = {
+    Caja: { 'cobrar.html': 'Mostrar el QR de cobro' }
+  };
+
+  /* Los menus salen de MATRIZ. No hay una segunda lista que mantener. */
+  var FUNCIONES_POR_ROL = (function () {
+    var out = {};
+    Object.keys(MATRIZ).forEach(function (rol) {
+      out[rol] = MATRIZ[rol].map(function (url) {
+        var propio = ROTULO_POR_ROL[rol] && ROTULO_POR_ROL[rol][url];
+        return { url: url, texto: propio || MODULOS[url] };
+      });
+    });
+    return out;
+  })();
 
   /* El renombre del panel tecnico se aplica ACA, en el unico lugar por el
      que pasan todos los menus. Si la copia local esta rota, devuelve los
@@ -1395,6 +1370,51 @@
   /* Escribe quien sos en las pantallas que tengan un [data-quien].
      Se llama sola al cargar app.js: asi ninguna pantalla se puede olvidar
      de decirlo, que es lo que pidio el duenio.                          */
+  /* --- Como se llama el puesto de cada uno --------------------------------
+     Antes cada pantalla tenia el rotulo escrito a mano en el HTML, y por eso
+     admin.html le decia "Duenia" a Cintia, que es encargada. Ahora sale de
+     quien entro, en un solo lugar.
+
+     El genero lo resuelve la nota de la persona: Oscar tiene "Dueno" y Nelly
+     "Duenia", una moza tendria "Moza". Solo se usa si es una variante del
+     mismo puesto, para que una nota rara no le cambie el rol a nadie. Y se
+     corta en " de ": "Encargada de maniana" es el puesto de Betty, pero
+     arriba de la pantalla va "Encargada". */
+  var ROTULO_DE_ROL = {
+    Duenio: 'Dueña',
+    Encargada: 'Encargada',
+    Mozo: 'Mozo',
+    Caja: 'Caja',
+    Cocina: 'Cocina',
+    Mantenimiento: 'Mantenimiento'
+  };
+
+  function rotuloDeRol(persona) {
+    var yo = persona || quienSoy();
+    if (!yo || !yo.rol) return '';
+    var base = ROTULO_DE_ROL[yo.rol] || yo.rol;
+    var nota = String(yo.nota || '').trim();
+    if (nota) {
+      var raiz = sinTildes(base.slice(0, Math.max(3, base.length - 1)));
+      if (sinTildes(nota).indexOf(raiz) === 0) return nota.split(' de ')[0];
+    }
+    return base;
+  }
+
+  /* Escribe el puesto en todo nodo con [data-rol], y de paso arregla el
+     titulo de la pestania si termina con el rotulo viejo. */
+  function mostrarRol() {
+    var yo = quienSoy();
+    var txt = rotuloDeRol(yo);
+    var nodos = document.querySelectorAll('[data-rol]');
+    for (var i = 0; i < nodos.length; i++) {
+      if (txt) nodos[i].textContent = txt;
+    }
+    if (txt && nodos.length && /–|-/.test(document.title)) {
+      document.title = document.title.replace(/[-–]\s*[^-–]*$/, '- ' + txt);
+    }
+  }
+
   function mostrarQuienSoy() {
     var nodos = document.querySelectorAll('[data-quien]');
     if (!nodos.length) return;
@@ -1404,6 +1424,34 @@
       nodos[i].hidden = false;
       nodos[i].textContent = yo.nombre;
       nodos[i].setAttribute('title', yo.nota || yo.rol);
+    }
+  }
+
+  /* --- Podar los enlaces que ya no corresponden ---------------------------
+     Esconder el modulo del menu no alcanza: adentro de las pantallas hay
+     links sueltos que llevan a otras. admin.html tenia seis, mozo.html dos.
+     Si se dejan, el que los toca rebota contra el portero y lee "esta
+     pantalla no es de tu puesto" en un boton que el sistema le ofrecio: eso
+     se lee como que algo se rompio, no como que no le toca.
+
+     Se recorre UNA vez al arrancar, contra la misma MATRIZ de siempre. No se
+     borra nada del HTML: se oculta. Y se oculta el <li> entero cuando el link
+     vive en una lista, para no dejar una vinieta vacia colgando.        */
+  function podarEnlaces() {
+    var yo = quienSoy();
+    if (!yo || !yo.rol) return;              // sin puesto no hay nada que podar
+    var links = document.querySelectorAll('a[href]');
+    for (var i = 0; i < links.length; i++) {
+      var href = links[i].getAttribute('href') || '';
+      /* Solo los internos y solo los que son un modulo de la matriz. Se corta
+         en ? y en # para que 'alta.html?rol=Cocina' cuente como alta.html. */
+      var url = href.split('?')[0].split('#')[0].replace(/^\.\//, '');
+      if (!MODULOS[url]) continue;
+      if (puedeVer(url)) continue;
+      var caja = links[i].closest ? (links[i].closest('li') || links[i]) : links[i];
+      caja.hidden = true;
+      /* hidden solo no gana contra un display puesto por CSS. */
+      try { caja.style.display = 'none'; } catch (e) {}
     }
   }
 
@@ -3454,46 +3502,37 @@
 
      Mantenimiento (Lautaro) no toca la operacion: entra a sus anotaciones
      y mira el salon para saber que mesa hay que limpiar. Nada mas.       */
-  var PERMISOS = {
-    'comanda.html':     { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 'no',    Cocina: 'no',    Mantenimiento: 'no' },
-    'mozo.html':        { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 've',    Cocina: 'no',    Mantenimiento: 'no' },
-    'mesas.html':       { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 'edita', Cocina: 'no',    Mantenimiento: 've' },
-    'cocina.html':      { Duenio: 'edita', Encargada: 'edita', Mozo: 've',    Caja: 'no',    Cocina: 'edita', Mantenimiento: 'no' },
-    'caja.html':        { Duenio: 'edita', Encargada: 'edita', Mozo: 'no',    Caja: 'edita', Cocina: 'no',    Mantenimiento: 'no' },
-    'cobrar.html':      { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 'edita', Cocina: 'no',    Mantenimiento: 'no' },
-    /* Ojo con esta fila: la carta es la UNICA pantalla donde conviven tres
-       trabajos de tres puestos distintos, y por eso NO puede ir en 've'.
-       Un 've' pinta la cinta de "no se toca nada" arriba de todo, y la
-       cocina justamente entra aca a marcar lo que se termino: leer que no
-       toque nada y dejar un plato agotado sin marcar es una mesa pidiendo
-       algo que no hay. Entran en 'edita' los que tienen algo que hacer, y
-       QUE pueden hacer lo deciden las tres reglas finas de abajo. La caja
-       es la unica que solo mira: entra para saber cuanto sale un plato. */
-    'carta-fotos.html': { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 've',    Cocina: 'edita', Mantenimiento: 'no' },
-    'qr-mesa.html':     { Duenio: 'edita', Encargada: 'edita', Mozo: 'no',    Caja: 'edita', Cocina: 'no',    Mantenimiento: 'no' },
-    'propinas.html':    { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 've',    Cocina: 'no',    Mantenimiento: 'no' },
-    'admin.html':       { Duenio: 'edita', Encargada: 'edita', Mozo: 'no',    Caja: 'no',    Cocina: 'no',    Mantenimiento: 'no' },
-    'diseno.html':      { Duenio: 'edita', Encargada: 'edita', Mozo: 'no',    Caja: 'no',    Cocina: 'no',    Mantenimiento: 'no' },
-    /* El panel interno de David: no lo abre nadie mas, ni las encargadas. */
-    'tecnico.html':     { Duenio: 'edita', Encargada: 'no',    Mozo: 'no',    Caja: 'no',    Cocina: 'no',    Mantenimiento: 'no' },
-    /* Activar los avisos del propio celular: lo necesita todo el mundo. */
-    'alta.html':        { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 'edita', Cocina: 'edita', Mantenimiento: 'edita' },
-    /* La libreta del local: todos en 'edita' y a proposito. Es un cuaderno
-       compartido, no hay nada delicado adentro. El mozo que ve que se termina
-       la Coca la anota, y el que hace la compra la lee. Si esto fuera 've'
-       para alguien, esa persona veria la lista y no podria sumar lo que sabe,
-       que es justo lo unico que se le pide. */
-    'anotaciones.html': { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 'edita', Cocina: 'edita', Mantenimiento: 'edita' }
-  };
+  /* El portero sale de la MISMA matriz que los menus (ver MATRIZ, arriba).
+     Se arma aca en vez de escribirse a mano justamente para que no puedan
+     decir cosas distintas: si un modulo no esta en la lista del rol, ni
+     aparece el boton ni deja entrar escribiendo la direccion.
+
+     Las catorce pantallas llaman a guardaDeSeccion() arriba de todo, asi que
+     con esto alcanza para cerrar la puerta de atras del navegador.       */
+  var PERMISOS = (function () {
+    var m = {};
+    Object.keys(MODULOS).forEach(function (url) {
+      m[url] = {};
+      Object.keys(MATRIZ).forEach(function (rol) {
+        m[url][rol] = (MATRIZ[rol].indexOf(url) !== -1) ? 'edita' : 'no';
+      });
+    });
+    return m;
+  })();
 
   /* Adentro de carta-fotos conviven dos trabajos distintos: marcar lo que se
      termino -lo hace la cocina todo el tiempo- y tocar precios y fotos, que
      es de la duenia. Por eso una regla por pantalla no alcanza y hay tres
      mas finas para ese pedazo.                                            */
   var PERMISOS_FINOS = {
-    'carta.precios':  { Duenio: 'edita', Encargada: 'edita', Mozo: 'no',    Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
-    'carta.fotos':    { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
-    'carta.agotados': { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 'no', Cocina: 'edita', Mantenimiento: 'no' }
+    /* Precios y fotos: de nadie por ahora. La carta quedo como pantalla de
+       un solo trabajo -marcar lo que se termino- y ese trabajo es de la
+       cocina. Los formularios de precio y de foto siguen enteros en el
+       codigo: se devuelven poniendo un rol en 'edita'.                  */
+    'carta.precios':  { Duenio: 'no', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
+    'carta.fotos':    { Duenio: 'no', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
+    /* Lo unico que se toca ahi adentro, y solo la cocina. */
+    'carta.agotados': { Duenio: 'no', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'edita', Mantenimiento: 'no' }
   };
 
   function permisoDe(seccion, rol) {
@@ -3973,6 +4012,9 @@
     ACCESO_RAPIDO: ACCESO_RAPIDO,
     accesoRapido: accesoRapido,
     mostrarQuienSoy: mostrarQuienSoy,
+    rotuloDeRol: rotuloDeRol,
+    mostrarRol: mostrarRol,
+    podarEnlaces: podarEnlaces,
     navegacionFija: navegacionFija,
     navDonde: navDonde,
     rolDeAvisos: rolDeAvisos,
@@ -4033,6 +4075,7 @@
      documento ya suele estar armado; el listener cubre el caso contrario. */
   function alArrancar() {
     mostrarQuienSoy();
+    try { mostrarRol(); } catch (e) {}
     /* Los interruptores se aplican con la copia local ANTES de pintar, y
        despues se refrescan contra la base. Los dos van envueltos: que un
        interruptor falle no puede tumbar la pantalla. */
@@ -4044,6 +4087,9 @@
     /* Y la pastilla de abajo, aparte otra vez y por la misma razon: si
        fallara, la barra de arriba y el resto de la pantalla siguen enteras. */
     try { accesoRapido(); } catch (e) {}
+    /* Ultimo: cuando ya estan todos los links en la pagina, incluidos los
+       que arma la barra fija y la pastilla de abajo. */
+    try { podarEnlaces(); } catch (e) {}
   }
 
   if (document.readyState === 'loading') {

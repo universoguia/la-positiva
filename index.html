@@ -381,14 +381,37 @@ document.addEventListener('DOMContentLoaded', function () {
   var misCosas = document.getElementById('misCosas');
   var todasBox = document.getElementById('todasBox');
 
-  /* AJ-008: quien ve la lista de todas las pantallas. La duenia si -entra a
-     todo por definicion- y el que todavia no dijo quien es tambien, porque
-     esa es la puerta con la que se muestra el sistema. Mozo, cocina y caja
-     no: arriba tienen sus accesos. */
+  /* La lista de todas las pantallas. Antes la veia la duenia entera, porque
+     entraba a todo por definicion. Desde el 17/09 eso ya no es cierto: cada
+     puesto tiene lo suyo y el duenio tambien.
+
+     Asi que la lista deja de ser "todas" y pasa por la misma matriz que el
+     resto: se le sacan los renglones que ese rol no puede abrir. Si no queda
+     ninguno, no se muestra. Nunca es una puerta de atras a algo escondido:
+     lo que aparece aca es lo mismo que ya esta arriba en sus accesos.
+
+     Al que todavia no dijo quien es se le muestra entera: esa es la puerta
+     con la que se ensenia el sistema, y sin identidad no hay nada que
+     proteger -las pantallas rebotan igual al entrar.                    */
   function pintarTodas(yo) {
     if (!todasBox) return;
-    todasBox.hidden = !!(yo && yo.rol && yo.rol !== 'Duenio');
-    if (todasBox.hidden) todasBox.open = false;
+
+    /* Al que ya dijo quien es no se le muestra: lo unico que podria listar
+       son sus propios accesos, que estan tres centimetros mas arriba y en
+       botones grandes. Repetirlos como lista de texto no suma una puerta,
+       suma ruido. */
+    if (yo && yo.rol) {
+      todasBox.hidden = true;
+      todasBox.open = false;
+      return;
+    }
+
+    /* Sin identidad si, entera: es la vidriera con la que se muestra el
+       sistema. Y no es una puerta de atras, porque cada pantalla tiene su
+       propio portero y rebota igual al que entre sin puesto. */
+    var items = todasBox.querySelectorAll('li');
+    for (var i = 0; i < items.length; i++) items[i].hidden = false;
+    todasBox.hidden = false;
   }
 
   /* Dibuja la puerta segun si el telefono ya sabe quien sos. Se llama al
