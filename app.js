@@ -1139,7 +1139,10 @@
        libreta es justamente donde se anota lo que hay que comprar. Sacarsela
        al pasarlo a la barra habria apagado la funcion para todo el local,
        porque hoy solo la ven el duenio y el. */
-    Barman:        ['comanda.html', 'mozo.html', 'cobrar.html', 'anotaciones.html'],
+    /* La carta tambien, pero SOLO la parte de la barra: ver CATEGORIAS_DE_ROL
+       abajo. El que sirve el fernet es el que sabe que aumento el fernet. */
+    Barman:        ['comanda.html', 'mozo.html', 'cobrar.html', 'anotaciones.html',
+                    'carta-fotos.html'],
     /* El puesto de David. Una sola puerta y es la del taller: toca su nombre,
        ve un boton, entra y ahi le piden la clave. De ahi para adentro tiene
        todo, pero el camino pasa SIEMPRE por la clave.
@@ -1166,8 +1169,36 @@
     /* La cocina entra a la carta a marcar lo que se acabo y nada mas. La
        duenia entra a lo mismo MAS los precios y las fotos, asi que el boton
        no puede prometerle solo una de las tres cosas. */
-    Duenio: { 'carta-fotos.html': 'La carta y lo que se terminó' }
+    Duenio: { 'carta-fotos.html': 'La carta y lo que se terminó' },
+    /* Al barman el boton le promete lo suyo y nada mas: si dijera "La carta"
+       entraria esperando la carta entera y encontraria cuatro categorias. */
+    Barman: { 'carta-fotos.html': 'La barra: precios y fotos' }
   };
+
+  /* --- Que pedazo de la carta es de cada puesto ---------------------------
+     El barman toca lo que sirve el: los vinos, las bebidas y las infusiones.
+     La comida no, y no es desconfianza: no esta ahi cuando se decide el
+     precio del asado, y un precio equivocado se le cobra a alguien.
+
+     Un rol que NO figura aca no tiene recorte: toca toda la carta, como
+     siempre. Asi el dia que se sume un puesto nuevo, el silencio no lo deja
+     sin nada por accidente -que es el error que ya nos paso con la matriz-
+     sino con lo que su permiso diga.
+
+     Una sola lista para las dos cosas: lo que se ve y lo que se puede
+     guardar. */
+  var CATEGORIAS_DE_ROL = {
+    Barman: ['Vinos tintos', 'Vinos blancos', 'Bebidas', 'Infusiones']
+  };
+
+  /* Si este puesto puede meter mano en esa categoria de la carta. */
+  function puedeTocarCategoria(cat) {
+    if (tallerPrendido()) return true;
+    var yo = quienSoy();
+    var permitidas = yo && yo.rol ? CATEGORIAS_DE_ROL[yo.rol] : null;
+    if (!permitidas) return true;              // sin recorte: la carta entera
+    return permitidas.indexOf(cat) !== -1;
+  }
 
   /* Los menus salen de MATRIZ. No hay una segunda lista que mantener. */
   var FUNCIONES_POR_ROL = (function () {
@@ -3815,8 +3846,11 @@
        cocina entra a marcar lo que se acabo, la duenia a poner precios y
        fotos. Por eso la regla por pantalla no alcanza y hay tres finas.
        La encargada NO toca precios: eso quedo de la duenia.            */
-    'carta.precios':  { Duenio: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
-    'carta.fotos':    { Duenio: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
+    /* El barman tambien, pero solo sobre SUS categorias: el permiso dice que
+       puede, CATEGORIAS_DE_ROL dice sobre que. Las dos condiciones se piden
+       juntas en cada boton y en cada guardado. */
+    'carta.precios':  { Duenio: 'edita', Barman: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
+    'carta.fotos':    { Duenio: 'edita', Barman: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
     /* Lo unico que se toca ahi adentro, y solo la cocina. */
     'carta.agotados': { Duenio: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'edita', Mantenimiento: 'no' },
     /* Sacar un plato de la carta para siempre no es lo mismo que marcar que
@@ -4382,6 +4416,8 @@
     permisoDe: permisoDe,
     puedeEditar: puedeEditar,
     puedeVer: puedeVer,
+    puedeTocarCategoria: puedeTocarCategoria,
+    CATEGORIAS_DE_ROL: CATEGORIAS_DE_ROL,
     guardaDeSeccion: guardaDeSeccion,
     NOTAS_BASE: NOTAS_BASE,
     notasFrecuentes: notasFrecuentes,

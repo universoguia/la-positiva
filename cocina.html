@@ -206,6 +206,43 @@
   }
   .ravisado:empty{display:none}
 
+  /* ------------------------------------------------ notas con el mozo ---- */
+  .knotas{margin-top:8px;border-top:1px dashed var(--border);padding-top:6px}
+  .knotas > summary{
+    display:flex;align-items:center;gap:8px;
+    min-height:var(--tap);cursor:pointer;
+    font-size:13px;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--muted-strong);
+  }
+  .knotas > summary::-webkit-details-marker{display:none}
+  .knotas > summary::after{content:'';margin-left:auto;
+    width:8px;height:8px;border-right:1.5px solid currentColor;
+    border-bottom:1.5px solid currentColor;transform:rotate(45deg);
+  }
+  .knotas[open] > summary::after{transform:rotate(-135deg)}
+  .kn-cuenta{
+    min-width:20px;padding:1px 6px;border-radius:999px;
+    background:var(--warn);color:var(--ink);font-size:12px;text-align:center;
+  }
+  .kn{
+    margin-top:6px;padding:7px 9px;border-radius:var(--r-sm);
+    border:1px solid var(--border);background:var(--card);
+    font-size:14px;line-height:1.45;
+  }
+  /* La del mozo es la que hay que contestar: va marcada. La propia queda
+     apagada, es lo que ya dijimos. */
+  .kn-mozo{background:var(--warn-soft);border-color:var(--warn-border)}
+  .kn b{display:block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--muted-strong);margin-bottom:3px}
+  .kn-alta{display:flex;gap:7px;margin-top:8px}
+  .kn-alta input{
+    flex:1;min-width:0;min-height:var(--tap);padding:0 10px;
+    border:1px solid var(--border);border-radius:var(--r-sm);
+    background:var(--card);color:var(--fg);font-size:15px;font-family:inherit;
+  }
+  .kn-alta input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .kn-alta button{flex:none;min-height:var(--tap);min-width:88px;padding:0 16px;font-size:14px}
+
   .klines{
     border-top:1px dashed var(--border);border-bottom:1px dashed var(--border);
     padding:9px 0;margin:8px 0;
@@ -472,6 +509,16 @@ document.addEventListener('DOMContentLoaded', function () {
   var showAllDone = false;
   var orders = [];
   var voces = {};          // { pedido_id: [notas de voz con audio] }
+  /* Lo que se escribieron la cocina y el mozo sobre cada ronda. La pantalla
+     del mozo ya las mostraba y podia contestar; aca solo se leian de un
+     lado. */
+  var notas = {};          // { pedido_id: [notas] }
+  /* Lo que el cocinero esta tipeando, por ronda. Vive fuera del DOM a
+     proposito: esta pantalla se repinta sola cada siete segundos y cualquier
+     cosa escrita adentro de la tarjeta se perderia en el medio de la
+     palabra. */
+  var borradores = Object.create(null);
+  var mandando = Object.create(null);
   /* Las sesiones de las mesas que estan en pantalla: { id: fila }. De aca
      salen el nombre de la mesa y cuanta gente hay sentada. Si la consulta
      falla queda {} y el tablero se pinta igual, sin el "4 personas". */
@@ -525,7 +572,11 @@ document.addEventListener('DOMContentLoaded', function () {
   function signature(o) {
     return [o.id, o.estado, o.pagado, o.updated_at, minutesOld(o),
             pendingIds[o.id] ? 1 : 0, avisando[o.id] || '',
-            avisados[o.id] || ''].join('|');
+            avisados[o.id] || '',
+            /* Las notas entran en la firma: sin esto, la respuesta del mozo
+               llegaba a la memoria y la tarjeta seguia mostrando la de antes,
+               porque nada mas habia cambiado en la ronda. */
+            (notas[o.id] || []).length, mandando[o.id] ? 1 : 0].join('|');
   }
 
   /* La firma de la MESA entera. Desde que la tarjeta es la mesa y no la ronda,
@@ -660,6 +711,8 @@ document.addEventListener('DOMContentLoaded', function () {
               : avisando[o.id] === 'espera' ? 'Avisado' : 'Avisarle de nuevo al mozo') +
           '</button>' +
           '<p class="ravisado">' + esc(avisados[o.id] || '') + '</p>') +
+      /* Tambien en la anulada no: esa ronda ya no existe para nadie. */
+      notasHTML(o) +
       '</div>';
   }
 
@@ -676,6 +729,47 @@ document.addEventListener('DOMContentLoaded', function () {
         (v.segundos ? '<span class="seg">' + Math.round(v.segundos) + 's</span>' : '') +
         '</div>';
     }).join('');
+  }
+
+  /* --- Lo que la cocina le quiere decir al mozo ---------------------------
+     "Del lomo queda uno solo", "la milanesa va a tardar veinte minutos", "no
+     hay mas papas". Antes eso se gritaba o se caminaba hasta el salon, y el
+     mozo se enteraba cuando ya le habia prometido el plato a la mesa.
+
+     La plomeria ya existia entera -la tabla, el guardado y el aviso al
+     celular del mozo- pero el campo para escribir estaba SOLO en la pantalla
+     del mozo: la cocina podia leer y no contestar. Esto es la otra mitad.
+
+     Va plegado por defecto y se abre solo cuando hay algo escrito: en una
+     pantalla de cuatro columnas con doce rondas, un campo de texto abierto
+     en cada una se come el lugar de la comida.                            */
+  function notasHTML(o) {
+    var lista = notas[o.id] || [];
+    var enVuelo = mandando[o.id];
+    return '<details class="knotas"' + (lista.length ? ' open' : '') + '>' +
+      '<summary>Con el mozo' +
+        (lista.length ? ' <span class="kn-cuenta">' + lista.length + '</span>' : '') +
+      '</summary>' +
+      '<div class="kn-cuerpo">' +
+        lista.map(function (n) {
+          /* La del mozo se pinta distinto que la propia: en pleno servicio
+             hay que saber de un vistazo si eso es una pregunta que contestar
+             o algo que ya avisamos nosotros. */
+          return '<div class="kn' + (n.autor === 'Cocina' ? ' kn-propia' : ' kn-mozo') + '">' +
+            '<b>' + esc(n.autor) + ' &middot; ' + esc(LP.timeAgo(n.created_at)) + '</b>' +
+            esc(n.texto) + '</div>';
+        }).join('') +
+        '<div class="kn-alta" data-solo-edita>' +
+          '<input type="text" data-borrador="nota-' + esc(o.id) + '" ' +
+            'value="' + esc(borradores['nota-' + o.id] || '') + '" ' +
+            'maxlength="500" ' +
+            'aria-label="Mensaje para el mozo" ' +
+            'placeholder="Avisarle algo al mozo...">' +
+          '<button type="button" class="btn btn-secondary" data-nota="' + esc(o.id) + '"' +
+            (enVuelo ? ' disabled' : '') + '>' +
+            (enVuelo ? 'Mandando...' : 'Mandar') + '</button>' +
+        '</div>' +
+      '</div></details>';
   }
 
   /* La tarjeta es la MESA. Adentro van sus rondas, cada una con su estado y
@@ -777,7 +871,25 @@ document.addEventListener('DOMContentLoaded', function () {
     }).join('');
   }
 
+  /* El cocinero esta escribiendole al mozo: repintar ahora le borra el campo
+     a mitad de la palabra y en el celular le cierra el teclado. Se posterga
+     hasta que suelte. Es la misma defensa que ya tenia la pantalla del mozo,
+     que se repinta igual de seguido. */
+  var renderPendiente = false;
+  function escribiendo() {
+    var a = document.activeElement;
+    return !!(a && a.hasAttribute && a.hasAttribute('data-borrador') &&
+              elCols.contains(a));
+  }
+  document.addEventListener('focusout', function (ev) {
+    if (!ev.target || !ev.target.hasAttribute ||
+        !ev.target.hasAttribute('data-borrador')) return;
+    if (renderPendiente) setTimeout(render, 0);
+  });
+
   function render() {
+    if (escribiendo()) { renderPendiente = true; return; }
+    renderPendiente = false;
     var g = groupOrders();
     ensureColumns();
     renderTabs(g);
@@ -861,7 +973,28 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   /* ------------------------------------------------------ avanzar estado -- */
+  /* Lo tipeado se anota afuera del DOM, que es lo unico que sobrevive al
+     repintado de cada siete segundos. */
+  elCols.addEventListener('input', function (ev) {
+    var el = ev.target.closest('[data-borrador]');
+    if (el) borradores[el.dataset.borrador] = el.value;
+  });
+
+  /* Enter manda: el cocinero tiene las manos ocupadas y buscar el boton con
+     el dedo grasoso es justo lo que no va a hacer. */
+  elCols.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Enter') return;
+    var el = ev.target.closest('[data-borrador]');
+    if (!el) return;
+    var caja = el.closest('.kn-alta');
+    var b = caja && caja.querySelector('[data-nota]');
+    if (b && !b.disabled) { ev.preventDefault(); mandarNota(b.dataset.nota, b); }
+  });
+
   elCols.addEventListener('click', function (ev) {
+    var bn = ev.target.closest('[data-nota]');
+    if (bn && !bn.disabled) { mandarNota(bn.dataset.nota, bn); return; }
+
     var avisar = ev.target.closest('[data-avisar]');
     if (avisar && !avisar.disabled) { reavisar(avisar.dataset.avisar, avisar); return; }
 
@@ -877,6 +1010,42 @@ document.addEventListener('DOMContentLoaded', function () {
      El boton se bloquea 20 segundos despues de cada aviso: no es una regla de
      negocio, es para que tocarlo cinco veces seguidas no vibre cinco veces el
      celular del mozo por lo mismo.                                        */
+  /* Manda la nota y le hace sonar el celular al mozo. El autor va como
+     'Cocina' y no como el nombre de quien este parado ahi: LP.agregarNota
+     decide a quien avisar mirando justamente ese texto, y ademas en la
+     cocina el puesto es uno solo, con o sin nombre propio. */
+  function mandarNota(id, btn) {
+    if (mandando[id]) return;
+    var pedido = null;
+    for (var i = 0; i < orders.length; i++) {
+      if (String(orders[i].id) === String(id)) { pedido = orders[i]; break; }
+    }
+    if (!pedido || !sb) { LP.toast('No hay conexión con el sistema.', 'err'); return; }
+
+    var texto = (borradores['nota-' + id] || '').trim();
+    if (!texto) { LP.toast('Escribí algo antes de mandar.', 'err'); return; }
+
+    mandando[id] = true;
+    btn.disabled = true;
+    btn.textContent = 'Mandando...';
+
+    LP.agregarNota(sb, pedido, 'Cocina', texto).then(function (r) {
+      delete mandando[id];
+      if (!r.ok) {
+        btn.disabled = false;
+        btn.textContent = 'Mandar';
+        LP.toast(r.motivo || 'No se pudo mandar.', 'err');
+        return;
+      }
+      /* Se borra recien cuando esta guardada: si falla, lo escrito sigue ahi
+         y se puede reintentar sin volver a tipearlo. */
+      delete borradores['nota-' + id];
+      (notas[id] = notas[id] || []).push(r.nota);
+      LP.toast('Aviso mandado al mozo.', 'ok');
+      render();
+    });
+  }
+
   function reavisar(id, btn) {
     if (avisando[id]) return;
     var pedido = null;
@@ -1047,6 +1216,23 @@ document.addEventListener('DOMContentLoaded', function () {
           voces = m || {};
           if (Object.keys(voces).length) render();
         });
+
+      /* Lo que se escribieron con el mozo. Misma consulta que usa la pantalla
+         del mozo, en una sola vuelta para todas las rondas de la pantalla, y
+         tambien sin bloquear: la comida va primero. */
+      if (data.length) {
+        sb.from(LP.NOTAS_TABLE).select('*')
+          .in('pedido_id', data.map(function (o) { return o.id; }))
+          .order('created_at', { ascending: true })
+          .then(function (rn) {
+            if (rn.error) return;
+            notas = {};
+            (rn.data || []).forEach(function (n) {
+              (notas[n.pedido_id] = notas[n.pedido_id] || []).push(n);
+            });
+            render();
+          });
+      }
       LP.sesionesPorId(sb, ids).then(function (mapa) {
         sesiones = mapa || {};
         render();

@@ -65,6 +65,16 @@
   .cat-b[aria-pressed="true"]:hover{color:#fff}
 
   .cuenta{font-size:14px;color:var(--muted);margin:0 0 12px}
+  /* El recorte se dice una vez arriba y no en cada plato: repetirlo 167 veces
+     seria ruido, y el que entra necesita entenderlo antes de buscar el boton
+     que no esta. */
+  .mi-parte{
+    margin:0 0 10px;padding:9px 12px;
+    border:1px solid var(--warn-border);border-radius:var(--r-sm);
+    background:var(--warn-soft);color:var(--fg);
+    font-size:14px;line-height:1.45;
+  }
+  .mi-parte[hidden]{display:none}
 
   /* --------------------------------------------------------- listado --- */
   .platos{list-style:none;margin:0;padding:0;display:grid;gap:12px}
@@ -247,6 +257,10 @@
          angosto al lado del buscador. -->
     <div class="cats" id="cats" role="group" aria-label="Categor&iacute;as de la carta"></div>
   </div>
+  <!-- Solo aparece para el puesto que tiene un pedazo de la carta y no toda:
+       hoy el barman. Sin esto, veria la carta entera con la mitad de los
+       botones y pensaria que se rompio. -->
+  <p class="mi-parte" id="miParte" hidden></p>
   <p class="cuenta" id="cuenta" role="status" aria-live="polite"></p>
 
   <ul class="platos" id="lista"></ul>
@@ -443,7 +457,7 @@ document.addEventListener('DOMContentLoaded', function () {
                   textoEstado(estadoDe(p.id)) + '</button>'
               : '<span class="pill ' + claseEstado(estadoDe(p.id)) + '">' +
                   textoEstado(estadoDe(p.id)) + '</span>') +
-            (!LP.puedeEditar('carta.fotos') ? '' :
+            (!LP.puedeEditar('carta.fotos') || !LP.puedeTocarCategoria(p.cat) ? '' :
               '<label class="subir">' +
                 '<input type="file" accept="image/*" data-subir="' + esc(p.id) + '">' +
                 '<span class="pill">' + (propia ? 'Cambiar foto' : 'Cargar foto') + '</span>' +
@@ -464,7 +478,9 @@ document.addEventListener('DOMContentLoaded', function () {
     /* Los precios son plata y no son de todos los puestos. El que no los
        puede tocar los VE -necesita saber cuanto sale un plato para
        contestarle a la mesa- pero sin el boton de cambiarlos.        */
-    var puedeTocar = LP.puedeEditar('carta.precios');
+    /* Dos condiciones, no una: el puesto tiene permiso de tocar precios Y la
+       categoria es suya. El barman cambia el precio del vino, no el del bife. */
+    var puedeTocar = LP.puedeEditar('carta.precios') && LP.puedeTocarCategoria(p.cat);
     var vigente = cambiado ? precios[p.id] : (p.precioCarta !== undefined ? p.precioCarta : p.price);
     var carta = p.precioCarta !== undefined ? p.precioCarta : p.price;
     return '<div class="precio-linea">' +
@@ -513,6 +529,13 @@ document.addEventListener('DOMContentLoaded', function () {
     var platoId = input.dataset.subir;
     var file = input.files[0];
     input.value = '';                       // permite reintentar el mismo archivo
+
+    // Mismo candado que en el precio, del lado del guardado.
+    var platoF = platoPorId(platoId);
+    if (platoF && !LP.puedeTocarCategoria(platoF.cat)) {
+      decir(platoId, 'Esa parte de la carta no es de tu puesto.', 'err');
+      return;
+    }
 
     // Freno al doble toque: una foto grande tarda unos segundos y si eligen
     // otra mientras tanto salian dos subidas y una quedaba huerfana.
@@ -581,6 +604,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (d.guardarPrecio) {
       var id = d.guardarPrecio;
+      /* El mismo candado que apaga el boton, otra vez antes de escribir: el
+         boton puede no estar y la accion llegar igual -una pantalla vieja
+         abierta desde antes, alguien que toca dos veces mientras cambia el
+         puesto-. La plata no se guarda por confiar en que el boton no estaba. */
+      var platoP = platoPorId(id);
+      if (platoP && !LP.puedeTocarCategoria(platoP.cat)) {
+        decir(id, 'Esa parte de la carta no es de tu puesto.', 'err');
+        return;
+      }
       var input = lista.querySelector('[data-precio-input="' + id + '"]');
       // Solo digitos: "34.000" y "34000" valen lo mismo, "34,5" no existe.
       var n = Math.round(Number(String(input.value).replace(/[^0-9]/g, '')));
@@ -671,6 +703,12 @@ document.addEventListener('DOMContentLoaded', function () {
     var b = ev.target.closest('[data-quitar]');
     if (!b) return;
     var platoId = b.dataset.quitar;
+    // Borrar una foto es igual de definitivo que cambiarla: mismo candado.
+    var platoQ = platoPorId(platoId);
+    if (platoQ && !LP.puedeTocarCategoria(platoQ.cat)) {
+      decir(platoId, 'Esa parte de la carta no es de tu puesto.', 'err');
+      return;
+    }
     b.disabled = true;
     decir(platoId, 'Quitando...', '');
 
@@ -695,6 +733,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
   pintarCats();
   pintar();                                  // dibuja ya, con las fotos de la carta
+  /* El cartel del recorte. Sale de la MISMA lista que apaga los botones, asi
+     que no pueden decir cosas distintas. */
+  (function () {
+    var yo = LP.quienSoy();
+    var mias = yo && yo.rol ? LP.CATEGORIAS_DE_ROL[yo.rol] : null;
+    if (!mias || !mias.length) return;
+    var el = document.getElementById('miParte');
+    el.hidden = false;
+    el.innerHTML = 'Podés cambiar precios y fotos de <b>' +
+      esc(mias.slice(0, -1).join(', ')) + ' y ' + esc(mias[mias.length - 1]) +
+      '</b>. El resto de la carta lo ves, pero no se toca desde tu puesto.';
+  })();
+
   LP.fotosDePlatos(sb).then(function (mapa) {
     propias = mapa || {};
     pintar();                                // y repinta cuando llegan las propias
