@@ -75,6 +75,17 @@
     font-size:14px;line-height:1.45;
   }
   .mi-parte[hidden]{display:none}
+  .camara{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    margin:0 0 12px;padding:9px 12px;
+    border:1px solid var(--border);border-radius:var(--r-sm);
+    background:var(--card);
+  }
+  .camara[hidden]{display:none}
+  .cam-txt{margin:0;flex:1;min-width:180px;font-size:14px;line-height:1.45;color:var(--muted-strong)}
+  .cam-txt.ok{color:var(--ok)}
+  .cam-txt.err{color:var(--err)}
+  .camara .btn{flex:none;min-height:var(--tap)}
   .mi-parte-cats{
     display:block;margin-top:4px;
     font-size:13px;line-height:1.4;color:var(--muted-strong);
@@ -265,6 +276,13 @@
        hoy el barman. Sin esto, veria la carta entera con la mitad de los
        botones y pensaria que se rompio. -->
   <p class="mi-parte" id="miParte" hidden></p>
+  <!-- El permiso de la camara, a la vista y probable antes de necesitarlo.
+       Mismo criterio que el sonido y los avisos en la pantalla de la cocina:
+       el permiso se prueba cuando hay tiempo, no con el plato enfriandose. -->
+  <div class="camara" id="camara" hidden>
+    <p class="cam-txt" id="camTxt" role="status" aria-live="polite"></p>
+    <button type="button" class="btn btn-secondary" id="camBtn">Probar la c&aacute;mara</button>
+  </div>
   <p class="cuenta" id="cuenta" role="status" aria-live="polite"></p>
 
   <ul class="platos" id="lista"></ul>
@@ -777,9 +795,101 @@ document.addEventListener('DOMContentLoaded', function () {
        nada; el nombre corto se entiende de un vistazo y el detalle queda
        para el que lo busca. */
     var comoSeLlama = LP.MI_PARTE[yo.rol] || 'tu parte de la carta';
-    el.innerHTML = 'Podés cambiar precios y fotos de <b>' + esc(comoSeLlama) +
+    /* Que dice que puede hacer sale de los MISMOS permisos que pintan los
+       botones. Escrito a mano decia "precios y fotos" tambien a la cocina,
+       que fotos si y precios no: un cartel que promete de mas es peor que
+       no tener cartel. */
+    var pu = [];
+    if (LP.puedeEditar('carta.precios')) pu.push('precios');
+    if (LP.puedeEditar('carta.fotos')) pu.push('fotos');
+    if (!pu.length) return;
+    el.innerHTML = 'Podés cambiar ' + pu.join(' y ') + ' de <b>' + esc(comoSeLlama) +
       '</b>. El resto de la carta lo ves, pero no se toca desde tu puesto.' +
       '<span class="mi-parte-cats">' + esc(mias.join(' · ')) + '</span>';
+  })();
+
+  /* --- El permiso de la camara -------------------------------------------
+     Se puede pedir de antemano y conviene: asi el permiso se resuelve cuando
+     hay tiempo y no parado con el plato en la mano. El aparato lo pregunta
+     UNA vez y se lo acuerda para toda la app.
+
+     Lo que NO existe en una pagina web es un permiso de galeria: elegir un
+     archivo lo maneja el sistema y por eso no pregunta nada. Aca se dice con
+     todas las letras en vez de prometer un boton que no puede existir.
+
+     Mismo criterio que el sonido y los avisos de la cocina: se muestra el
+     estado y se puede probar. */
+  (function () {
+    if (!LP.puedeEditar('carta.fotos')) return;      // no sube fotos: no le sirve
+    var caja = document.getElementById('camara');
+    var txt = document.getElementById('camTxt');
+    var btn = document.getElementById('camBtn');
+    var hayCamara = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    caja.hidden = false;
+
+    function decirCam(estado) {
+      if (estado === 'granted') {
+        txt.className = 'cam-txt ok';
+        txt.textContent = 'La cámara está lista. "Sacar foto" la abre al toque. ' +
+          'Para "Elegir una" no hace falta ningún permiso.';
+        btn.hidden = true;
+        return;
+      }
+      if (estado === 'denied') {
+        txt.className = 'cam-txt err';
+        /* No alcanza con decir "está bloqueada": el permiso negado no se
+           puede volver a pedir desde la página, lo tiene que soltar la
+           persona en el navegador. Asi que se dice donde. */
+        txt.textContent = 'La cámara está bloqueada en este aparato. Tocá el candado ' +
+          '(o los tres puntos) al lado de la dirección, entrá a Permisos y ' +
+          'poné Cámara en Permitir. Mientras tanto podés usar "Elegir una".';
+        btn.hidden = true;
+        return;
+      }
+      txt.className = 'cam-txt';
+      txt.textContent = hayCamara
+        ? 'Para sacar fotos, este aparato tiene que darte permiso de cámara. ' +
+          'Se pregunta una sola vez.'
+        : 'Este aparato no tiene cámara disponible para la app. Subí las fotos con "Elegir una".';
+      btn.hidden = !hayCamara;
+    }
+
+    /* Se pregunta el estado sin molestar a nadie: si el navegador sabe
+       contestarlo, el que ya dio permiso no ve ningun boton. */
+    var listo = false;
+    try {
+      if (navigator.permissions && navigator.permissions.query) {
+        navigator.permissions.query({ name: 'camera' }).then(function (p) {
+          listo = true;
+          decirCam(p.state);
+          p.onchange = function () { decirCam(p.state); };
+        }, function () { if (!listo) decirCam('prompt'); });
+      } else { decirCam('prompt'); }
+    } catch (e) { decirCam('prompt'); }
+    // Safari no conoce el permiso 'camera': si nadie contesto, se pregunta igual.
+    setTimeout(function () { if (!listo && !txt.textContent) decirCam('prompt'); }, 400);
+
+    btn.addEventListener('click', function () {
+      if (!hayCamara) return;
+      btn.disabled = true;
+      var antes = btn.textContent;
+      btn.textContent = 'Pidiendo...';
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(function (stream) {
+          /* Se apaga enseguida: el permiso ya quedo dado y dejar la camara
+             prendida enciende la luz del aparato y le come la bateria a la
+             tablet toda la noche. */
+          stream.getTracks().forEach(function (t) { t.stop(); });
+          btn.disabled = false; btn.textContent = antes;
+          decirCam('granted');
+          LP.toast('Cámara lista. Ya podés sacar fotos desde acá.', 'ok');
+        }, function (err) {
+          btn.disabled = false; btn.textContent = antes;
+          var no = err && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
+          decirCam(no ? 'denied' : 'prompt');
+          if (!no) LP.toast('No pudimos abrir la cámara de este aparato.', 'err');
+        });
+    });
   })();
 
   LP.fotosDePlatos(sb).then(function (mapa) {

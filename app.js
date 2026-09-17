@@ -1191,6 +1191,13 @@
 
      Una sola lista para las dos cosas: lo que se ve y lo que se puede
      guardar. */
+  /* Las trece categorias que salen de la cocina. Una constante y no tres
+     copias: el dia que se sume "Guarniciones" se agrega en un solo lugar y
+     la ven el mozo y la cocina a la vez. */
+  var COMIDA = ['Entradas', 'Ensaladas', 'Menú light', 'Sugerencias del chef',
+                'Parrilla al carbón', 'Pescados', 'Carnes elaboradas', 'Pollos',
+                'Supremas', 'Milanesas de ternera', 'Pastas', 'Salsas', 'Postres'];
+
   var CATEGORIAS_DE_ROL = {
     Barman: ['Vinos tintos', 'Vinos blancos', 'Bebidas', 'Infusiones'],
     /* El mozo, al reves: toda la comida y nada de la barra. Son las trece
@@ -1198,15 +1205,18 @@
        que no es del barman": una categoria nueva maniana tiene que quedar
        sin dueno y que alguien la reparta a mano, no colarse sola en el
        permiso de cuatro personas. */
-    Mozo: ['Entradas', 'Ensaladas', 'Menú light', 'Sugerencias del chef',
-           'Parrilla al carbón', 'Pescados', 'Carnes elaboradas', 'Pollos',
-           'Supremas', 'Milanesas de ternera', 'Pastas', 'Salsas', 'Postres']
+    Mozo: COMIDA,
+    /* La cocina, la misma comida que el mozo: es la que tiene el plato
+       recien hecho adelante, que es cuando la foto sale bien. Los precios
+       NO -eso quedo del duenio y del que sirve- pero la foto de lo que
+       cocina es suya. */
+    Cocina: COMIDA
   };
 
   /* Como se llama, en una palabra, el pedazo de carta de cada puesto. Es
      para el cartel de arriba de la carta: trece nombres de categoria seguidos
      no le dicen a nadie "esto es la comida". */
-  var MI_PARTE = { Barman: 'la barra', Mozo: 'la comida' };
+  var MI_PARTE = { Barman: 'la barra', Mozo: 'la comida', Cocina: 'la comida' };
 
   /* Si este puesto puede meter mano en esa categoria de la carta. */
   function puedeTocarCategoria(cat) {
@@ -3867,7 +3877,10 @@
        dice que pueden, CATEGORIAS_DE_ROL dice sobre que. Las dos condiciones
        se piden juntas en cada boton y en cada guardado. */
     'carta.precios':  { Duenio: 'edita', Barman: 'edita', Mozo: 'edita', Encargada: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
-    'carta.fotos':    { Duenio: 'edita', Barman: 'edita', Mozo: 'edita', Encargada: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
+    /* La cocina tambien saca fotos -del plato recien salido, que es cuando
+       sale bien-, pero sigue sin tocar precios: ahi arriba Cocina es 'no' y
+       tiene que quedar asi. */
+    'carta.fotos':    { Duenio: 'edita', Barman: 'edita', Mozo: 'edita', Cocina: 'edita', Encargada: 'no', Caja: 'no', Mantenimiento: 'no' },
     /* Lo unico que se toca ahi adentro, y solo la cocina. */
     'carta.agotados': { Duenio: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'edita', Mantenimiento: 'no' },
     /* Sacar un plato de la carta para siempre no es lo mismo que marcar que
