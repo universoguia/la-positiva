@@ -77,6 +77,14 @@
     display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
     gap:8px;margin-top:18px;
   }
+  /* Cuando queda un solo secundario -la caja tiene dos accesos: el grande y
+     uno mas- la grilla de dos columnas lo dejaba a media caja con un hueco
+     al lado, como si faltara algo. Solo, ocupa las dos.
+
+     Va en EVEN y no en odd: el principal ya ocupa la fila entera, asi que el
+     ultimo queda solo justo cuando el total es par (2 accesos, 4 accesos).
+     Con 3 los dos secundarios se reparten la fila y esto no se aplica. */
+  .mis-cosas a:last-child:nth-child(even){grid-column:1 / -1}
   .mis-cosas a{
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     gap:7px;min-height:82px;padding:11px 7px;border-radius:var(--r-lg);

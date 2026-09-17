@@ -1098,7 +1098,7 @@
     'mozo.html':        'Los pedidos de las mesas',
     'cobrar.html':      'Cobrar con QR',
     'admin.html':       'Cómo viene el salón',
-    'caja.html':        'Los pagos',
+    'caja.html':        'Cobrar las mesas',
     'cocina.html':      'Las comandas',
     'carta-fotos.html': 'Marcar lo que se terminó',
     'anotaciones.html': 'La libreta del local',
@@ -1115,7 +1115,10 @@
   var MATRIZ = {
     Mozo:          ['comanda.html', 'mozo.html', 'cobrar.html'],
     Encargada:     ['comanda.html', 'mozo.html', 'cobrar.html', 'admin.html'],
-    Caja:          ['cobrar.html', 'caja.html'],
+    /* caja.html va PRIMERA y por eso se pinta como boton grande: es lo que
+       Cecilia hace todo el turno. cobrar.html es mostrar un QR, que pasa de
+       vez en cuando. Estaban al reves. */
+    Caja:          ['caja.html', 'cobrar.html'],
     Cocina:        ['cocina.html', 'carta-fotos.html'],
     Mantenimiento: ['anotaciones.html'],
     Duenio:        ['admin.html', 'anotaciones.html', 'carta-fotos.html', 'tecnico.html']
@@ -1124,7 +1127,15 @@
   /* El mismo modulo se llama distinto segun quien entra: el mozo va a cobrar,
      la caja va a mostrar el QR. Es la misma pantalla y dos trabajos. */
   var ROTULO_POR_ROL = {
-    Caja: { 'cobrar.html': 'Mostrar el QR de cobro' },
+    /* "Los pagos" no dice que se hace ahi adentro: un sustantivo suelto, que
+       lo mismo puede ser una lista para mirar que un lugar donde tocar algo.
+       Cecilia necesita leer el verbo. "Cobrar las mesas" dice la accion y
+       sobre que. Y como hay dos pantallas que suenan parecido, la otra
+       aclara que ahi solo se muestra un codigo. */
+    Caja: {
+      'caja.html': 'Cobrar las mesas',
+      'cobrar.html': 'Mostrar el QR para que paguen'
+    },
     /* La cocina entra a la carta a marcar lo que se acabo y nada mas. La
        duenia entra a lo mismo MAS los precios y las fotos, asi que el boton
        no puede prometerle solo una de las tres cosas. */

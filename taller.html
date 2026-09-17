@@ -11,84 +11,165 @@
 <link rel="stylesheet" href="styles.css">
 <script src="tema.js"></script>
 <style>
-  .taller-wrap{max-width:460px;margin:0 auto;padding:28px 16px 60px}
-  .taller-caja{
-    background:var(--dark-card);border:1px solid var(--dark-border);
-    border-radius:var(--r-card);padding:22px 18px;
+  /* ---------------------------------------------------------- la puerta --
+     Centrada de verdad, no pegada arriba con media pantalla vacia abajo.
+     Es la unica cosa que hay que hacer en esta pantalla, asi que ocupa el
+     medio y no compite con nada. */
+  /* width:100% explicito: el grid no hereda el ancho del body si el body no
+     lo estira, y la caja terminaba arriba a la izquierda en vez del medio. */
+  .puerta-centro{
+    min-height:100svh;width:100%;
+    display:grid;place-items:center;
+    padding:24px 16px calc(24px + var(--sa-b));
+    box-sizing:border-box;
   }
-  .taller-caja h1{margin:0 0 4px;font-size:26px}
-  .taller-caja .sub{margin:0 0 18px;color:var(--dark-muted);font-size:15px}
-  .taller-caja label{display:block;margin:0 0 6px;font-size:14px;font-weight:600}
-  .taller-caja input{
-    width:100%;min-height:var(--tap);padding:0 14px;font-size:17px;
+  .puerta{
+    width:100%;max-width:380px;
+    background:var(--dark-card);border:1px solid var(--dark-border);
+    border-radius:var(--r-lg);padding:26px 22px 22px;
+    box-shadow:var(--shadow-lg);
+  }
+  .puerta .marca{
+    font-family:var(--font-titulos);font-style:var(--font-titulos-estilo);
+    font-size:15px;color:var(--gold);margin:0 0 14px;letter-spacing:.02em;
+  }
+  .puerta h1{margin:0 0 6px;font-size:30px;line-height:1.1}
+  .puerta .sub{margin:0 0 22px;color:var(--dark-muted);font-size:14px;line-height:1.45}
+
+  /* El rotulo se leia gris sobre marron y practicamente no estaba. */
+  .campo{display:block;margin:0 0 7px;font-size:13px;font-weight:600;
+    color:var(--dark-ink);text-transform:uppercase;letter-spacing:.06em}
+  .puerta input{
+    width:100%;min-height:var(--tap);padding:0 16px;font-size:17px;
     border-radius:var(--r-pill);border:1px solid var(--dark-border);
     background:var(--dark-bg);color:var(--dark-ink);
   }
-  .taller-caja input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-  .taller-msg{margin:12px 0 0;font-size:14px;min-height:20px}
-  .taller-msg.mal{color:var(--err)}
-  .taller-msg.ok{color:var(--ok)}
-  .taller-nota{
-    margin:18px 0 0;padding:12px 14px;border-radius:var(--r-card);
-    background:rgba(255,255,255,.04);color:var(--dark-muted);
-    font-size:13px;line-height:1.5;
+  .puerta input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .puerta button{margin-top:14px}
+  .msg{margin:12px 0 0;font-size:14px;min-height:20px;line-height:1.4}
+  .msg.mal{color:var(--err)}
+  .msg.ok{color:var(--ok)}
+
+  .nota{
+    margin:18px 0 0;padding:12px 14px;border-radius:var(--r-md);
+    background:rgba(255,255,255,.04);border:1px solid var(--dark-border-soft);
+    color:var(--dark-muted);font-size:13px;line-height:1.55;
   }
-  .taller-nota code{
-    background:rgba(0,0,0,.35);padding:1px 5px;border-radius:5px;
-    font-size:12px;word-break:break-all;
+  .nota code{
+    background:rgba(0,0,0,.4);padding:1px 6px;border-radius:5px;
+    font-size:12px;word-break:break-all;color:var(--dark-ink);
   }
-  .puertas{margin:22px 0 0;padding:0;list-style:none;display:grid;gap:8px}
-  .puertas a{
-    display:flex;align-items:center;justify-content:space-between;gap:10px;
-    min-height:var(--tap);padding:10px 14px;border-radius:var(--r-card);
-    background:var(--dark-card);border:1px solid var(--dark-border);
-    color:var(--dark-ink);text-decoration:none;font-size:15px;
+
+  /* ---------------------------------------------------------- ya adentro --
+     Antes eran dieciseis renglones iguales, todos del mismo peso, que
+     obligaban a leer la lista entera para encontrar uno. Ahora van por
+     grupos, con el dibujo que ya tiene cada pantalla en el resto del
+     sistema: se busca por zona ("eso es de la cocina") y no por nombre. */
+  .taller{max-width:920px;margin:0 auto;padding:22px 16px calc(90px + var(--sa-b))}
+
+  .cabecera{
+    display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;
+    justify-content:space-between;margin:0 0 4px;
   }
-  .puertas a:hover{background:var(--dark-card-hover)}
-  .puertas em{font-style:normal;color:var(--dark-muted);font-size:12px}
+  .cabecera h1{margin:0;font-size:30px}
+  .chip-taller{
+    flex:none;display:inline-flex;align-items:center;gap:7px;
+    padding:5px 12px;border-radius:var(--r-pill);
+    background:rgba(200,150,62,.14);border:1px solid var(--gold);
+    color:var(--gold);font-size:12px;font-weight:600;
+    text-transform:uppercase;letter-spacing:.06em;
+  }
+  .chip-taller::before{
+    content:'';width:7px;height:7px;border-radius:50%;
+    background:var(--gold);flex:none;
+  }
+  .taller > .sub{margin:0 0 22px;color:var(--dark-muted);font-size:14px}
+
+  .grupo{margin:0 0 22px}
+  .grupo h2{
+    margin:0 0 10px;font-size:12px;font-weight:700;color:var(--dark-muted);
+    text-transform:uppercase;letter-spacing:.09em;
+    font-family:var(--font-cuerpo);font-style:normal;
+    display:flex;align-items:center;gap:10px;
+  }
+  /* La rayita que sigue al titulo: separa los grupos sin gastar un borde
+     entero ni un renglon en blanco de mas. */
+  .grupo h2::after{
+    content:'';flex:1;height:1px;background:var(--dark-border-soft);
+  }
+
+  .rejilla{
+    display:grid;gap:8px;list-style:none;margin:0;padding:0;
+    grid-template-columns:1fr;
+  }
+  @media (min-width:600px){ .rejilla{grid-template-columns:1fr 1fr} }
+  @media (min-width:880px){ .rejilla{grid-template-columns:1fr 1fr 1fr} }
+
+  .rejilla a{
+    display:flex;align-items:center;gap:12px;
+    min-height:var(--tap);padding:11px 14px;
+    border-radius:var(--r-md);background:var(--dark-card);
+    border:1px solid var(--dark-border);color:var(--dark-ink);
+    text-decoration:none;
+  }
+  .rejilla a:hover{background:var(--dark-card-hover);border-color:var(--gold)}
+  .rejilla a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .rejilla svg{flex:none;width:22px;height:22px;color:var(--gold)}
+  .rejilla .texto{min-width:0;display:flex;flex-direction:column;gap:1px}
+  .rejilla b{font-weight:600;font-size:15px;line-height:1.25}
+  .rejilla em{
+    font-style:normal;color:var(--dark-muted);font-size:11px;
+    letter-spacing:.02em;
+  }
+
+  /* Aca NO va una barra propia abajo. app.js ya pinta la cinta de MODO TALLER
+     en todas las pantallas, con su boton de salir, asi que una segunda barra
+     fija se le montaba encima: dos franjas pisadas y dos botones que hacen lo
+     mismo. El padding de abajo de .taller le deja el lugar a esa cinta. */
 </style>
 </head>
-<body>
-<div class="taller-wrap">
+<!-- dark como el resto del sistema. Sin esto la caja oscura queda flotando
+     sobre el fondo crema del modo claro y parece un recorte pegado. -->
+<body class="dark">
 
-  <!-- Estado 1: pedir la clave. -->
-  <section class="taller-caja" id="puerta">
+<!-- Estado 1: la puerta. -->
+<div class="puerta-centro" id="centro">
+  <section class="puerta">
+    <p class="marca">La Positiva</p>
     <h1>Taller</h1>
     <p class="sub">La entrada de atr&aacute;s. No figura en el men&uacute; de nadie.</p>
 
     <form id="form" autocomplete="off">
-      <label for="clave">Clave</label>
+      <label class="campo" for="clave">Clave</label>
       <input type="password" id="clave" name="clave" inputmode="text"
              autocomplete="current-password" enterkeyhint="go">
-      <p class="taller-msg" id="msg" role="status" aria-live="polite"></p>
-      <button type="submit" class="btn btn-primary btn-block" id="entrar">Entrar</button>
+      <p class="msg" id="msg" role="status" aria-live="polite"></p>
+      <button type="submit" class="btn btn-primary btn-block">Entrar</button>
     </form>
 
-    <p class="taller-nota" id="notaSinClave" hidden>
+    <p class="nota" id="notaSinClave" hidden>
       <strong>Falta configurar la clave.</strong><br>
-      Gener&aacute; el hash con <code>node scripts/hash-taller.js</code>, pegalo en
-      Vercel como <code>LP_PUBLIC_TALLER_HASH</code> y volv&eacute; a deployar.
+      Corr&eacute; <code>node scripts/activar-taller.js</code> y pon&eacute; la tuya.
       Mientras tanto, desde <code>localhost</code> entra sin clave.
     </p>
   </section>
-
-  <!-- Estado 2: ya adentro. -->
-  <section class="taller-caja" id="adentro" hidden>
-    <h1>Estás en el taller</h1>
-    <p class="sub">Entr&aacute;s a todas las pantallas, sin cambiarte el puesto.</p>
-
-    <ul class="puertas" id="puertas"></ul>
-
-    <button type="button" class="btn btn-secondary btn-block" id="salir"
-            style="margin-top:16px">Salir del taller</button>
-
-    <p class="taller-nota">
-      Esto ordena el acceso, no lo cierra con llave: la app entera se usa
-      tocando un nombre, sin contrase&ntilde;a. Filtra al curioso, no al que sabe.
-    </p>
-  </section>
-
 </div>
+
+<!-- Estado 2: adentro. -->
+<main class="taller" id="adentro" hidden>
+  <div class="cabecera">
+    <h1>Est&aacute;s en el taller</h1>
+    <span class="chip-taller">Modo taller</span>
+  </div>
+  <p class="sub">Entr&aacute;s a todas las pantallas, sin cambiarte el puesto.</p>
+
+  <div id="grupos"></div>
+
+  <p class="nota">
+    Esto ordena el acceso, no lo cierra con llave: a la app se entra tocando
+    un nombre, sin contrase&ntilde;a. Filtra al curioso, no al que sabe.
+  </p>
+</main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
 <script src="menu-data.js" defer></script>
@@ -98,49 +179,88 @@
 document.addEventListener('DOMContentLoaded', function () {
   /* Sin guardaDeSeccion a proposito: esta ES la puerta. Si se pidiera permiso
      para entrar aca, haria falta otra puerta para abrir esta. */
-  var puerta = document.getElementById('puerta');
+  var centro = document.getElementById('centro');
   var adentro = document.getElementById('adentro');
   var msg = document.getElementById('msg');
   var form = document.getElementById('form');
   var clave = document.getElementById('clave');
 
-  /* Las mismas de siempre. No se inventa la lista: sale de la constante que
-     ya usa el resto del sistema, asi que si maniana entra una pantalla nueva
-     aparece aca sola. */
-  var PANTALLAS = [
-    ['index.html', 'La portada'],
-    ['comanda.html', 'Tomar comanda'],
-    ['mozo.html', 'Los pedidos de las mesas'],
-    ['cocina.html', 'Las comandas'],
-    ['caja.html', 'Los pagos'],
-    ['cobrar.html', 'Cobrar con QR'],
-    ['mesas.html', 'El salón y las cuentas'],
-    ['admin.html', 'Cómo viene el salón'],
-    ['carta-fotos.html', 'La carta y lo que se terminó'],
-    ['qr-mesa.html', 'Los QR de las mesas'],
-    ['propinas.html', 'Las propinas'],
-    ['anotaciones.html', 'La libreta del local'],
-    ['diseno.html', 'El diseño del local'],
-    ['tecnico.html', 'Panel técnico'],
-    ['alta.html', 'Activar los avisos'],
-    ['pedir.html', 'La carta del cliente']
+  /* Agrupadas por zona del local y no por orden alfabetico: cuando buscas una
+     pantalla te acordas de QUIEN la usa antes que de como se llama. */
+  var GRUPOS = [
+    ['El salón', [
+      ['comanda.html', 'Tomar comanda'],
+      ['mozo.html', 'Los pedidos de las mesas'],
+      ['mesas.html', 'El salón y las cuentas'],
+      ['cobrar.html', 'Cobrar con QR']
+    ]],
+    ['La cocina y la caja', [
+      ['cocina.html', 'Las comandas'],
+      ['caja.html', 'Los pagos'],
+      ['qr-mesa.html', 'Los QR de las mesas']
+    ]],
+    ['La carta y la plata', [
+      ['carta-fotos.html', 'La carta y lo que se terminó'],
+      ['admin.html', 'Cómo viene el salón'],
+      ['propinas.html', 'Las propinas']
+    ]],
+    ['El local', [
+      ['index.html', 'La portada'],
+      ['anotaciones.html', 'La libreta del local'],
+      ['diseno.html', 'El diseño del local']
+    ]],
+    ['Interno', [
+      ['tecnico.html', 'Panel técnico'],
+      ['alta.html', 'Activar los avisos']
+    ]],
+    ['Lo que ve el cliente', [
+      ['pedir.html', 'La carta del cliente']
+    ]]
   ];
 
   function pintarAdentro() {
-    puerta.hidden = true;
+    centro.hidden = true;
     adentro.hidden = false;
-    var ul = document.getElementById('puertas');
-    ul.innerHTML = '';
-    PANTALLAS.forEach(function (p) {
-      var li = document.createElement('li');
-      var a = document.createElement('a');
-      a.href = p[0];
-      var b = document.createElement('b');
-      b.textContent = p[1];
-      var em = document.createElement('em');
-      em.textContent = p[0];
-      a.appendChild(b); a.appendChild(em);
-      li.appendChild(a); ul.appendChild(li);
+
+    var cont = document.getElementById('grupos');
+    cont.innerHTML = '';
+
+    GRUPOS.forEach(function (g) {
+      var sec = document.createElement('section');
+      sec.className = 'grupo';
+
+      var h = document.createElement('h2');
+      h.textContent = g[0];
+      sec.appendChild(h);
+
+      var ul = document.createElement('ul');
+      ul.className = 'rejilla';
+
+      g[1].forEach(function (p) {
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.href = p[0];
+
+        /* El mismo dibujo que esa pantalla tiene en la portada y en la barra
+           de abajo. No se inventa uno nuevo: si el icono cambia una vez,
+           cambia en los tres lados. */
+        a.innerHTML = LP.iconoDe(p[0]);
+
+        var caja = document.createElement('span');
+        caja.className = 'texto';
+        var b = document.createElement('b');
+        b.textContent = p[1];
+        var em = document.createElement('em');
+        em.textContent = p[0];
+        caja.appendChild(b); caja.appendChild(em);
+
+        a.appendChild(caja);
+        li.appendChild(a);
+        ul.appendChild(li);
+      });
+
+      sec.appendChild(ul);
+      cont.appendChild(sec);
     });
   }
 
@@ -148,11 +268,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
-    msg.className = 'taller-msg';
+    msg.className = 'msg';
     msg.textContent = 'Comprobando...';
     LP.abrirTaller(clave.value).then(function (r) {
       if (r === 'ok') {
-        msg.className = 'taller-msg ok';
+        msg.className = 'msg ok';
         msg.textContent = 'Listo.';
         clave.value = '';
         pintarAdentro();
@@ -163,19 +283,15 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('notaSinClave').hidden = false;
         return;
       }
-      msg.className = 'taller-msg mal';
+      msg.className = 'msg mal';
       msg.textContent = 'Esa no es.';
       clave.select();
     }, function (err) {
-      msg.className = 'taller-msg mal';
+      msg.className = 'msg mal';
       msg.textContent = (err && err.message) || 'No se pudo comprobar.';
     });
   });
 
-  document.getElementById('salir').addEventListener('click', function () {
-    LP.apagarTaller();
-    location.reload();
-  });
 });
 </script>
 </body>
