@@ -86,6 +86,10 @@
   .cam-txt.ok{color:var(--ok)}
   .cam-txt.err{color:var(--err)}
   .camara .btn{flex:none;min-height:var(--tap)}
+  .cam-detalle{flex-basis:100%;font-size:13px;color:var(--muted-strong)}
+  .cam-detalle > summary{min-height:var(--tap);display:flex;align-items:center;cursor:pointer}
+  .cam-detalle ul{margin:4px 0 0;padding-left:18px;line-height:1.55}
+  .cam-detalle b{color:var(--ink)}
   .mi-parte-cats{
     display:block;margin-top:4px;
     font-size:13px;line-height:1.4;color:var(--muted-strong);
@@ -282,6 +286,13 @@
   <div class="camara" id="camara" hidden>
     <p class="cam-txt" id="camTxt" role="status" aria-live="polite"></p>
     <button type="button" class="btn btn-secondary" id="camBtn">Probar la c&aacute;mara</button>
+    <!-- El detalle, plegado. Son cinco aparatos distintos en el local y desde
+         acá no se ve ninguno: cuando la cámara no abre, esto dice por qué en
+         la pantalla del que la tiene en la mano. -->
+    <details class="cam-detalle" id="camDetalle">
+      <summary>&iquest;Por qu&eacute; no abre la c&aacute;mara?</summary>
+      <ul id="camDatos"></ul>
+    </details>
   </div>
   <p class="cuenta" id="cuenta" role="status" aria-live="polite"></p>
 
@@ -824,8 +835,46 @@ document.addEventListener('DOMContentLoaded', function () {
     var caja = document.getElementById('camara');
     var txt = document.getElementById('camTxt');
     var btn = document.getElementById('camBtn');
-    var hayCamara = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    /* Tres cosas distintas que se confundian en una sola:
+
+       - seguro: la pagina viaja con candado (https). Los navegadores NO
+         dejan abrir la camara en una direccion http, ni aunque el aparato
+         tenga camara y el permiso dado. Si el local entra por la IP de la
+         red -http://192.168...- la camara no va a abrir nunca y el aparato
+         no tiene la culpa.
+       - hayApi: el navegador conoce getUserMedia.
+       - permiso: lo que contesto la persona.
+
+       Antes, una pagina sin candado caia en "este aparato no tiene camara",
+       que es mentira y manda a buscar el problema donde no esta.         */
+    var seguro = (window.isSecureContext !== false);
+    var hayApi = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    var hayCamara = seguro && hayApi;
     caja.hidden = false;
+
+    /* El detalle, para cuando no abre y el aparato esta en otra mano. */
+    (function () {
+      var ul = document.getElementById('camDatos');
+      function fila(que, valor, bien) {
+        return '<li>' + esc(que) + ': <b>' + esc(valor) + '</b>' +
+          (bien === false ? ' ← acá está el problema' : '') + '</li>';
+      }
+      var filas =
+        fila('Dirección', location.origin) +
+        fila('Dirección que habilita la cámara', seguro ? 'sí' : 'NO (falta el https)', seguro) +
+        fila('El navegador sabe abrir la cámara', hayApi ? 'sí' : 'NO', hayApi) +
+        fila('Navegador', (navigator.userAgent || '').slice(0, 90));
+      ul.innerHTML = filas;
+      /* Cuantas camaras ve el aparato. Se pregunta aparte porque puede no
+         estar y porque sin permiso los nombres vienen vacios, pero la
+         CANTIDAD ya dice si hay camara o no. */
+      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        navigator.mediaDevices.enumerateDevices().then(function (ds) {
+          var n = ds.filter(function (d) { return d.kind === 'videoinput'; }).length;
+          ul.innerHTML = filas + fila('Cámaras que ve', String(n), n > 0);
+        }, function () {});
+      }
+    })();
 
     function decirCam(estado) {
       if (estado === 'granted') {
@@ -846,11 +895,18 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.hidden = true;
         return;
       }
-      txt.className = 'cam-txt';
+      txt.className = hayCamara ? 'cam-txt' : 'cam-txt err';
       txt.textContent = hayCamara
         ? 'Para sacar fotos, este aparato tiene que darte permiso de cámara. ' +
           'Se pregunta una sola vez.'
-        : 'Este aparato no tiene cámara disponible para la app. Subí las fotos con "Elegir una".';
+        : !seguro
+          /* La causa numero uno, y no se arregla en el aparato: se arregla
+             entrando por la direccion con candado. */
+          ? 'Estás entrando por una dirección sin candado, y así ningún navegador ' +
+            'deja abrir la cámara. Entrá por https://la-positiva-demo.vercel.app ' +
+            'y probá de nuevo. Mientras tanto anda "Elegir una".'
+          : 'Este navegador no sabe abrir la cámara. Subí las fotos con "Elegir una", ' +
+            'o probá con Chrome.';
       btn.hidden = !hayCamara;
     }
 
