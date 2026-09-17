@@ -3588,13 +3588,14 @@
   /* Resuelve 'ok' | 'mal' | 'sin-clave'. En localhost entra sin clave: es la
      maquina donde se programa y pedirla ahi solo molesta. */
   function abrirTaller(clave) {
-    var esperado = (CFG && CFG.TALLER_HASH) || '';
+    /* trim por si el hash llego con un salto o un espacio pegado. */
+    var esperado = String((CFG && CFG.TALLER_HASH) || '').trim().toLowerCase();
     if (!esperado) {
       if (esLocal()) { prenderTaller(); return Promise.resolve('ok'); }
       return Promise.resolve('sin-clave');
     }
     return hashTaller(clave).then(function (h) {
-      if (h !== esperado) return 'mal';
+      if (String(h).trim().toLowerCase() !== esperado) return 'mal';
       prenderTaller();
       return 'ok';
     });

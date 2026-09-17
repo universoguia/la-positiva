@@ -66,9 +66,15 @@ const CAMPOS = [
 const valores = {};
 const faltan = [];
 for (const [clave, variable, obligatoria, porDefecto] of CAMPOS) {
-  const v = env[variable] || porDefecto;
+  /* trim() y no es paranoia: 'vercel env add' leyendo de stdin se guarda el
+     salto de linea final como parte del valor, y pegar a mano en el panel de
+     Vercel suele arrastrar un espacio. Un hash con un 
+ pegado atras no
+     coincide nunca con el que calcula el navegador, y el sintoma es el peor
+     de todos: la clave correcta te dice que esta mal. */
+  const v = String(env[variable] || porDefecto || '').trim();
   if (!v && obligatoria) { faltan.push(variable); continue; }
-  valores[clave] = v || '';
+  valores[clave] = v;
 }
 
 /* Red de seguridad: si algun valor huele a secreto, se corta el build en

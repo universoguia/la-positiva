@@ -6,11 +6,11 @@
      node scripts/activar-taller.js
 
    Lo que hace, en orden:
-     1. Te pide la clave. No se ve mientras la escribis y no queda en ningun
-        archivo: lo unico que se guarda es el sha-256.
+     1. Te pide la clave. Se ve mientras la escribis -a proposito, ver abajo-
+        y no queda en ningun archivo: lo unico que se guarda es el sha-256.
      2. Escribe el hash en .env (para poder probarlo local).
-     3. Lo carga en Vercel como LP_PUBLIC_TALLER_HASH, en Production,
-        Preview y Development. Si ya estaba, lo pisa.
+     3. Lo carga en Vercel como LP_PUBLIC_TALLER_HASH en Production.
+        Si ya estaba, lo pisa.
      4. Regenera config.js.
      5. Deploya a produccion.
 
@@ -24,33 +24,47 @@ const path = require('path');
 
 const RAIZ = path.join(__dirname, '..');
 const VARIABLE = 'LP_PUBLIC_TALLER_HASH';
-const ENTORNOS = ['production', 'preview', 'development'];
+/* Solo production, y a proposito.
+
+   La primera version cargaba los tres entornos y se cayo en 'preview': ese
+   pide ademas a que rama aplica, asi que el add sin mas argumentos no
+   alcanza. Y no hace falta ninguno de los otros dos: production es el sitio
+   que usa el equipo, y en localhost el taller entra sin clave porque es donde
+   se programa. Dos entornos de mas eran dos lugares donde fallar por algo que
+   no se usa.                                                             */
+const ENTORNOS = ['production'];
 
 function hash(clave) {
   return crypto.createHash('sha256').update(String(clave), 'utf8').digest('hex');
 }
 
-/* Pregunta sin mostrar lo que se tipea. Si el terminal no lo soporta (pasa en
-   algunas consolas de Windows), avisa y la muestra igual en vez de romperse:
-   es preferible que David la vea el a que el script no ande. */
-function preguntarOculto(texto) {
+/* Pregunta, y SI muestra lo que se escribe.
+
+   La primera version la ocultaba, como hace sudo. En el terminal de David no
+   se veia nada al tipear y directamente no se podia escribir: el truco de
+   tapar la salida de readline no anda en todas las consolas de Windows, y
+   cuando falla no avisa, deja el cursor mudo.
+
+   Se ve, entonces. Es su maquina, esta solo, y esta clave abre un taller de
+   un sistema al que se entra tocando un nombre sin contrasenia. No justifica
+   romper la escritura para tapar cuatro letras.                          */
+function preguntar(texto) {
   return new Promise(function (resolve) {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    let mudo = false;
-    const escribir = rl._writeToOutput;
-    rl._writeToOutput = function (s) {
-      if (mudo && !/\n/.test(s)) return;
-      escribir.call(rl, s);
-    };
-    rl.question(texto, function (v) { rl.close(); process.stdout.write('\n'); resolve(v); });
-    mudo = true;
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(texto, function (v) { rl.close(); resolve(v); });
   });
 }
 
 function paso(n, texto) { console.log('\n[' + n + '/5] ' + texto); }
 
+/* shell:true no es adorno. En Windows 'vercel' no es un .exe, es un
+   vercel.cmd, y execFileSync sin shell no resuelve la extension: tira
+   'spawnSync vercel ENOENT' y parece que Vercel no estuviera instalado.
+   Con shell lo encuentra igual que si lo escribieras vos en la consola.  */
 function corriendo(cmd, args) {
-  return execFileSync(cmd, args, { cwd: RAIZ, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8' });
+  return execFileSync(cmd, args, {
+    cwd: RAIZ, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8', shell: true
+  });
 }
 
 /* El .env no va al repo (esta en .gitignore). Se reescribe la linea si ya
@@ -71,16 +85,20 @@ async function main() {
   console.log('\n=== Activar el taller ===');
   console.log('La clave no se guarda en ningun lado. Solo su hash.\n');
 
-  const clave = (await preguntarOculto('Clave nueva: ')).trim();
+  /* Tambien se puede pasar por argumento, por si el terminal no toma texto:
+       node scripts/activar-taller.js miClaveSecreta
+     Asi queda en el historial del terminal, asi que la otra es mejor. */
+  let clave = (process.argv[2] || '').trim();
+  if (!clave) {
+    clave = (await preguntar('Clave nueva (la vas a ver al escribirla): ')).trim();
+  }
+
   if (clave.length < 6) {
-    console.error('Muy corta: poné al menos 6 caracteres. No se cambió nada.');
+    console.error('\nMuy corta: poné al menos 6 caracteres. No se cambió nada.');
     process.exit(1);
   }
-  const otra = (await preguntarOculto('Repetila: ')).trim();
-  if (otra !== clave) {
-    console.error('No coinciden. No se cambió nada.');
-    process.exit(1);
-  }
+
+  console.log('\nLa clave va a ser:  ' + clave);
 
   const h = hash(clave);
 
