@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3ece2">
+<meta name="description" content="La libreta de La Positiva: lo que hay que anotar y no olvidarse, con fecha de recordatorio.">
+<title>La Positiva - La libreta</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="La Positiva">
+<link rel="preload" href="fonts/jost-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/cormorant-500-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<!-- El tema (nombre, color, letra y forma) que se edita en diseno.html.
+     SIN defer y a proposito: tiene que escribir las variables ANTES del
+     primer pintado, o el color viejo se ve un instante y despues salta. -->
+<script src="tema.js"></script>
+<style>
+  .wrap{max-width:760px;padding-top:calc(20px + var(--sa-t));padding-bottom:90px}
+  .sub{color:var(--muted);font-size:15px;margin:3px 0 0}
+
+  /* ---------------------------------------------------------- anotar ----
+     Lo primero de la pantalla y siempre abierto. La usa gente que no maneja
+     tecnologia: si esto fuera un cajon que hay que abrir, nadie anota. */
+  .anotar{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);
+    padding:16px;margin:18px 0 8px;
+  }
+  .anotar textarea{
+    width:100%;min-height:76px;padding:12px;resize:vertical;
+    border-radius:var(--r-md);border:1px solid var(--border-strong);
+    background:#fff;color:var(--ink);font-family:inherit;font-size:17px;line-height:1.35;
+  }
+  .anotar textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .rotulo{
+    display:block;font-size:13px;letter-spacing:.06em;text-transform:uppercase;
+    font-weight:600;color:var(--muted-strong);margin:16px 0 8px;
+  }
+  .opciones{display:flex;flex-wrap:wrap;gap:8px}
+  /* 44px de alto, regla dura del proyecto: estos botones los toca un mozo con
+     el celular en una mano y una bandeja en la otra. */
+  .opciones button{
+    min-height:var(--tap);padding:0 14px;
+    border-radius:var(--r-pill);border:1px solid var(--border-strong);
+    background:var(--card);color:var(--muted-strong);
+    font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;
+    display:inline-flex;align-items:center;gap:7px;
+  }
+  .opciones button .pip{
+    width:11px;height:11px;border-radius:50%;flex:none;background:var(--border-strong);
+  }
+  .opciones button[aria-pressed="true"]{
+    background:var(--ink);color:#fff;border-color:var(--ink);
+  }
+  .opciones button[aria-pressed="true"] .pip{background:#fff}
+  /* Los cinco tipos se distinguen por el mismo color en los dos lados: el
+     punto del boton de arriba y la barra izquierda de la anotacion. Todos
+     salen de las variables que ya existen, ninguno es nuevo. */
+  /* Con el selector corto (.t-tarea .pip) ganaba .opciones button .pip, que
+     es mas especifico, y los cinco puntos salian grises: justo lo contrario
+     de distinguir los tipos de un vistazo. */
+  .opciones button.t-tarea    .pip{background:var(--accent)}
+  .opciones button.t-evento   .pip{background:var(--gold)}
+  .opciones button.t-stock    .pip{background:var(--warn)}
+  .opciones button.t-limpieza .pip{background:var(--ok)}
+  .opciones button.t-arreglo  .pip{background:var(--err)}
+
+  .fecha-libre{margin-top:10px}
+  .fecha-libre input{
+    width:100%;min-height:var(--tap);padding:0 12px;
+    border-radius:var(--r-md);border:1px solid var(--border-strong);
+    background:#fff;color:var(--ink);font-family:inherit;font-size:16px;
+  }
+  .anotar .btn{margin-top:18px}
+  .field-err{color:var(--err-ink);font-size:14px;margin-top:8px}
+  .field-err:empty{display:none}
+
+  /* ---------------------------------------------------------- listas ---- */
+  h2.seccion{
+    font-family:var(--font-cuerpo);font-style:normal;
+    font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
+    color:var(--muted-strong);margin:28px 0 10px;display:flex;align-items:center;gap:9px;
+  }
+  h2.seccion .n{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:22px;height:22px;padding:0 6px;border-radius:var(--r-pill);
+    background:var(--border);color:var(--muted-strong);font-size:13px;font-weight:700;
+  }
+  h2.seccion.urge .n{background:var(--err-bg);color:var(--err-ink)}
+
+  .lista{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+  .vacio{
+    color:var(--muted);text-align:center;padding:20px 16px;font-size:15px;
+    border:1px dashed var(--border-strong);border-radius:var(--r-md);
+  }
+
+  .ano{
+    background:var(--card);border:1px solid var(--border);
+    border-left:5px solid var(--border-strong);
+    border-radius:var(--r-md);padding:12px 13px;
+    display:flex;align-items:flex-start;gap:11px;
+  }
+  .ano.t-tarea   {border-left-color:var(--accent)}
+  .ano.t-evento  {border-left-color:var(--gold)}
+  .ano.t-stock   {border-left-color:var(--warn)}
+  .ano.t-limpieza{border-left-color:var(--ok)}
+  .ano.t-arreglo {border-left-color:var(--err)}
+
+  /* Lo que vence hoy o ya vencio se ve distinto, no solo mas arriba: el fondo
+     y el borde cambian para que salte sin leer nada. */
+  .ano.urgente{background:var(--err-bg);border-color:var(--err-border)}
+  .ano.hoy{background:var(--warn-soft);border-color:var(--warn-border)}
+  /* Lo de mas adelante, apagado: esta ahi para consultarlo, no para hoy. */
+  .ano.luego{background:transparent;opacity:.82}
+  .ano.lista-hecho{opacity:.62}
+  .ano.lista-hecho .tex{text-decoration:line-through;color:var(--muted)}
+
+  .ano .cuerpo{flex:1 1 auto;min-width:0}
+  .ano .tex{font-size:17px;line-height:1.32;word-break:break-word}
+  .ano .meta{font-size:13px;color:var(--muted);margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 8px}
+  .ano .meta .cuando{font-weight:600;color:var(--muted-strong)}
+  .ano.urgente .meta .cuando{color:var(--err-ink)}
+  .tipo-badge{
+    font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;
+    color:var(--muted-strong);background:var(--border);border-radius:var(--r-pill);
+    padding:2px 8px;white-space:nowrap;
+  }
+
+  /* Marcar hecho es UN toque, y el area es la caja entera de 44px. */
+  .tic{
+    width:var(--tap);height:var(--tap);min-width:var(--tap);flex:none;
+    border-radius:50%;border:2px solid var(--border-strong);
+    background:#fff;cursor:pointer;color:var(--ok);
+    display:flex;align-items:center;justify-content:center;
+    font-size:22px;line-height:1;padding:0;
+  }
+  .tic:active:not(:disabled){transform:scale(.94)}
+  .tic[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:#fff}
+  .tic:disabled{opacity:.5}
+  .borrar{
+    width:var(--tap);height:var(--tap);min-width:var(--tap);flex:none;
+    border:none;background:transparent;color:var(--muted);
+    font-size:19px;cursor:pointer;border-radius:50%;
+  }
+
+  details.hechas{margin-top:26px}
+  details.hechas > summary{
+    min-height:var(--tap);display:flex;align-items:center;cursor:pointer;
+    font-size:15px;color:var(--muted-strong);font-weight:600;
+  }
+  details.hechas .lista{margin-top:10px}
+
+  /* Escritorio: anotar a la izquierda y fijo, las listas a la derecha. En una
+     pantalla de 1440 la caja de anotar sobraba de ancho y las listas quedaban
+     a novecientos pixeles de scroll. */
+  @media (min-width:1000px){
+    .wrap{max-width:1080px}
+    .dos{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:30px;align-items:start}
+    .dos .col{min-width:0}
+    .dos .col-anotar{position:sticky;top:calc(var(--nav-h, 0px) + 14px)}
+    .dos .anotar{margin-top:0}
+    .dos .col-listas > h2.seccion:first-child{margin-top:0}
+  }
+
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>La libreta</h1>
+      <p class="sub">Lo que hay que anotar para no olvidarse. Anota cualquiera, lo ve todo el local.</p>
+    </div>
+    <div class="head-right">
+      <a class="soy" href="./" data-quien hidden></a>
+      <span class="conn conn-retry" id="conn" role="status" aria-live="polite">
+        <span class="dot" aria-hidden="true"></span><span>Conectando...</span>
+      </span>
+      <a class="back-link" href="./" id="volver">Volver al inicio</a>
+    </div>
+  </header>
+
+  <p class="cargando" id="cargando">Cargando...</p>
+
+  <div id="contenido" hidden>
+   <div class="dos">
+    <div class="col col-anotar">
+    <form class="anotar" id="anotarForm">
+      <label class="rotulo" for="txt" style="margin-top:0">Qu&eacute; hay que hacer</label>
+      <textarea id="txt" maxlength="400" placeholder="Ej: se est&aacute; terminando la Coca"></textarea>
+
+      <span class="rotulo" id="rotTipo">Qu&eacute; es</span>
+      <div class="opciones" id="tipos" role="group" aria-labelledby="rotTipo"></div>
+
+      <span class="rotulo" id="rotFecha">Para cu&aacute;ndo &mdash; si no tiene fecha, dejalo as&iacute;</span>
+      <div class="opciones" id="cuandos" role="group" aria-labelledby="rotFecha">
+        <button type="button" data-cuando="" aria-pressed="true">Sin fecha</button>
+        <button type="button" data-cuando="hoy" aria-pressed="false">Hoy</button>
+        <button type="button" data-cuando="maniana" aria-pressed="false">Ma&ntilde;ana</button>
+        <button type="button" data-cuando="otro" aria-pressed="false">Otro d&iacute;a</button>
+      </div>
+      <div class="fecha-libre" id="fechaLibre" hidden>
+        <input type="date" id="fecha" aria-label="Eleg&iacute; el d&iacute;a">
+      </div>
+
+      <p class="field-err" id="anotarErr" role="alert"></p>
+      <button type="submit" class="btn btn-primary btn-block btn-grande" id="anotarBtn">Anotar</button>
+    </form>
+    </div>
+
+    <div class="col col-listas">
+    <h2 class="seccion urge" id="secAhora">Para hoy y lo atrasado <span class="n" id="nAhora">0</span></h2>
+    <ul class="lista" id="ahora"></ul>
+
+    <h2 class="seccion">Lo que viene <span class="n" id="nLuego">0</span></h2>
+    <ul class="lista" id="luego"></ul>
+
+    <h2 class="seccion">Sin fecha <span class="n" id="nSinFecha">0</span></h2>
+    <ul class="lista" id="sinFecha"></ul>
+
+    <details class="hechas" id="cajonHechas">
+      <summary>Ya hechas (<span id="nHechas">0</span>)</summary>
+      <ul class="lista" id="hechas"></ul>
+    </details>
+    </div>
+   </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+<script src="config.js" defer></script>
+<script src="app.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var esc = LP.esc;
+
+  /* Todos los puestos entran en 'edita': es un cuaderno compartido y el que
+     lee tiene que poder sumar lo que sabe. El portero igual se llama, porque
+     si el telefono todavia no dijo quien es hace falta saberlo para firmar la
+     anotacion (queda "lo anoto Betty", y eso es la mitad del valor). */
+  if (LP.guardaDeSeccion('anotaciones.html') === 'no') return;
+
+  var elCargando = document.getElementById('cargando');
+
+  /* Apagada desde el panel tecnico. La pantalla no se borra: se dice por que
+     esta vacia, que es distinto de que no cargue. */
+  if (!LP.func('f_libreta')) {
+    elCargando.innerHTML = '<b>La libreta está apagada.</b><br>Se prende desde el panel ' +
+      'técnico. Lo que ya estaba anotado no se borró.';
+    return;
+  }
+
+  var sb = LP.client();
+  var conn = new LP.ConnBadge(document.getElementById('conn'));
+  var soy = LP.quienSoy();
+  var YO = (soy && soy.nombre) || null;
+  /* Borrar saca el rastro para siempre, asi que no lo hace cualquiera.
+     Marcar hecho -que es lo que se usa todo el dia- si lo hace todo el mundo. */
+  var puedeBorrar = !!(soy && (soy.rol === 'Duenio' || soy.rol === 'Encargada'));
+
+  var elContenido = document.getElementById('contenido');
+  var elAhora = document.getElementById('ahora');
+  var elLuego = document.getElementById('luego');
+  var elSinFecha = document.getElementById('sinFecha');
+  var elHechas = document.getElementById('hechas');
+  var elFechaLibre = document.getElementById('fechaLibre');
+  var elFecha = document.getElementById('fecha');
+  var elTxt = document.getElementById('txt');
+  var elErr = document.getElementById('anotarErr');
+
+  var TIPOS = LP.TIPOS_LIBRETA;
+  var tipoElegido = 'tarea';
+  var cuandoElegido = '';       // '', 'hoy', 'maniana', 'otro'
+  var filas = [];
+
+  function textoDeTipo(id) {
+    for (var i = 0; i < TIPOS.length; i++) if (TIPOS[i].id === id) return TIPOS[i].texto;
+    return id;
+  }
+
+  /* --------------------------------------------------- volver a donde vino --
+     Lautaro entra y sale de la libreta todo el dia y su vuelta es la portada.
+     La duenia y las encargadas llegan desde su panel. */
+  (function () {
+    var b = document.getElementById('volver');
+    if (!b) return;
+    var rol = soy && soy.rol;
+    if (rol === 'Duenio' || rol === 'Encargada') {
+      b.href = 'admin.html';
+      b.textContent = 'Volver al panel';
+    }
+  }());
+
+  /* --------------------------------------------------------------- fechas --
+     Todo se compara con AAAA-MM-DD, que es lo que guarda la columna.
+     Comparar cadenas de ese formato ordena igual que comparar fechas y no hay
+     zona horaria que las pueda mover de dia. */
+  var HOY = LP.hoyLocalISO();
+
+  function sumarDias(n) {
+    var d = new Date();
+    d.setDate(d.getDate() + n);
+    return LP.hoyLocalISO(d);
+  }
+
+  function diasHasta(iso) {
+    var a = new Date(iso + 'T12:00:00');
+    var b = new Date(HOY + 'T12:00:00');
+    return Math.round((a - b) / 86400000);
+  }
+
+  var DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+
+  /* Nadie lee "2026-09-19". Se dice en palabras lo que la persona necesita
+     saber: si es para hoy, si viene, o cuanto lleva esperando. */
+  function fechaCorta(iso) {
+    var d = new Date(iso + 'T12:00:00');
+    return DIAS[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth() + 1);
+  }
+
+  function comoSeLee(iso) {
+    var n = diasHasta(iso);
+    if (n === 0) return 'Hoy';
+    if (n === 1) return 'Mañana';
+    if (n === -1) return 'Era ayer';
+    if (n < -1) return 'Atrasado ' + Math.abs(n) + ' días';
+    return fechaCorta(iso);
+  }
+
+  /* ------------------------------------------------------------- pintado -- */
+  function item(f) {
+    var vencida = f.para_cuando && !f.hecho && f.para_cuando < HOY;
+    var esHoy   = f.para_cuando && !f.hecho && f.para_cuando === HOY;
+    var futura  = f.para_cuando && !f.hecho && f.para_cuando > HOY;
+
+    var clases = 'ano t-' + esc(f.tipo);
+    if (f.hecho) clases += ' lista-hecho';
+    else if (vencida) clases += ' urgente';
+    else if (esHoy) clases += ' hoy';
+    else if (futura) clases += ' luego';
+
+    var meta = '<span class="tipo-badge">' + esc(textoDeTipo(f.tipo)) + '</span>';
+    /* En lo ya hecho la fecha se cuenta en pasado: decirle "Atrasado 3 dias" a
+       algo que Lautaro acaba de resolver es un reto que no corresponde. */
+    if (f.para_cuando) {
+      meta += '<span class="cuando">' +
+        esc(f.hecho ? ('Era para ' + fechaCorta(f.para_cuando)) : comoSeLee(f.para_cuando)) +
+        '</span>';
+    }
+    if (f.hecho) {
+      meta += '<span>Hecho' + (f.hecho_por ? ' por ' + esc(f.hecho_por) : '') + '</span>';
+    } else if (f.anotado_por) {
+      meta += '<span>Lo anotó ' + esc(f.anotado_por) + '</span>';
+    }
+
+    return '<li class="' + clases + '">' +
+      '<button type="button" class="tic" data-tic="' + f.id + '" ' +
+        'aria-pressed="' + (f.hecho ? 'true' : 'false') + '" ' +
+        'aria-label="' + (f.hecho ? 'Desmarcar' : 'Marcar hecho') + ': ' + esc(f.texto) + '">' +
+        (f.hecho ? '✓' : '') + '</button>' +
+      '<div class="cuerpo">' +
+        '<div class="tex">' + esc(f.texto) + '</div>' +
+        '<div class="meta">' + meta + '</div>' +
+      '</div>' +
+      (puedeBorrar
+        ? '<button type="button" class="borrar" data-borrar="' + f.id + '" ' +
+          'aria-label="Borrar: ' + esc(f.texto) + '">✕</button>'
+        : '') +
+    '</li>';
+  }
+
+  function pintarUna(ul, lista, vacio) {
+    ul.innerHTML = lista.length ? lista.map(item).join('')
+                                : '<li class="vacio">' + vacio + '</li>';
+  }
+
+  function render() {
+    var ahora = [], luego = [], sin = [], hechas = [];
+    filas.forEach(function (f) {
+      if (f.hecho) { hechas.push(f); return; }
+      if (!f.para_cuando) { sin.push(f); return; }
+      if (f.para_cuando <= HOY) ahora.push(f); else luego.push(f);
+    });
+
+    /* Lo mas atrasado primero: si algo espera desde hace cuatro dias, va
+       arriba de lo de hoy. */
+    ahora.sort(function (a, b) { return a.para_cuando < b.para_cuando ? -1 : 1; });
+    luego.sort(function (a, b) { return a.para_cuando < b.para_cuando ? -1 : 1; });
+    hechas = hechas.slice(0, 40);
+
+    document.getElementById('nAhora').textContent = ahora.length;
+    document.getElementById('nLuego').textContent = luego.length;
+    document.getElementById('nSinFecha').textContent = sin.length;
+    document.getElementById('nHechas').textContent = hechas.length;
+    document.getElementById('secAhora').className = 'seccion' + (ahora.length ? ' urge' : '');
+
+    pintarUna(elAhora, ahora, 'Nada para hoy. Todo al día.');
+    pintarUna(elLuego, luego, 'Nada anotado para los próximos días.');
+    pintarUna(elSinFecha, sin, 'Nada sin fecha.');
+    pintarUna(elHechas, hechas, 'Todavía no hay nada marcado hecho.');
+  }
+
+  function cargar() {
+    if (!sb) return Promise.resolve();
+    return LP.libreta(sb).then(function (lista) {
+      if (lista === null) { conn.set(navigator.onLine ? 'retry' : 'off'); return; }
+      conn.set(navigator.onLine ? 'live' : 'off');
+      filas = lista;
+      elCargando.hidden = true;
+      elContenido.hidden = false;
+      render();
+    });
+  }
+
+  /* -------------------------------------------------- los botones de tipo -- */
+  document.getElementById('tipos').innerHTML = TIPOS.map(function (t) {
+    return '<button type="button" class="t-' + esc(t.id) + '" data-tipo="' + esc(t.id) + '" ' +
+      'aria-pressed="' + (t.id === tipoElegido ? 'true' : 'false') + '">' +
+      '<span class="pip" aria-hidden="true"></span>' + esc(t.texto) + '</button>';
+  }).join('');
+
+  function marcarGrupo(cont, attr, valor) {
+    var bs = cont.querySelectorAll('[' + attr + ']');
+    for (var i = 0; i < bs.length; i++) {
+      bs[i].setAttribute('aria-pressed', bs[i].getAttribute(attr) === valor ? 'true' : 'false');
+    }
+  }
+
+  document.getElementById('tipos').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-tipo]');
+    if (!b) return;
+    tipoElegido = b.getAttribute('data-tipo');
+    marcarGrupo(this, 'data-tipo', tipoElegido);
+  });
+
+  document.getElementById('cuandos').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-cuando]');
+    if (!b) return;
+    cuandoElegido = b.getAttribute('data-cuando');
+    marcarGrupo(this, 'data-cuando', cuandoElegido);
+    elFechaLibre.hidden = cuandoElegido !== 'otro';
+    if (cuandoElegido === 'otro') {
+      if (!elFecha.value) elFecha.value = HOY;
+      try { elFecha.focus(); } catch (e) {}
+    }
+  });
+
+  function fechaElegida() {
+    if (cuandoElegido === 'hoy') return HOY;
+    if (cuandoElegido === 'maniana') return sumarDias(1);
+    if (cuandoElegido === 'otro') return elFecha.value || null;
+    return null;
+  }
+
+  /* ------------------------------------------------------------- anotar --- */
+  document.getElementById('anotarForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    elErr.textContent = '';
+    var texto = elTxt.value.trim();
+    if (!texto) {
+      elErr.textContent = 'Escribí qué hay que hacer.';
+      try { elTxt.focus(); } catch (e) {}
+      return;
+    }
+    if (cuandoElegido === 'otro' && !elFecha.value) {
+      elErr.textContent = 'Elegí el día, o tocá "Sin fecha".';
+      return;
+    }
+
+    var btn = document.getElementById('anotarBtn');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    LP.anotar(sb, {
+      texto: texto, tipo: tipoElegido,
+      para_cuando: fechaElegida(), anotado_por: YO
+    }).then(function (r) {
+      btn.disabled = false;
+      btn.textContent = 'Anotar';
+      if (!r.ok) { elErr.textContent = r.motivo || 'No pudimos guardarla.'; return; }
+      /* Se limpia el texto y la fecha, pero NO el tipo: el que esta anotando
+         tres faltantes seguidos no tiene que volver a tocar "Falta" cada vez. */
+      elTxt.value = '';
+      cuandoElegido = '';
+      marcarGrupo(document.getElementById('cuandos'), 'data-cuando', '');
+      elFechaLibre.hidden = true;
+      LP.toast('Anotado.', 'ok');
+      /* La fila que volvio se mete a mano: asi aparece al toque y no se espera
+         el viaje de ida y vuelta de realtime. */
+      if (r.fila) { filas.unshift(r.fila); render(); }
+      cargar();
+      try { elTxt.focus(); } catch (e) {}
+    });
+  });
+
+  /* ------------------------------------------- marcar hecho y desmarcar --- */
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest('[data-tic]');
+    if (t) {
+      var id = t.getAttribute('data-tic');
+      var quiere = t.getAttribute('aria-pressed') !== 'true';
+      t.disabled = true;
+      LP.marcarAnotacion(sb, id, quiere, YO).then(function (ok) {
+        t.disabled = false;
+        if (!ok) { LP.toast('No pudimos marcarla. Probá de nuevo.', 'err'); return; }
+        if (quiere) LP.toast('Listo. Si fue sin querer, tocá el tilde otra vez.', 'ok');
+        cargar();
+      });
+      return;
+    }
+
+    var b = ev.target.closest('[data-borrar]');
+    if (!b) return;
+    if (!window.confirm('¿Borrar esta anotación? No se puede deshacer.')) return;
+    b.disabled = true;
+    LP.borrarAnotacion(sb, b.getAttribute('data-borrar')).then(function (ok) {
+      b.disabled = false;
+      if (!ok) { LP.toast('No pudimos borrarla.', 'err'); return; }
+      LP.toast('Borrada.', 'ok');
+      cargar();
+    });
+  });
+
+  /* -------------------------------------------------------------- inicio -- */
+  if (!sb) {
+    conn.set('off');
+    elCargando.textContent = 'No hay conexión con el sistema.';
+    return;
+  }
+  cargar();
+
+  var canal = sb.channel('libreta-' + Date.now())
+    .on('postgres_changes', { event: '*', schema: 'public', table: LP.LIBRETA_TABLE },
+        function () { cargar(); })
+    .subscribe(function (st) {
+      if (st === 'SUBSCRIBED') conn.set(navigator.onLine ? 'live' : 'off');
+    });
+  LP.onCleanup(function () { try { sb.removeChannel(canal); } catch (e) {} });
+
+  /* El celular estuvo media hora en el bolsillo: al volver, lo de "hoy" puede
+     ser lo de ayer. Se recalcula el dia, no solo la lista. */
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) return;
+    HOY = LP.hoyLocalISO();
+    cargar();
+  });
+});
+</script>
+</body>
+</html>

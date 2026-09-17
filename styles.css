@@ -340,6 +340,62 @@ body.dark .nav-donde{color:var(--dark-ink)}
 body.con-nav .wrap{padding-top:calc(var(--nav-h) + 14px)}
 body.con-nav .container{padding-top:var(--nav-h)}
 
+/* ------------------------------------------------- el acceso rapido -----
+   La pastilla fija de abajo con lo que el mozo hace todo el turno: tomar la
+   comanda, las mesas y cobrar. La arma LP.accesoRapido() desde app.js; aca
+   solo vive como se ve. El comentario de POR QUE esta abajo y no arriba, y
+   de en que pantallas aparece, esta en app.js al lado del codigo.
+
+   Es una pastilla centrada y no una barra de ancho completo, al contrario de
+   la de arriba: la de arriba ocupa su propio alto porque tiene que dejar ver
+   el titulo de la pantalla, y esta flota porque son tres botones y una barra
+   entera de 64px le comeria una fila de platos a la carta.
+
+   Se pone por encima de la pastilla el ancho de la lista (--acceso-h) para
+   que el ultimo renglon de cualquier lista se pueda tocar. Los toasts van en
+   z-index 80 y le pasan por arriba unos segundos: es a proposito, el aviso
+   de "se mando la comanda" no lo puede tapar un boton de navegacion. */
+body.con-acceso{--acceso-h:calc(62px + var(--sa-b))}
+body.con-acceso .wrap{padding-bottom:calc(var(--acceso-h) + 18px)}
+
+.acceso-rapido{
+  position:fixed;z-index:40;
+  left:50%;transform:translateX(-50%);
+  bottom:calc(10px + var(--sa-b));
+  display:flex;gap:4px;padding:5px;
+  border-radius:var(--r-pill);
+  background:var(--ink);border:1px solid var(--dark-border);
+  box-shadow:0 8px 26px rgba(20,16,14,.42);
+  max-width:calc(100% - 24px);
+}
+.acceso-rapido a{
+  /* 44px de alto y 62px de ancho: la regla dura del tap del proyecto, con
+     margen. El texto va debajo del icono para que la pastilla entera entre
+     en un celular de 320px con los tres accesos. */
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;min-width:62px;min-height:var(--tap);padding:5px 10px;
+  border-radius:var(--r-pill);
+  color:#fff;text-decoration:none;line-height:1;
+  transition:background-color .16s,color .16s;
+}
+.acceso-rapido a span{
+  font-family:var(--font-cuerpo);font-size:11px;font-weight:500;
+  letter-spacing:.02em;white-space:nowrap;
+}
+/* El icono a 22px y no a 26: en la pastilla comparte los 44px con el rotulo. */
+.acceso-rapido .ico{width:22px;height:22px}
+.acceso-rapido a:active{background:var(--dark-card-hover)}
+.acceso-rapido a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+@media (hover:hover){
+  .acceso-rapido a:hover{background:var(--dark-card-hover);color:var(--gold)}
+}
+/* En escritorio no hay pulgar y sobra lugar: se va a la izquierda, que es
+   donde David lo vio en LIDERA, y deja el centro libre. */
+@media (min-width:760px){
+  .acceso-rapido{left:max(16px,var(--sa-l));transform:none}
+}
+@media (prefers-reduced-motion:reduce){.acceso-rapido a{transition:none}}
+
 /* Las cifras de un vistazo (el salon, el encargado): grilla con bordes de
    1px, dos por fila en el celular y cuatro de 560px en adelante. Estaba en
    admin.html; mesas.html tenia otra version del mismo bloque. */

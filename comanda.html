@@ -99,9 +99,39 @@
   .buscar .limpiar:hover{color:#fff;background:var(--dark-card-hover)}
   .buscar .limpiar[hidden]{display:none}
 
+  /* ------------------------------------------- paso 1: las 19 categorias --
+     La carta tiene 19 categorias y 160 platos. La tira horizontal sola no
+     alcanza: para llegar a "Parrilla al carbon" -que esta quinta- o a
+     "Vinos tintos" -que esta decimoseptima- el mozo tenia que arrastrar la
+     tira sin ver cuanto le faltaba, y el mozo YA SABE donde esta cada cosa.
+
+     Se eligio la HOJA CON LAS 19 EN GRILLA y no "chips mejor marcados", que
+     era la otra opcion. La razon: marcar mejor los chips arregla saber DONDE
+     ESTAS, pero no arregla LLEGAR -la tira sigue teniendo el mismo largo-, y
+     el pedido era llegar en un toque. Con la hoja se ven las 19 de una, sin
+     scrollear ninguna, y son dos toques fijos desde cualquier lugar de la
+     carta: abrir y elegir. La tira se queda igual para el que va de
+     Entradas a Ensaladas, que es el paso de al lado.
+
+     El boton que abre la hoja vive AFUERA de la tira que se arrastra: si
+     estuviera adentro se iria de pantalla al tercer chip, que es justo el
+     momento en el que se lo necesita. */
+  .cats-fila{display:flex;align-items:flex-start;gap:8px;min-width:0}
+  .cat-todas{
+    flex:none;min-height:38px;min-width:var(--tap);padding:0 12px;
+    border-radius:var(--r-pill);
+    background:var(--dark-card);border:1px solid var(--gold);color:var(--gold);
+    font-size:14px;font-weight:500;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:7px;
+  }
+  .cat-todas svg{flex:none}
+  .cat-todas:hover{background:var(--dark-card-hover)}
+  .cat-todas:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
   .cats{
     display:flex;gap:7px;overflow-x:auto;padding:2px 0 8px;
     -webkit-overflow-scrolling:touch;scrollbar-width:none;
+    min-width:0;
   }
   .cats::-webkit-scrollbar{display:none}
   .cat-b{
@@ -110,6 +140,53 @@
     color:var(--dark-ink);font-size:14px;white-space:nowrap;
   }
   .cat-b[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:600}
+
+  /* En que categoria estas. Antes era el mismo gris chico que el resto de
+     los rotulos y se perdia; ahora es el renglon que contesta "donde estoy",
+     con el punto dorado adelante y el numero de platos al lado. */
+  .cat-donde{
+    display:flex;align-items:center;gap:8px;
+    margin:2px 0 9px;color:#fff;font-size:15px;font-weight:500;line-height:1.25;
+  }
+  .cat-donde::before{
+    content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--gold);
+  }
+  .cat-donde em{font-style:normal;color:var(--dark-muted);font-size:13px;font-weight:400}
+
+  /* La grilla de la hoja. Dos columnas en el celular y tres de 480px en
+     adelante: con 19 categorias, dos columnas entran enteras en 812px de
+     alto sin scrollear. */
+  .cats-grilla{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  @media (min-width:480px){.cats-grilla{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  .cg-b{
+    /* 52px y no 56: son diez filas, y con 56 la ultima -"Cervezas (porron /
+       lata)"- quedaba medio renglon abajo del borde de la hoja. Sigue arriba
+       de los 44px de la regla del tap. */
+    display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+    gap:1px;min-height:52px;padding:8px 11px;width:100%;
+    background:var(--card);border:1px solid var(--border-strong);
+    border-radius:var(--r-md);
+    font-family:inherit;font-size:15px;color:var(--ink);text-align:left;cursor:pointer;
+    line-height:1.2;
+  }
+  .cg-b span{font-size:12px;color:var(--muted)}
+  .cg-b:hover{border-color:var(--accent)}
+  .cg-b[aria-current="true"]{
+    background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;
+  }
+  .cg-b[aria-current="true"] span{color:#fff;opacity:.85}
+  /* La que no tiene ningun plato disponible: se ve, se puede abrir, pero
+     avisa. Que la cocina marque toda una categoria como agotada es raro pero
+     pasa un lunes a la noche, y entrar a una lista vacia se lee como que se
+     rompio. */
+  .cg-b.vacia{opacity:.62}
+
+  /* La pastilla de accesos rapidos de app.js se esconde mientras el pie con
+     el total esta a la vista: son las dos cosas pegadas abajo y apiladas se
+     comen 170px de una pantalla de 812px. Mientras hay platos cargados el
+     camino es el pie -no se salta a otra pantalla en medio de una comanda- y
+     el "Volver" de la barra de arriba sigue estando siempre. */
+  body.con-barra .acceso-rapido{display:none}
 
   /* ------------------------------------------------- paso 1: el estado --
      Que mesa lleva la comanda, si es que ya se eligio. En el flujo nuevo lo
@@ -146,11 +223,8 @@
      doble. */
   .carta{list-style:none;margin:0;padding:0;display:grid;gap:6px}
   @media (min-width:760px){.carta{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  .cat-tit{
-    color:var(--dark-muted);font-family:var(--font-cuerpo);font-style:normal;
-    font-size:12px;letter-spacing:.1em;text-transform:uppercase;
-    margin:2px 0 8px;font-weight:600;
-  }
+  /* El rotulo gris chico de la categoria ya no existe: lo reemplaza
+     .cat-donde, que es el renglon que contesta "en que categoria estoy". */
 
   .plato{
     position:relative;overflow:hidden;
@@ -430,8 +504,23 @@
       <button type="button" class="limpiar" id="limpiarBusq" hidden aria-label="Borrar la b&uacute;squeda">&#10005;</button>
     </div>
 
-    <div class="cats" id="cats" role="group" aria-label="Categor&iacute;as de la carta"></div>
-    <p class="cat-tit" id="catTit"></p>
+    <!-- El boton de las 19 va afuera de la tira: la tira se arrastra, el
+         boton no se puede ir de pantalla nunca. -->
+    <div class="cats-fila">
+      <button type="button" class="cat-todas" id="catTodas"
+              aria-haspopup="dialog" aria-label="Elegir entre las 19 categor&iacute;as">
+        <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" focusable="false"
+             fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
+          <rect x="4" y="4" width="7" height="7" rx="1.6"/>
+          <rect x="13" y="4" width="7" height="7" rx="1.6"/>
+          <rect x="4" y="13" width="7" height="7" rx="1.6"/>
+          <rect x="13" y="13" width="7" height="7" rx="1.6"/>
+        </svg>
+        <span id="catTodasN">19</span>
+      </button>
+      <div class="cats" id="cats" role="group" aria-label="Categor&iacute;as de la carta"></div>
+    </div>
+    <p class="cat-donde" id="catTit" role="status" aria-live="polite"></p>
     <ul class="carta" id="carta"></ul>
   </section>
 
@@ -466,6 +555,20 @@
       <span id="pieCuenta">nada cargado</span>
     </button>
     <button type="button" class="btn btn-primary" id="pieAccion">Continuar</button>
+  </div>
+</div>
+
+<!-- ============================================== las 19 categorias ======
+     Las 19 de una, en grilla, sin scrollear ninguna. Adentro NO hay ni un
+     boton que sume, reste o vacie: elegir una categoria no puede tocar el
+     pedido. -->
+<div class="sheet" id="hojaCats" hidden role="dialog" aria-modal="true" aria-labelledby="hcatTit">
+  <div class="sheet-panel">
+    <div class="sheet-head">
+      <h2 id="hcatTit">&iquest;Qu&eacute; categor&iacute;a?</h2>
+      <button type="button" class="close-x" id="hcatX" aria-label="Cerrar">&#10005;</button>
+    </div>
+    <div class="cats-grilla" id="catsGrilla"></div>
   </div>
 </div>
 
@@ -534,8 +637,14 @@ document.addEventListener('DOMContentLoaded', function () {
   var enviando = false;
 
   var CATS = [];
+  /* Cuantos platos tiene cada categoria. Se cuenta una sola vez al arrancar
+     -la carta no cambia mientras se toma una comanda- y sirve para el numero
+     que la hoja pone al lado de cada nombre: "Postres 21" le dice al mozo si
+     lo que busca esta en una lista corta o larga antes de entrar. */
+  var CUANTOS = Object.create(null);
   for (var i = 0; i < MENU.length; i++) {
     if (CATS.indexOf(MENU[i].cat) === -1) CATS.push(MENU[i].cat);
+    CUANTOS[MENU[i].cat] = (CUANTOS[MENU[i].cat] || 0) + 1;
   }
   catActiva = CATS[0];
 
@@ -855,14 +964,69 @@ document.addEventListener('DOMContentLoaded', function () {
     }).join('');
   }
 
+  /* Ir a una categoria. Es el unico camino: lo usan la tira de chips y la
+     hoja de las 19, asi que las dos hacen exactamente lo mismo y no hay dos
+     versiones del mismo salto que se puedan desincronizar. */
+  function irACategoria(cat) {
+    if (!cat) return;
+    catActiva = cat;
+    if (query) { query = ''; elBusc.value = ''; elLimpiar.hidden = true; }
+    pintarCats(); pintarCarta();
+    /* El chip activo al centro de la tira: asi despues de saltar a "Vinos
+       tintos" desde la hoja, la tira queda parada ahi y los vecinos
+       -"Vinos blancos", "Cervezas"- quedan a un toque. */
+    var act = elCats.querySelector('[aria-pressed="true"]');
+    if (act) { try { act.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); } catch (e) {} }
+  }
+
   elCats.addEventListener('click', function (ev) {
     var b = ev.target.closest('[data-cat]');
     if (!b) return;
-    catActiva = b.dataset.cat;
-    if (query) { query = ''; elBusc.value = ''; elLimpiar.hidden = true; }
-    pintarCats(); pintarCarta();
-    var act = elCats.querySelector('[aria-pressed="true"]');
-    if (act) { try { act.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); } catch (e) {} }
+    irACategoria(b.dataset.cat);
+  });
+
+  /* ------------------------------------------------- la hoja de las 19 ----
+     Se abre con el boton de la grilla y con la tecla Escape se cierra sola
+     (lo hace LP.openDialog). Al elegir, se cierra y la carta ya esta en la
+     categoria nueva: dos toques desde cualquier lugar de los 160 platos. */
+  var hojaCats = document.getElementById('hojaCats');
+  var elCatsGrilla = document.getElementById('catsGrilla');
+  var elCatTodas = document.getElementById('catTodas');
+  document.getElementById('catTodasN').textContent = CATS.length;
+
+  function pintarGrillaCats() {
+    elCatsGrilla.innerHTML = CATS.map(function (c) {
+      /* Cuantos hay y cuantos se pueden pedir. Si la cocina agoto toda la
+         categoria, el numero lo dice ANTES de entrar. */
+      var total = CUANTOS[c] || 0;
+      var hay = 0;
+      for (var k = 0; k < MENU.length; k++) {
+        if (MENU[k].cat === c && !agotados[MENU[k].id]) hay++;
+      }
+      var detalle = hay === total
+        ? (total + (total === 1 ? ' plato' : ' platos'))
+        : (hay === 0 ? 'todo agotado' : hay + ' de ' + total + ' disponibles');
+      return '<button type="button" class="cg-b' + (hay === 0 ? ' vacia' : '') +
+        '" data-ir="' + esc(c) + '" aria-current="' + (c === catActiva ? 'true' : 'false') + '">' +
+        esc(c) + '<span>' + esc(detalle) + '</span></button>';
+    }).join('');
+  }
+
+  elCatTodas.addEventListener('click', function () {
+    pintarGrillaCats();
+    LP.openDialog(hojaCats, { focus: '[aria-current="true"]' });
+  });
+  document.getElementById('hcatX').addEventListener('click', function () {
+    LP.closeDialog(hojaCats);
+  });
+  elCatsGrilla.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-ir]');
+    if (!b) return;
+    LP.closeDialog(hojaCats);
+    irACategoria(b.dataset.ir);
+    /* Se sube al principio de la lista: se acaba de cambiar de categoria, y
+       quedar a mitad de camino de la anterior es no haber llegado. */
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
   });
 
   var tBusq = null;
@@ -936,9 +1100,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function pintarCarta() {
     var items = visibles();
-    elCatTit.textContent = query
-      ? (items.length + (items.length === 1 ? ' resultado' : ' resultados'))
-      : catActiva;
+    /* El renglon de "donde estoy". Buscando dice cuantos encontro; parado en
+       una categoria dice el nombre y cuantos platos tiene. */
+    elCatTit.innerHTML = query
+      ? esc(items.length + (items.length === 1 ? ' resultado' : ' resultados'))
+      : esc(catActiva) + ' <em>' +
+        esc(items.length + (items.length === 1 ? ' plato' : ' platos')) + '</em>';
     elCarta.innerHTML = items.length
       ? items.map(filaHTML).join('')
       : '<li class="nada">No encontramos ese plato. Probá con otra palabra.</li>';

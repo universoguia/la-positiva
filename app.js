@@ -31,6 +31,11 @@
   var PERSONAS_TABLE = CFG.PERSONAS_TABLE || 'la_positiva_personas';
   var PROPINAS_TABLE = CFG.PROPINAS_TABLE || 'la_positiva_propinas';
   var VOZ_TABLE = CFG.VOZ_TABLE || 'la_positiva_voz';
+  /* La libreta del local: lo que hay que anotar para no olvidarse, con fecha
+     de recordatorio OPCIONAL. Ojo de no confundirla con NOTAS_TABLE, que es
+     otra cosa: esas son las notas de UN pedido ("sin sal"). Esta no cuelga de
+     ningun pedido ni de ninguna mesa, es del local entero. */
+  var LIBRETA_TABLE = CFG.LIBRETA_TABLE || 'la_positiva_libreta';
   var BUCKET = CFG.BUCKET;
   var IMG_BASE = CFG.IMG_BASE;
 
@@ -919,6 +924,103 @@
       }, function (e) { humanError(e); return null; });
   }
 
+
+  /* --- La libreta del local ----------------------------------------------
+     Cosas para anotar y no olvidarse: tareas, eventos, stock, limpieza y
+     arreglos. Cualquiera anota y cualquiera marca hecho, a proposito: es un
+     cuaderno compartido. La usa gente que no maneja tecnologia, asi que
+     anotar tiene que ser escribir y tocar un boton, nada mas.
+
+     La fecha es OPCIONAL y eso no es un descuido: "arreglar la puerta del
+     baniio" no tiene fecha, y obligar a poner una hace que la persona
+     invente cualquier dia y el recordatorio pierda sentido.               */
+  var TIPOS_LIBRETA = [
+    { id: 'tarea',    texto: 'Tarea' },
+    { id: 'evento',   texto: 'Evento' },
+    { id: 'stock',    texto: 'Falta / comprar' },
+    { id: 'limpieza', texto: 'Limpiar' },
+    { id: 'arreglo',  texto: 'Arreglar' }
+  ];
+
+  function tipoLibretaValido(t) {
+    for (var i = 0; i < TIPOS_LIBRETA.length; i++) if (TIPOS_LIBRETA[i].id === t) return true;
+    return false;
+  }
+
+  /* El dia de HOY en el mismo formato que guarda la base (AAAA-MM-DD) y en la
+     hora del telefono, no en UTC. Con toISOString() a las 22 de Argentina ya
+     es maniana en Londres: lo de hoy aparecia como "de maniana" y lo atrasado
+     dejaba de estar atrasado. */
+  function hoyLocalISO(d) {
+    var f = d || new Date();
+    var m = String(f.getMonth() + 1);
+    var dd = String(f.getDate());
+    return f.getFullYear() + '-' + (m.length < 2 ? '0' + m : m) + '-' +
+           (dd.length < 2 ? '0' + dd : dd);
+  }
+
+  function libreta(sb) {
+    var cliente = sb || client();
+    if (!cliente) return Promise.resolve(null);
+    return cliente.from(LIBRETA_TABLE).select('*')
+      .order('created_at', { ascending: false })
+      .limit(400)
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return null; }
+        return res.data || [];
+      }, function (e) { humanError(e); return null; });
+  }
+
+  /* Devuelve { ok, motivo } como el resto de los guardados de la app, para que
+     la pantalla pueda decir QUE paso y no solo que no anduvo.             */
+  function anotar(sb, datos) {
+    var cliente = sb || client();
+    if (!cliente) return Promise.resolve({ ok: false, motivo: 'No hay conexi\u00f3n con el sistema.' });
+    var texto = String((datos && datos.texto) || '').trim().slice(0, 400);
+    if (!texto) return Promise.resolve({ ok: false, motivo: 'Escrib\u00ed qu\u00e9 hay que hacer.' });
+    var tipo = (datos && datos.tipo) || 'tarea';
+    if (!tipoLibretaValido(tipo)) tipo = 'tarea';
+    var fila = {
+      texto: texto,
+      tipo: tipo,
+      /* Cadena vacia no es lo mismo que null y Postgres rechaza '' como date:
+         sin fecha se manda null, que es lo que la columna espera. */
+      para_cuando: (datos && datos.para_cuando) ? datos.para_cuando : null,
+      anotado_por: (datos && datos.anotado_por) || null
+    };
+    return cliente.from(LIBRETA_TABLE).insert(fila).select('*').single()
+      .then(function (res) {
+        if (res.error) return { ok: false, motivo: humanError(res.error, 'No pudimos guardar la anotaci\u00f3n.') };
+        return { ok: true, fila: res.data };
+      }, function (e) { return { ok: false, motivo: humanError(e, 'No pudimos guardar la anotaci\u00f3n.') }; });
+  }
+
+  /* Marcar y desmarcar son la MISMA funcion: marcar sin querer tiene que
+     poder deshacerse con otro toque. Al desmarcar se limpian quien y cuando,
+     asi no queda un "hecho por Betty" en algo que esta pendiente.         */
+  function marcarAnotacion(sb, id, hecho, quien) {
+    var cliente = sb || client();
+    if (!cliente || !id) return Promise.resolve(false);
+    var cambio = hecho
+      ? { hecho: true, hecho_por: quien || null, hecho_at: new Date().toISOString() }
+      : { hecho: false, hecho_por: null, hecho_at: null };
+    return cliente.from(LIBRETA_TABLE).update(cambio).eq('id', id)
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return false; }
+        return true;
+      }, function (e) { humanError(e); return false; });
+  }
+
+  function borrarAnotacion(sb, id) {
+    var cliente = sb || client();
+    if (!cliente || !id) return Promise.resolve(false);
+    return cliente.from(LIBRETA_TABLE).delete().eq('id', id)
+      .then(function (res) {
+        if (res.error) { humanError(res.error); return false; }
+        return true;
+      }, function (e) { humanError(e); return false; });
+  }
+
   function quienSoy() {
     try {
       var crudo = localStorage.getItem(YO_KEY);
@@ -944,7 +1046,10 @@
     Duenio: 'admin.html',
     Mozo:   'mozo.html',
     Caja:   'caja.html',
-    Cocina: 'cocina.html'
+    Cocina: 'cocina.html',
+    Encargada: 'admin.html',
+    /* Mantenimiento no tiene operacion: su pantalla es la libreta. */
+    Mantenimiento: 'anotaciones.html'
   };
 
   function pantallaDe(rol) { return PANTALLA_POR_ROL[rol] || 'index.html'; }
@@ -974,6 +1079,7 @@
       { url: 'qr-mesa.html',     texto: 'Los QR de las mesas' },
       { url: 'propinas.html',    texto: 'Las propinas de los mozos' },
       { url: 'diseno.html',      texto: 'El diseño del local' },
+      { url: 'anotaciones.html', texto: 'La libreta del local' },
       { url: 'alta.html',        texto: 'Activar los avisos' },
       /* Ultimo y con el nombre de lo que es. No se esconde: la duenia tiene
          que poder llegar sin que nadie le pase la direccion por WhatsApp. */
@@ -999,11 +1105,13 @@
          pantallas" de la portada. Sin esto, esconder esa lista dejaba al
          mozo, a la cocina y a la caja sin ninguna puerta a la pantalla que
          activa los avisos en su celular: se les apagaba el telefono. */
+      { url: 'anotaciones.html', texto: 'La libreta del local' },
       { url: 'alta.html',     texto: 'Activar los avisos' }
     ],
     Caja: [
       { url: 'caja.html',   texto: 'Los pagos' },
       { url: 'cobrar.html', texto: 'Mostrar el QR de cobro' },
+      { url: 'anotaciones.html', texto: 'La libreta del local' },
       { url: 'alta.html',   texto: 'Activar los avisos' }
     ],
     Cocina: [
@@ -1012,6 +1120,36 @@
          "solo los que se terminaron", el cocinero caeria en una lista vacia
          justo cuando todavia no marco nada, que es siempre la primera vez. */
       { url: 'carta-fotos.html', texto: 'Marcar lo que se termin\u00f3' },
+      { url: 'anotaciones.html', texto: 'La libreta del local' },
+      { url: 'alta.html',        texto: 'Activar los avisos' }
+    ],
+    /* Betty de maniana y Cintia de noche: administran todo el local, asi que
+       su menu es el de la duenia SIN el panel tecnico. Este renglon faltaba:
+       el permiso ya las dejaba entrar a todo, pero funcionesDe('Encargada')
+       devolvia una lista vacia y en la portada no les aparecia ni una puerta. */
+    Encargada: [
+      { url: 'admin.html',       texto: 'C\u00f3mo viene el sal\u00f3n' },
+      { url: 'comanda.html',     texto: 'Tomar comanda' },
+      { url: 'mesas.html',       texto: 'El sal\u00f3n y las cuentas' },
+      { url: 'mozo.html',        texto: 'Los pedidos de las mesas' },
+      { url: 'cocina.html',      texto: 'Las comandas' },
+      { url: 'caja.html',        texto: 'Los pagos' },
+      { url: 'cobrar.html',      texto: 'Cobrar con QR' },
+      { url: 'carta-fotos.html', texto: 'La carta y lo que se termin\u00f3' },
+      { url: 'qr-mesa.html',     texto: 'Los QR de las mesas' },
+      { url: 'propinas.html',    texto: 'Las propinas de los mozos' },
+      { url: 'diseno.html',      texto: 'El dise\u00f1o del local' },
+      { url: 'anotaciones.html', texto: 'La libreta del local' },
+      { url: 'alta.html',        texto: 'Activar los avisos' }
+    ],
+    /* Lautaro. La libreta va PRIMERA porque es su pantalla: ahi ve lo que hay
+       que limpiar y arreglar, y ahi lo marca hecho. El salon lo mira para
+       saber que mesa se desocupo. Nada de la operacion le corresponde.
+       El orden importa: el primero de la lista se pinta como boton grande
+       ('principal') en la portada. */
+    Mantenimiento: [
+      { url: 'anotaciones.html', texto: 'La libreta del local' },
+      { url: 'mesas.html',       texto: 'Mirar el sal\u00f3n' },
       { url: 'alta.html',        texto: 'Activar los avisos' }
     ]
   };
@@ -1024,7 +1162,8 @@
      pantalla vacia, y eso se lee como "se rompio". */
   var LLAVE_DE_PANTALLA = {
     'propinas.html': 'f_propinas',
-    'cobrar.html': 'f_qr_pago'
+    'cobrar.html': 'f_qr_pago',
+    'anotaciones.html': 'f_libreta'
   };
 
   function funcionesDe(rol) {
@@ -1045,6 +1184,202 @@
         return { url: f.url, texto: nombreDePantalla(f.url, f.texto) };
       });
     } catch (e) { return base; }
+  }
+
+  /* --- Los iconos ---------------------------------------------------------
+     Un dibujo por pantalla. Se reconoce mas rapido de lo que se lee un
+     renglon de texto, y el mozo mira el celular con una mano y una bandeja
+     en la otra.
+
+     TRES decisiones y las tres son a proposito:
+
+     1. SVG escrito a mano, nada de librerias. El proyecto no tiene build y
+        la portada tiene que abrir de una: bajar una libreta de iconos para
+        dibujar once figuras seria mas peso que toda la app junta.
+     2. Trazo y NO relleno, con stroke="currentColor". Asi el mismo icono
+        sirve sobre el fondo tinta de la portada y sobre la crema de las
+        pantallas de dia, y si maniana el tema cambia el terracota por otro
+        color el icono lo sigue solo, sin tocar una linea.
+     3. Cero emojis. El emoji de olla, de campana o de camara se dibuja
+        distinto en cada telefono y en algunos directamente no aparece. Esa
+        regla ya estaba escrita en comanda.html para el icono de la foto;
+        aca se vuelve la regla de todos.
+
+     Va en app.js y no en cada HTML porque los usan DOS lugares: la grilla de
+     la portada y la barra de acceso rapido, y las dos se arman desde JS a
+     partir de funcionesDe(). Una sola copia, un solo lugar donde corregir. */
+  var ICONO_BASE =
+    '<svg class="ico" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" ' +
+      'focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" ' +
+      'stroke-linecap="round" stroke-linejoin="round">';
+
+  var DIBUJOS = {
+    /* Libreta con lapiz: tomar la comanda. */
+    'comanda.html':
+      '<rect x="3.5" y="3" width="12" height="18" rx="2.2"/>' +
+      '<path d="M6.8 7.6h5.4M6.8 11.2h5.4M6.8 14.8h3.2"/>' +
+      '<path d="M18.4 12.4 21 15l-3.4 3.4-2.6.6.6-2.6z"/>',
+    /* Comanda impresa con el borde dentado: los pedidos que ya dan vueltas. */
+    'mozo.html':
+      '<path d="M5.5 3.5h13v17l-2.2-1.5-2.2 1.5-2.2-1.5-2.2 1.5L7.7 19z"/>' +
+      '<path d="M9 8.2h6M9 12h6"/>',
+    /* La planta del salon vista de arriba: mesas redondas y cuadradas. */
+    'mesas.html':
+      '<circle cx="7.5" cy="7.5" r="3.1"/>' +
+      '<rect x="14" y="4.2" width="6.2" height="6.6" rx="1.4"/>' +
+      '<rect x="3.8" y="14" width="7" height="6.4" rx="1.4"/>' +
+      '<circle cx="17.1" cy="17.2" r="3.1"/>',
+    /* Olla con vapor. */
+    'cocina.html':
+      '<path d="M4.4 10.4h15.2v4.4a4.2 4.2 0 0 1-4.2 4.2H8.6a4.2 4.2 0 0 1-4.2-4.2z"/>' +
+      '<path d="M19.6 11.8h1.6a1.3 1.3 0 0 1 0 2.6h-1.6M4.4 11.8H2.8a1.3 1.3 0 0 0 0 2.6h1.6"/>' +
+      '<path d="M9.6 7.4c0-1.3 1.2-1.5 1.2-2.8M14 7.4c0-1.3 1.2-1.5 1.2-2.8"/>',
+    /* Billete: los pagos. */
+    'caja.html':
+      '<rect x="2.6" y="6" width="18.8" height="12" rx="2.2"/>' +
+      '<circle cx="12" cy="12" r="2.6"/>' +
+      '<path d="M6 10.4v3.2M18 10.4v3.2"/>',
+    /* El QR de cobro. */
+    'cobrar.html':
+      '<rect x="3.4" y="3.4" width="6.2" height="6.2" rx="1.2"/>' +
+      '<rect x="14.4" y="3.4" width="6.2" height="6.2" rx="1.2"/>' +
+      '<rect x="3.4" y="14.4" width="6.2" height="6.2" rx="1.2"/>' +
+      '<path d="M14.4 14.4h3.1v3.1h-3.1z"/>' +
+      '<path d="M20.6 14.4v3.1M17.5 20.6h3.1"/>',
+    /* Libro abierto: la carta. */
+    'carta-fotos.html':
+      '<path d="M12 6.6C10.5 5.1 8.4 4.4 5 4.4v12.8c3.4 0 5.5.7 7 2.2 1.5-1.5 3.6-2.2 7-2.2V4.4' +
+        'c-3.4 0-5.5.7-7 2.2z"/>' +
+      '<path d="M12 6.6v12.8"/>',
+    /* Etiqueta colgada: el QR que se pega en cada mesa. */
+    'qr-mesa.html':
+      '<path d="M20.4 12.7l-7.7 7.7a2 2 0 0 1-2.8 0L3.7 14.2a2 2 0 0 1-.58-1.55l.44-5.9' +
+        'a2 2 0 0 1 1.84-1.84l5.9-.44a2 2 0 0 1 1.55.58l6.2 6.2a2 2 0 0 1 0 2.8z"/>' +
+      '<circle cx="8.3" cy="8.3" r="1.5"/>',
+    /* Barras: como viene el salon. */
+    'admin.html':
+      '<path d="M3.6 20.4h16.8"/>' +
+      '<path d="M7.2 17.6v-5.4M12 17.6V7.8M16.8 17.6V4.6"/>',
+    /* Moneda sobre la mano: las propinas. */
+    'propinas.html':
+      '<circle cx="12" cy="7.8" r="4.1"/>' +
+      '<path d="M12 6v3.6M10.7 6.9h2.6"/>' +
+      '<path d="M3.6 20.4c2-2.3 4.7-3.5 8.4-3.5s6.4 1.2 8.4 3.5"/>',
+    /* Paleta de pintor: el diseno del local. */
+    'diseno.html':
+      '<path d="M12 3.3a8.7 8.7 0 0 0 0 17.4c1.35 0 1.95-.9 1.95-1.8 0-1.55-1.55-1.85-1.55-3.25' +
+        ' 0-1.2.95-2.05 2.25-2.05h1.75a4.25 4.25 0 0 0 4.25-4.25C20.65 5.85 16.8 3.3 12 3.3z"/>' +
+      '<circle cx="8.3" cy="9.3" r="1.05"/><circle cx="12" cy="7.1" r="1.05"/>' +
+      '<circle cx="7.5" cy="13.6" r="1.05"/>',
+    /* Nota con el tilde de "hecho": la libreta del local. */
+    'anotaciones.html':
+      '<rect x="4" y="3.4" width="16" height="17.2" rx="2.2"/>' +
+      '<path d="M8 9.6l2 2 3.6-3.6"/><path d="M8 15.6h8"/>',
+    /* Campana: activar los avisos. */
+    'alta.html':
+      '<path d="M18.1 16.6H5.9l1.35-2.25V11a4.75 4.75 0 0 1 9.5 0v3.35z"/>' +
+      '<path d="M10.2 19.3a2 2 0 0 0 3.6 0"/><path d="M12 6.25V4.4"/>',
+    /* Llave: el panel tecnico. Es una llave y no un engranaje porque el
+       engranaje ya quiere decir "ajustes" en media docena de pantallas del
+       telefono, y esto no es ajustes: es el tablero interno. */
+    'tecnico.html':
+      '<circle cx="7.8" cy="16.2" r="3.6"/>' +
+      '<path d="M10.35 13.65 19.6 4.4"/>' +
+      '<path d="M16.1 7.9l2.4 2.4M18.7 5.3l2.4 2.4"/>'
+  };
+
+  /* Si maniana aparece una pantalla nueva y nadie le dibujo el icono, sale
+     este cuadrado con un punto en vez de un hueco: la tarjeta se sigue
+     viendo entera y el que la agrego se da cuenta de que falta el dibujo.
+     Es un cuadrado y no una grilla de cuatro a proposito: la grilla de
+     cuatro se confunde con el plano del salon y con el boton de las 19
+     categorias de la comanda, y un icono "no se" no puede parecerse a uno
+     de verdad. */
+  var DIBUJO_GENERICO =
+    '<rect x="3.8" y="3.8" width="16.4" height="16.4" rx="3"/>' +
+    '<circle cx="12" cy="12" r="1.7"/>';
+
+  /* El icono de una pantalla, listo para pegar en el HTML. La url puede
+     venir con parametros ('carta-fotos.html?solo=agotados'): se corta en el
+     '?' antes de buscar. */
+  function iconoDe(url) {
+    var limpia = String(url || '').split('?')[0].split('/').pop();
+    return ICONO_BASE + (DIBUJOS[limpia] || DIBUJO_GENERICO) + '</svg>';
+  }
+
+  /* --- El acceso rapido ---------------------------------------------------
+     La pastilla fija de abajo con las tres cosas que el mozo hace todo el
+     turno: tomar la comanda, las mesas y cobrar. "Saca el celu y ya esta
+     adentro": sin volver a la portada y sin buscar nada.
+
+     POR QUE ABAJO Y NO ARRIBA: arriba ya vive la barra de navegacion fija
+     (.nav-fija: el boton de volver y el nombre de la pantalla). Taparla o
+     competirle seria romper lo unico que ya esta siempre visible. Abajo,
+     ademas, es donde llega el pulgar con el celular en una mano.
+
+     DONDE APARECE: en una lista cerrada de pantallas de trabajo, no en
+     "todas las que tengan barra de navegacion". Es a proposito: diseno.html
+     tiene su propia barra pegada abajo, la carta del comensal es del cliente
+     y la portada ya muestra los accesos grandes. Una lista explicita no se
+     rompe sola cuando maniana se agregue una pantalla nueva.
+
+     A QUIEN: solo los accesos que su puesto puede abrir. La cocina no ve
+     "Cobrar" y, como no puede abrir ninguno de los tres, no le aparece
+     barra ninguna. Se pregunta a permisoDe() y al interruptor, los mismos
+     dos filtros que usa funcionesDe(): la barra no puede ofrecer una puerta
+     que el portero despues rebota.                                        */
+  var ACCESO_RAPIDO = [
+    { url: 'comanda.html', texto: 'Comanda' },
+    { url: 'mesas.html',   texto: 'Mesas' },
+    { url: 'cobrar.html',  texto: 'Cobrar' }
+  ];
+
+  var CON_ACCESO_RAPIDO = [
+    'comanda.html', 'mozo.html', 'mesas.html', 'cobrar.html',
+    'cocina.html', 'caja.html', 'admin.html', 'anotaciones.html',
+    'carta-fotos.html', 'propinas.html'
+  ];
+
+  function paginaActual() {
+    var p = (location.pathname || '').split('/').pop();
+    return p || 'index.html';
+  }
+
+  function accesoRapido() {
+    if (!document.body || document.querySelector('.acceso-rapido')) return;
+    var aqui = paginaActual();
+    if (CON_ACCESO_RAPIDO.indexOf(aqui) === -1) return;
+
+    var yo = quienSoy();
+    if (!yo) return;                      // todavia no dijo quien es
+
+    var mios = ACCESO_RAPIDO.filter(function (a) {
+      if (a.url === aqui) return false;   // no se ofrece la pantalla que ya esta abierta
+      var p = permisoDe(a.url, yo.rol);
+      if (p !== 'edita' && p !== 've') return false;
+      var llave = LLAVE_DE_PANTALLA[a.url];
+      return !llave || func(llave);
+    });
+    if (!mios.length) return;
+
+    var barra = document.createElement('nav');
+    barra.className = 'acceso-rapido';
+    barra.setAttribute('aria-label', 'Accesos rápidos');
+    barra.innerHTML = mios.map(function (a) {
+      return '<a href="' + esc(a.url) + '">' + iconoDe(a.url) +
+        '<span>' + esc(nombreCorto(a)) + '</span></a>';
+    }).join('');
+
+    document.body.appendChild(barra);
+    document.body.classList.add('con-acceso');
+  }
+
+  /* El rotulo de la pastilla. Se respeta el renombre del panel tecnico solo
+     si el nombre nuevo es corto: en una pastilla de 100px, "Tomar la comanda
+     de la mesa" se corta en "Tomar la com...". */
+  function nombreCorto(a) {
+    var puesto = nombreDePantalla(a.url, a.texto);
+    return puesto && puesto.length <= 12 ? puesto : a.texto;
   }
 
   /* Escribe quien sos en las pantallas que tengan un [data-quien].
@@ -2952,7 +3287,11 @@
     f_fotos: true,
     f_carta_comensal: true,   // que el comensal pida desde el QR
     f_qr_pago: true,
-    f_avisos: true
+    f_avisos: true,
+    /* La libreta del local. Con esto apagado desaparece anotaciones.html del
+       menu de todos; lo anotado NO se borra. Para un local que ya lleva su
+       cuaderno de papel y no la quiere ver. */
+    f_libreta: true
   };
 
   var FUNCIONES_KEY = 'lp_funciones';
@@ -3099,13 +3438,19 @@
      'sin' es el que todavia no toco su nombre en la portada. No se lo trata
      como intruso: se lo manda a decir quien es, que es lo unico que le
      falta.                                                                */
+  /* Encargada (Betty de maniana, Cintia de noche) administra todo el local:
+     mismas puertas que la duenia. La unica que NO tiene es tecnico.html,
+     que es el panel interno de David para prender y apagar funciones.
+
+     Mantenimiento (Lautaro) no toca la operacion: entra a sus anotaciones
+     y mira el salon para saber que mesa hay que limpiar. Nada mas.       */
   var PERMISOS = {
-    'comanda.html':     { Duenio: 'edita', Mozo: 'edita', Caja: 'no',    Cocina: 'no' },
-    'mozo.html':        { Duenio: 'edita', Mozo: 'edita', Caja: 've',    Cocina: 'no' },
-    'mesas.html':       { Duenio: 'edita', Mozo: 'edita', Caja: 'edita', Cocina: 'no' },
-    'cocina.html':      { Duenio: 'edita', Mozo: 've',    Caja: 'no',    Cocina: 'edita' },
-    'caja.html':        { Duenio: 'edita', Mozo: 'no',    Caja: 'edita', Cocina: 'no' },
-    'cobrar.html':      { Duenio: 'edita', Mozo: 'edita', Caja: 'edita', Cocina: 'no' },
+    'comanda.html':     { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 'no',    Cocina: 'no',    Mantenimiento: 'no' },
+    'mozo.html':        { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 've',    Cocina: 'no',    Mantenimiento: 'no' },
+    'mesas.html':       { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 'edita', Cocina: 'no',    Mantenimiento: 've' },
+    'cocina.html':      { Duenio: 'edita', Encargada: 'edita', Mozo: 've',    Caja: 'no',    Cocina: 'edita', Mantenimiento: 'no' },
+    'caja.html':        { Duenio: 'edita', Encargada: 'edita', Mozo: 'no',    Caja: 'edita', Cocina: 'no',    Mantenimiento: 'no' },
+    'cobrar.html':      { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 'edita', Cocina: 'no',    Mantenimiento: 'no' },
     /* Ojo con esta fila: la carta es la UNICA pantalla donde conviven tres
        trabajos de tres puestos distintos, y por eso NO puede ir en 've'.
        Un 've' pinta la cinta de "no se toca nada" arriba de todo, y la
@@ -3114,13 +3459,21 @@
        algo que no hay. Entran en 'edita' los que tienen algo que hacer, y
        QUE pueden hacer lo deciden las tres reglas finas de abajo. La caja
        es la unica que solo mira: entra para saber cuanto sale un plato. */
-    'carta-fotos.html': { Duenio: 'edita', Mozo: 'edita', Caja: 've',    Cocina: 'edita' },
-    'qr-mesa.html':     { Duenio: 'edita', Mozo: 'no',    Caja: 'edita', Cocina: 'no' },
-    'propinas.html':    { Duenio: 'edita', Mozo: 'edita', Caja: 've',    Cocina: 'no' },
-    'admin.html':       { Duenio: 'edita', Mozo: 'no',    Caja: 'no',    Cocina: 'no' },
-    'diseno.html':      { Duenio: 'edita', Mozo: 'no',    Caja: 'no',    Cocina: 'no' },
-    'tecnico.html':     { Duenio: 'edita', Mozo: 'no',    Caja: 'no',    Cocina: 'no' },
-    'alta.html':        { Duenio: 'edita', Mozo: 'edita', Caja: 'edita', Cocina: 'edita' }
+    'carta-fotos.html': { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 've',    Cocina: 'edita', Mantenimiento: 'no' },
+    'qr-mesa.html':     { Duenio: 'edita', Encargada: 'edita', Mozo: 'no',    Caja: 'edita', Cocina: 'no',    Mantenimiento: 'no' },
+    'propinas.html':    { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 've',    Cocina: 'no',    Mantenimiento: 'no' },
+    'admin.html':       { Duenio: 'edita', Encargada: 'edita', Mozo: 'no',    Caja: 'no',    Cocina: 'no',    Mantenimiento: 'no' },
+    'diseno.html':      { Duenio: 'edita', Encargada: 'edita', Mozo: 'no',    Caja: 'no',    Cocina: 'no',    Mantenimiento: 'no' },
+    /* El panel interno de David: no lo abre nadie mas, ni las encargadas. */
+    'tecnico.html':     { Duenio: 'edita', Encargada: 'no',    Mozo: 'no',    Caja: 'no',    Cocina: 'no',    Mantenimiento: 'no' },
+    /* Activar los avisos del propio celular: lo necesita todo el mundo. */
+    'alta.html':        { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 'edita', Cocina: 'edita', Mantenimiento: 'edita' },
+    /* La libreta del local: todos en 'edita' y a proposito. Es un cuaderno
+       compartido, no hay nada delicado adentro. El mozo que ve que se termina
+       la Coca la anota, y el que hace la compra la lee. Si esto fuera 've'
+       para alguien, esa persona veria la lista y no podria sumar lo que sabe,
+       que es justo lo unico que se le pide. */
+    'anotaciones.html': { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 'edita', Cocina: 'edita', Mantenimiento: 'edita' }
   };
 
   /* Adentro de carta-fotos conviven dos trabajos distintos: marcar lo que se
@@ -3128,9 +3481,9 @@
      es de la duenia. Por eso una regla por pantalla no alcanza y hay tres
      mas finas para ese pedazo.                                            */
   var PERMISOS_FINOS = {
-    'carta.precios':  { Duenio: 'edita', Mozo: 'no',    Caja: 'no', Cocina: 'no' },
-    'carta.fotos':    { Duenio: 'edita', Mozo: 'edita', Caja: 'no', Cocina: 'no' },
-    'carta.agotados': { Duenio: 'edita', Mozo: 'edita', Caja: 'no', Cocina: 'edita' }
+    'carta.precios':  { Duenio: 'edita', Encargada: 'edita', Mozo: 'no',    Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
+    'carta.fotos':    { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
+    'carta.agotados': { Duenio: 'edita', Encargada: 'edita', Mozo: 'edita', Caja: 'no', Cocina: 'edita', Mantenimiento: 'no' }
   };
 
   function permisoDe(seccion, rol) {
@@ -3562,6 +3915,13 @@
     personas: personas,
     PROPINAS_TABLE: PROPINAS_TABLE,
     VOZ_TABLE: VOZ_TABLE,
+    LIBRETA_TABLE: LIBRETA_TABLE,
+    TIPOS_LIBRETA: TIPOS_LIBRETA,
+    hoyLocalISO: hoyLocalISO,
+    libreta: libreta,
+    anotar: anotar,
+    marcarAnotacion: marcarAnotacion,
+    borrarAnotacion: borrarAnotacion,
     FUNCIONES_BASE: FUNCIONES_BASE,
     func: func,
     aplicarFunciones: aplicarFunciones,
@@ -3598,6 +3958,9 @@
     pantallaDe: pantallaDe,
     FUNCIONES_POR_ROL: FUNCIONES_POR_ROL,
     funcionesDe: funcionesDe,
+    iconoDe: iconoDe,
+    ACCESO_RAPIDO: ACCESO_RAPIDO,
+    accesoRapido: accesoRapido,
     mostrarQuienSoy: mostrarQuienSoy,
     navegacionFija: navegacionFija,
     navDonde: navDonde,
@@ -3667,6 +4030,9 @@
     /* Envuelta aparte: si armar la barra fallara, quien sos ya se escribio y
        el resto del turno sigue andando. */
     try { navegacionFija(); } catch (e) {}
+    /* Y la pastilla de abajo, aparte otra vez y por la misma razon: si
+       fallara, la barra de arriba y el resto de la pantalla siguen enteras. */
+    try { accesoRapido(); } catch (e) {}
   }
 
   if (document.readyState === 'loading') {
