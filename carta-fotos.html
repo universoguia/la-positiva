@@ -129,6 +129,19 @@
   }
   .pill.si::before{content:"✓";margin-right:7px;font-weight:700}
   .pill.no{background:transparent;border-color:var(--border-strong);color:var(--muted-strong)}
+  /* "No lo hacemos" tiene que leerse distinto de "se termino": lo segundo
+     vuelve manana, lo primero no. Va rayado y con la letra tachada, que es
+     como se lee "esto no esta mas" sin tener que explicarlo. */
+  .pill.oculto{
+    background:repeating-linear-gradient(-45deg,transparent,transparent 5px,
+      rgba(0,0,0,.05) 5px,rgba(0,0,0,.05) 10px);
+    border-color:var(--border-strong);color:var(--muted-strong);
+    text-decoration:line-through;text-decoration-thickness:1px;
+  }
+  body.dark .pill.oculto{
+    background:repeating-linear-gradient(-45deg,transparent,transparent 5px,
+      rgba(255,255,255,.05) 5px,rgba(255,255,255,.05) 10px);
+  }
 
   /* El mismo cartelito, pero para el que solo mira: se lee igual y no
      invita a tocarlo. Es hijo directo de .acciones; el de "Cargar foto"
@@ -345,6 +358,42 @@ document.addEventListener('DOMContentLoaded', function () {
     return null;
   }
 
+  /* --- Los tres estados de un plato ---------------------------------------
+     'si'       esta y se puede pedir.
+     'agotado'  hoy no hay. Sigue en la carta del cliente, tachado.
+     'oculto'   no se hace. Sale de la carta y de la comanda.
+
+     El mapa `agotados` guarda el motivo como texto, asi que el que no esta
+     en el mapa es el que esta disponible.                                 */
+  function estadoDe(id) {
+    var m = agotados[id];
+    if (!m) return 'si';
+    return (m === 'oculto') ? 'oculto' : 'agotado';
+  }
+
+  function textoEstado(e) {
+    if (e === 'oculto') return 'No lo hacemos';
+    if (e === 'agotado') return 'Se terminó';
+    return 'Disponible';
+  }
+
+  function claseEstado(e) {
+    if (e === 'oculto') return 'oculto';
+    if (e === 'agotado') return 'no';
+    return 'si';
+  }
+
+  /* El orden del ciclo no es casual: Disponible -> Se termino -> Disponible
+     es el camino de todas las noches, y el de la cocina termina ahi. El
+     tercer paso solo existe para quien puede sacar un plato de la carta, asi
+     que no se le cruza a nadie mas en el medio. */
+  function siguienteEstado(e) {
+    if (!LP.puedeEditar('carta.ocultar')) return (e === 'si') ? 'agotado' : 'si';
+    if (e === 'si') return 'agotado';
+    if (e === 'agotado') return 'oculto';
+    return 'si';
+  }
+
   /* Tocar UN plato rehace SOLO su fila. Antes se rehacian los 156 <li>: se
      cerraba el precio que alguien estaba escribiendo en otro plato, se borraba
      un error que todavia no habia leido y se volvian a pedir todas las fotos. */
@@ -380,14 +429,20 @@ document.addEventListener('DOMContentLoaded', function () {
                necesita saber que un plato se termino para no mandar a
                nadie a pedirlo. Por eso no desaparece: deja de ser boton
                y queda como cartelito. */
+            /* Tres estados, y cada uno dice una cosa distinta:
+                 Disponible     -> esta.
+                 Se terminó     -> hoy no hay; sigue en la carta, tachado.
+                 No lo hacemos  -> sale de la carta del cliente y del mozo.
+               El boton cicla al tocarlo. La cocina solo tiene los dos
+               primeros: sacar un plato para siempre es de la duenia. */
             (LP.puedeEditar('carta.agotados')
-              ? '<button type="button" class="pill ' + (noHay ? 'no' : 'si') + '" ' +
-                  'aria-pressed="' + (noHay ? 'true' : 'false') + '" data-stock="' + esc(p.id) + '" ' +
-                  'aria-label="' + esc(p.name) + ': ' + (noHay ? 'agotado' : 'disponible') +
-                    '. Tocá para marcar que ' + (noHay ? 'hay' : 'se agotó') + '">' +
-                  (noHay ? 'Agotado' : 'Disponible') + '</button>'
-              : '<span class="pill ' + (noHay ? 'no' : 'si') + '">' +
-                  (noHay ? 'Agotado' : 'Disponible') + '</span>') +
+              ? '<button type="button" class="pill ' + claseEstado(estadoDe(p.id)) + '" ' +
+                  'data-stock="' + esc(p.id) + '" ' +
+                  'aria-label="' + esc(p.name) + ': ' + textoEstado(estadoDe(p.id)) +
+                    '. Tocá para cambiarlo">' +
+                  textoEstado(estadoDe(p.id)) + '</button>'
+              : '<span class="pill ' + claseEstado(estadoDe(p.id)) + '">' +
+                  textoEstado(estadoDe(p.id)) + '</span>') +
             (!LP.puedeEditar('carta.fotos') ? '' :
               '<label class="subir">' +
                 '<input type="file" accept="image/*" data-subir="' + esc(p.id) + '">' +
@@ -585,25 +640,29 @@ document.addEventListener('DOMContentLoaded', function () {
     var plato = platoPorId(platoId);
     if (!plato) return;
 
-    var apagar = !agotados[platoId];
+    var antes = estadoDe(platoId);
+    var quiero = siguienteEstado(antes);
     b.disabled = true;
     b.textContent = 'Marcando...';
 
-    var accion = apagar ? LP.agotarPlato(sb, plato, YO)
-                        : LP.reponerPlato(sb, platoId);
+    var accion = (quiero === 'si')
+      ? LP.reponerPlato(sb, platoId)
+      : LP.agotarPlato(sb, plato, YO, quiero);
 
     accion.then(function (ok) {
       b.disabled = false;
       if (!ok) {
         // Vuelve a decir lo que sigue siendo cierto: no cambio nada.
-        b.textContent = apagar ? 'Disponible' : 'Agotado';
+        b.textContent = textoEstado(antes);
         decir(platoId, 'No pudimos cambiarlo. Probá de nuevo.', 'err');
         return;
       }
-      if (apagar) agotados[platoId] = true; else delete agotados[platoId];
+      if (quiero === 'si') delete agotados[platoId]; else agotados[platoId] = quiero;
       repintarUno(platoId);
-      LP.toast(apagar ? plato.name + ': agotado por hoy.'
-                      : plato.name + ': vuelve a estar disponible.', 'ok');
+      LP.toast(
+        quiero === 'oculto' ? plato.name + ': sale de la carta.' :
+        quiero === 'agotado' ? plato.name + ': se terminó por hoy.' :
+        plato.name + ': vuelve a estar disponible.', 'ok');
     });
   });
 

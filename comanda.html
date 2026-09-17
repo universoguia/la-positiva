@@ -1043,13 +1043,15 @@ document.addEventListener('DOMContentLoaded', function () {
     pintarCats(); pintarCarta(); elBusc.focus();
   });
 
+  /* Igual que en la carta del cliente: lo que no se hace no se le ofrece ni al
+     mozo. Si lo viera el, lo cantaria en la mesa. */
   function visibles() {
-    if (!query) {
-      return MENU.filter(function (d) { return d.cat === catActiva; });
-    }
-    return MENU.filter(function (d) {
-      return LP.sinTildes(d.name + ' ' + (d.note || '') + ' ' + d.cat).indexOf(query) !== -1;
-    });
+    var lista = !query
+      ? MENU.filter(function (d) { return d.cat === catActiva; })
+      : MENU.filter(function (d) {
+          return LP.sinTildes(d.name + ' ' + (d.note || '') + ' ' + d.cat).indexOf(query) !== -1;
+        });
+    return LP.sinLosOcultos(lista, agotados);
   }
 
   // El icono de la foto. Va en SVG y no como emoji: el emoji de camara se

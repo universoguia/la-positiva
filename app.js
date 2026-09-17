@@ -2717,29 +2717,62 @@
 
      Se guardan SOLO los agotados: lo normal es que el plato este.          */
 
-  /* Devuelve un objeto { plato_id: true } con los que hoy no hay. */
+  /* Hay DOS maneras de que un plato no este, y decir la misma frase para las
+     dos le miente al cliente:
+
+       'agotado'  se acabo hoy. Sigue en la carta, tachado, y manana vuelve.
+       'oculto'   no lo hacemos. Sale de la carta entera.
+
+     "Se termino por hoy" sobre algo que no se hace nunca hace que el cliente
+     lo pregunte todos los dias. Por eso el segundo estado.
+
+     Devuelve { plato_id: 'agotado' | 'oculto' }. Sigue siendo truthy, asi que
+     todo lo que ya preguntaba `if (agotados[id])` anda igual sin tocarse.  */
   function platosAgotados(sb) {
     if (!sb) return Promise.resolve({});
-    return sb.from(AGOTADOS_TABLE).select('plato_id').then(function (res) {
+    return sb.from(AGOTADOS_TABLE).select('plato_id, motivo').then(function (res) {
       if (res.error) { humanError(res.error); return {}; }
       var m = {};
-      (res.data || []).forEach(function (f) { m[f.plato_id] = true; });
+      (res.data || []).forEach(function (f) {
+        /* motivo NULL son las filas de antes de que existiera la columna: se
+           leen como 'agotado', que es lo que querian decir. */
+        m[f.plato_id] = (f.motivo === 'oculto') ? 'oculto' : 'agotado';
+      });
       return m;
     }, function (e) { humanError(e); return {}; });
   }
 
-  function agotarPlato(sb, plato, quien) {
+  /* Los que NO se muestran a nadie. Lo usan la carta del cliente y la comanda
+     para sacarlos de la lista antes de pintar. */
+  function estaOculto(mapa, platoId) {
+    return !!mapa && mapa[platoId] === 'oculto';
+  }
+
+  /* Saca de una lista de platos los que estan ocultos. Un solo lugar, para que
+     la carta del cliente y la del mozo no puedan discrepar. */
+  function sinLosOcultos(platos, mapa) {
+    if (!mapa) return platos || [];
+    return (platos || []).filter(function (d) { return !estaOculto(mapa, d.id); });
+  }
+
+  /* motivo: 'agotado' (se acabo hoy) u 'oculto' (no lo hacemos).
+     Se usa upsert y no insert para poder pasar de un estado al otro sin
+     borrar primero: antes un segundo insert chocaba con la clave y se
+     ignoraba, asi que cambiar de motivo no hacia nada. */
+  function agotarPlato(sb, plato, quien, motivo) {
     if (!sb || !plato) return Promise.resolve(false);
-    return sb.from(AGOTADOS_TABLE).insert({
+    return sb.from(AGOTADOS_TABLE).upsert({
       plato_id: plato.id,
       nombre: (plato.name || '').slice(0, 120),
-      apagado_por: (quien || '').slice(0, 40) || null
-    }).then(function (res) {
-      // 23505 = ya estaba apagado. Es exito, no falla.
+      apagado_por: (quien || '').slice(0, 40) || null,
+      motivo: (motivo === 'oculto') ? 'oculto' : 'agotado'
+    }, { onConflict: 'plato_id' }).then(function (res) {
       if (res.error && res.error.code !== '23505') { humanError(res.error); return false; }
       return true;
     }, function (e) { humanError(e); return false; });
   }
+
+  function ocultarPlato(sb, plato, quien) { return agotarPlato(sb, plato, quien, 'oculto'); }
 
   function reponerPlato(sb, platoId) {
     if (!sb || !platoId) return Promise.resolve(false);
@@ -3551,7 +3584,12 @@
     'carta.precios':  { Duenio: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
     'carta.fotos':    { Duenio: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
     /* Lo unico que se toca ahi adentro, y solo la cocina. */
-    'carta.agotados': { Duenio: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'edita', Mantenimiento: 'no' }
+    'carta.agotados': { Duenio: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'edita', Mantenimiento: 'no' },
+    /* Sacar un plato de la carta para siempre no es lo mismo que marcar que
+       hoy se acabo. Lo primero es una decision del negocio y lo segundo pasa
+       cuatro veces por noche. Por eso la cocina sigue con dos estados
+       -Disponible / Se termino- y el tercero es solo de la duenia. */
+    'carta.ocultar':  { Duenio: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' }
   };
 
   /* --- El taller: la puerta de atras de David -----------------------------
@@ -4059,6 +4097,9 @@
     agotarPlato: agotarPlato,
     reponerPlato: reponerPlato,
     agotadosEnElCarrito: agotadosEnElCarrito,
+    estaOculto: estaOculto,
+    sinLosOcultos: sinLosOcultos,
+    ocultarPlato: ocultarPlato,
     SESIONES_TABLE: SESIONES_TABLE,
     MESAS_TABLE: MESAS_TABLE,
     mesasDelLocal: mesasDelLocal,

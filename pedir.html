@@ -768,11 +768,16 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   /* ------------------------------------------------------------ carta -- */
+  /* Los marcados "no lo hacemos" se van antes de pintar: no aparecen ni en la
+     categoria ni en el buscador. Los "se termino por hoy" SI siguen, tachados:
+     el cliente tiene que enterarse de que existe y hoy no hay. */
   function visibleItems() {
-    if (!query) return MENU.filter(function (d) { return d.cat === activeCat; });
-    return MENU.filter(function (d) {
-      return LP.sinTildes(d.name + ' ' + (d.note || '') + ' ' + d.cat).indexOf(query) !== -1;
-    });
+    var lista = !query
+      ? MENU.filter(function (d) { return d.cat === activeCat; })
+      : MENU.filter(function (d) {
+          return LP.sinTildes(d.name + ' ' + (d.note || '') + ' ' + d.cat).indexOf(query) !== -1;
+        });
+    return LP.sinLosOcultos(lista, agotados);
   }
 
   function dishHTML(d) {
