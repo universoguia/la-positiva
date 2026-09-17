@@ -1112,7 +1112,12 @@
     'propinas.html':    'Las propinas de los mozos',
     'diseno.html':      'El diseño del local',
     'tecnico.html':     'Panel técnico',
-    'alta.html':        'Activar los avisos'
+    'alta.html':        'Activar los avisos',
+    /* El taller entra a la matriz. Hasta ahora era solo-URL: existia y no
+       figuraba en el menu de nadie. Sigue sin figurar en el de nadie... menos
+       en el de un puesto, el de David, que es el unico que la usa. Y la clave
+       la sigue pidiendo igual: el acceso al menu no la reemplaza. */
+    'taller.html':      'El taller'
   };
 
   /* El orden importa: el primero de cada lista se pinta como boton grande en
@@ -1135,6 +1140,14 @@
        al pasarlo a la barra habria apagado la funcion para todo el local,
        porque hoy solo la ven el duenio y el. */
     Barman:        ['comanda.html', 'mozo.html', 'cobrar.html', 'anotaciones.html'],
+    /* El puesto de David. Una sola puerta y es la del taller: toca su nombre,
+       ve un boton, entra y ahi le piden la clave. De ahi para adentro tiene
+       todo, pero el camino pasa SIEMPRE por la clave.
+
+       No se le dan las otras trece aca a proposito. Si se las diera, entraria
+       sin clave con solo tocar su nombre en la portada, que es lo mismo que
+       no tener puerta. */
+    Dev:           ['taller.html'],
     Duenio:        ['admin.html', 'anotaciones.html', 'carta-fotos.html', 'tecnico.html']
   };
 
@@ -1299,7 +1312,13 @@
     'tecnico.html':
       '<circle cx="7.8" cy="16.2" r="3.6"/>' +
       '<path d="M10.35 13.65 19.6 4.4"/>' +
-      '<path d="M16.1 7.9l2.4 2.4M18.7 5.3l2.4 2.4"/>'
+      '<path d="M16.1 7.9l2.4 2.4M18.7 5.3l2.4 2.4"/>',
+    /* El taller: una llave inglesa. Es el otro lado del sistema, el de quien
+       lo construye, y una herramienta lo dice sin explicarlo. No se repite la
+       llave del panel tecnico: esa abre una puerta, esta arregla. */
+    'taller.html':
+      '<path d="M15.6 3.6a4.8 4.8 0 0 0-6 6L4 15.2a2.3 2.3 0 0 0 3.2 3.2l5.6-5.6a4.8 4.8 0 0 0 6-6l-2.7 2.7-2.5-.5-.5-2.5z"/>' +
+      '<circle cx="6.9" cy="16.5" r=".9"/>'
   };
 
   /* Si maniana aparece una pantalla nueva y nadie le dibujo el icono, sale
@@ -1572,7 +1591,8 @@
     Caja: 'Caja',
     Cocina: 'Cocina',
     Mantenimiento: 'Mantenimiento',
-    Barman: 'Barman'
+    Barman: 'Barman',
+    Dev: 'Desarrollador'
   };
 
   function rotuloDeRol(persona) {
