@@ -1123,7 +1123,9 @@
   /* El orden importa: el primero de cada lista se pinta como boton grande en
      la portada, asi que va la pantalla con la que arranca el turno. */
   var MATRIZ = {
-    Mozo:          ['comanda.html', 'mozo.html', 'cobrar.html'],
+    /* La carta tambien, pero solo la comida: ver CATEGORIAS_DE_ROL. El que
+       lleva el plato a la mesa es el que ve si la foto miente. */
+    Mozo:          ['comanda.html', 'mozo.html', 'cobrar.html', 'carta-fotos.html'],
     Encargada:     ['comanda.html', 'mozo.html', 'cobrar.html', 'admin.html'],
     /* caja.html va PRIMERA y por eso se pinta como boton grande: es lo que
        Cecilia hace todo el turno. cobrar.html es mostrar un QR, que pasa de
@@ -1170,9 +1172,11 @@
        duenia entra a lo mismo MAS los precios y las fotos, asi que el boton
        no puede prometerle solo una de las tres cosas. */
     Duenio: { 'carta-fotos.html': 'La carta y lo que se terminó' },
-    /* Al barman el boton le promete lo suyo y nada mas: si dijera "La carta"
-       entraria esperando la carta entera y encontraria cuatro categorias. */
-    Barman: { 'carta-fotos.html': 'La barra: precios y fotos' }
+    /* Al barman y al mozo el boton les promete lo suyo y nada mas: si dijera
+       "La carta" entrarian esperando la carta entera y encontrarian un
+       pedazo. */
+    Barman: { 'carta-fotos.html': 'La barra: precios y fotos' },
+    Mozo:   { 'carta-fotos.html': 'La comida: precios y fotos' }
   };
 
   /* --- Que pedazo de la carta es de cada puesto ---------------------------
@@ -1188,8 +1192,21 @@
      Una sola lista para las dos cosas: lo que se ve y lo que se puede
      guardar. */
   var CATEGORIAS_DE_ROL = {
-    Barman: ['Vinos tintos', 'Vinos blancos', 'Bebidas', 'Infusiones']
+    Barman: ['Vinos tintos', 'Vinos blancos', 'Bebidas', 'Infusiones'],
+    /* El mozo, al reves: toda la comida y nada de la barra. Son las trece
+       categorias que salen de la cocina, escritas una por una y no como "lo
+       que no es del barman": una categoria nueva maniana tiene que quedar
+       sin dueno y que alguien la reparta a mano, no colarse sola en el
+       permiso de cuatro personas. */
+    Mozo: ['Entradas', 'Ensaladas', 'Menú light', 'Sugerencias del chef',
+           'Parrilla al carbón', 'Pescados', 'Carnes elaboradas', 'Pollos',
+           'Supremas', 'Milanesas de ternera', 'Pastas', 'Salsas', 'Postres']
   };
+
+  /* Como se llama, en una palabra, el pedazo de carta de cada puesto. Es
+     para el cartel de arriba de la carta: trece nombres de categoria seguidos
+     no le dicen a nadie "esto es la comida". */
+  var MI_PARTE = { Barman: 'la barra', Mozo: 'la comida' };
 
   /* Si este puesto puede meter mano en esa categoria de la carta. */
   function puedeTocarCategoria(cat) {
@@ -3846,11 +3863,11 @@
        cocina entra a marcar lo que se acabo, la duenia a poner precios y
        fotos. Por eso la regla por pantalla no alcanza y hay tres finas.
        La encargada NO toca precios: eso quedo de la duenia.            */
-    /* El barman tambien, pero solo sobre SUS categorias: el permiso dice que
-       puede, CATEGORIAS_DE_ROL dice sobre que. Las dos condiciones se piden
-       juntas en cada boton y en cada guardado. */
-    'carta.precios':  { Duenio: 'edita', Barman: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
-    'carta.fotos':    { Duenio: 'edita', Barman: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
+    /* El barman y el mozo tambien, pero solo sobre SUS categorias: el permiso
+       dice que pueden, CATEGORIAS_DE_ROL dice sobre que. Las dos condiciones
+       se piden juntas en cada boton y en cada guardado. */
+    'carta.precios':  { Duenio: 'edita', Barman: 'edita', Mozo: 'edita', Encargada: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
+    'carta.fotos':    { Duenio: 'edita', Barman: 'edita', Mozo: 'edita', Encargada: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
     /* Lo unico que se toca ahi adentro, y solo la cocina. */
     'carta.agotados': { Duenio: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'edita', Mantenimiento: 'no' },
     /* Sacar un plato de la carta para siempre no es lo mismo que marcar que
@@ -4418,6 +4435,7 @@
     puedeVer: puedeVer,
     puedeTocarCategoria: puedeTocarCategoria,
     CATEGORIAS_DE_ROL: CATEGORIAS_DE_ROL,
+    MI_PARTE: MI_PARTE,
     guardaDeSeccion: guardaDeSeccion,
     NOTAS_BASE: NOTAS_BASE,
     notasFrecuentes: notasFrecuentes,

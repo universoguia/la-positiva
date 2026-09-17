@@ -75,6 +75,10 @@
     font-size:14px;line-height:1.45;
   }
   .mi-parte[hidden]{display:none}
+  .mi-parte-cats{
+    display:block;margin-top:4px;
+    font-size:13px;line-height:1.4;color:var(--muted-strong);
+  }
 
   /* --------------------------------------------------------- listado --- */
   .platos{list-style:none;margin:0;padding:0;display:grid;gap:12px}
@@ -458,9 +462,29 @@ document.addEventListener('DOMContentLoaded', function () {
               : '<span class="pill ' + claseEstado(estadoDe(p.id)) + '">' +
                   textoEstado(estadoDe(p.id)) + '</span>') +
             (!LP.puedeEditar('carta.fotos') || !LP.puedeTocarCategoria(p.cat) ? '' :
+              /* DOS caminos, y a proposito.
+
+                 'Sacar foto' lleva capture: el navegador abre la camara de
+                 una y, la primera vez, el aparato pide permiso solo. Es lo
+                 que hace falta parado en la barra con el plato adelante.
+
+                 'Elegir una' va SIN capture, porque en varios navegadores
+                 capture saca del medio la galeria: el que ya tiene la foto
+                 sacada, o la recibio por WhatsApp, se quedaba sin manera de
+                 subirla. Eran dos necesidades distintas peleando por el
+                 mismo boton.
+
+                 accept se deja igual en los dos: es lo que filtra la lista
+                 de archivos y lo que hace que el iPad ofrezca 'Sacar foto'
+                 sin que el boton se lo imponga. */
+              '<label class="subir">' +
+                '<input type="file" accept="image/*" capture="environment" ' +
+                  'data-subir="' + esc(p.id) + '">' +
+                '<span class="pill">' + (propia ? 'Sacar otra' : 'Sacar foto') + '</span>' +
+              '</label>' +
               '<label class="subir">' +
                 '<input type="file" accept="image/*" data-subir="' + esc(p.id) + '">' +
-                '<span class="pill">' + (propia ? 'Cambiar foto' : 'Cargar foto') + '</span>' +
+                '<span class="pill">Elegir una</span>' +
               '</label>' +
               (propia ? '<button type="button" class="pill peligro" data-quitar="' + esc(p.id) + '">' +
                         'Quitar la foto</button>' : '')) +
@@ -539,14 +563,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Freno al doble toque: una foto grande tarda unos segundos y si eligen
     // otra mientras tanto salian dos subidas y una quedaba huerfana.
-    input.disabled = true;
+    /* Los DOS inputs del plato, no solo el que se toco: desde que hay
+       'Sacar foto' y 'Elegir una', apagar uno dejaba el otro vivo y se
+       podian largar dos subidas del mismo plato, uno pisando al otro. */
+    var fila = input.closest('li') || lista;
+    var hermanos = fila.querySelectorAll('[data-subir="' +
+      (window.CSS && CSS.escape ? CSS.escape(platoId) : platoId) + '"]');
+    Array.prototype.forEach.call(hermanos, function (el) { el.disabled = true; });
     var rotulo = input.nextSibling, textoOriginal = rotulo.textContent;
     rotulo.textContent = 'Subiendo...';
     decir(platoId, 'Preparando la foto...', '');
 
     LP.subirFotoPlato(sb, platoId, file, YO).then(function (r) {
       if (!r.ok) {
-        input.disabled = false; rotulo.textContent = textoOriginal;
+        Array.prototype.forEach.call(hermanos, function (el) { el.disabled = false; });
+        rotulo.textContent = textoOriginal;
         decir(platoId, r.motivo, 'err'); return;
       }
       propias[platoId] = r.url;
@@ -741,9 +772,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!mias || !mias.length) return;
     var el = document.getElementById('miParte');
     el.hidden = false;
-    el.innerHTML = 'Podés cambiar precios y fotos de <b>' +
-      esc(mias.slice(0, -1).join(', ')) + ' y ' + esc(mias[mias.length - 1]) +
-      '</b>. El resto de la carta lo ves, pero no se toca desde tu puesto.';
+    /* El nombre corto arriba -"la comida", "la barra"- y las categorias en
+       letra chica abajo. Trece nombres seguidos en la primera linea no dicen
+       nada; el nombre corto se entiende de un vistazo y el detalle queda
+       para el que lo busca. */
+    var comoSeLlama = LP.MI_PARTE[yo.rol] || 'tu parte de la carta';
+    el.innerHTML = 'Podés cambiar precios y fotos de <b>' + esc(comoSeLlama) +
+      '</b>. El resto de la carta lo ves, pero no se toca desde tu puesto.' +
+      '<span class="mi-parte-cats">' + esc(mias.join(' · ')) + '</span>';
   })();
 
   LP.fotosDePlatos(sb).then(function (mapa) {
