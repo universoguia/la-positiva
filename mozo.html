@@ -277,7 +277,11 @@
   }
 
   /* ---------------------------------------------------------- anuladas -- */
-  .anuladas{margin-top:22px;border-top:1px solid var(--dark-border);padding-top:6px}
+  .anuladas{
+    margin:10px 0 4px;border:1px solid var(--dark-border);
+    border-radius:var(--r-md);background:var(--dark-card);
+  }
+  .anul.vacia{color:var(--dark-muted);font-style:italic}
   .anuladas[hidden]{display:none}
   .anuladas > summary{
     cursor:pointer;list-style:none;min-height:var(--tap);
@@ -354,16 +358,21 @@
        -no es trabajo, es historial- y su lugar lo ocupa "Cobrar", que son las
        mesas que ya comieron y todavia no pagaron. -->
   <div class="solapas" id="solapas" role="group" aria-label="Qu&eacute; mirar"></div>
-  <ul class="lista" id="mesas"><li class="vacio">Cargando los pedidos...</li></ul>
+  <!-- LA PAPELERA. Estaba al final de la pagina y escondida cuando no habia
+       nada, asi que nadie sabia que existia: para encontrarla habia que
+       anular algo primero y despues scrollear hasta abajo.
 
-  <!-- Lo que se anulo hace poco. Va plegado y al final: no es trabajo
-       pendiente, es el rastro de quien anulo que y cuando. Se muestra porque
-       anular una comanda entera es la accion mas destructiva de la pantalla y
-       tiene que poder mirarse despues, sin entrar a la base. -->
-  <details class="anuladas" id="anuladasBox" hidden>
-    <summary><span>Anuladas reci&eacute;n</span><span class="n" id="nAnuladas">0</span></summary>
+       Ahora vive arriba, debajo de las solapas, y se muestra SIEMPRE aunque
+       este vacia. Sigue plegada: no es trabajo pendiente, es el rastro de
+       quien anulo que y cuando, y anular una comanda entera es lo mas
+       destructivo que se puede hacer en esta pantalla. -->
+  <details class="anuladas" id="anuladasBox">
+    <summary><span>Papelera</span><span class="n" id="nAnuladas">0</span></summary>
     <ul class="lista" id="anuladas"></ul>
   </details>
+
+  <ul class="lista" id="mesas"><li class="vacio">Cargando los pedidos...</li></ul>
+
 </div>
 
 <div class="sheet" id="avisosSheet" role="dialog" aria-modal="true" aria-labelledby="avisosTitle" hidden>
@@ -623,9 +632,15 @@ document.addEventListener('DOMContentLoaded', function () {
      nombre-, no hay dato nuevo que inventar. */
   function renderAnuladas() {
     var caja = document.getElementById('anuladasBox');
-    if (!anuladas.length) { caja.hidden = true; return; }
     caja.hidden = false;
     document.getElementById('nAnuladas').textContent = anuladas.length;
+    /* Vacia tambien se muestra: que la papelera este ahi es justamente lo que
+       hace que alguien sepa que existe antes de necesitarla. */
+    if (!anuladas.length) {
+      document.getElementById('anuladas').innerHTML =
+        '<li class="anul vacia">No se anuló nada en las últimas 3 horas.</li>';
+      return;
+    }
     document.getElementById('anuladas').innerHTML = anuladas.map(function (p) {
       return '<li class="anul">' +
         '<b>' + esc(p.mesa) + '</b> &middot; ' + money(p.total) +
