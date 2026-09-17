@@ -92,6 +92,17 @@
     if (!navigator.onLine) {
       return 'Parece que te quedaste sin internet. Revisá la conexión y probá de nuevo.';
     }
+    /* "memoria insuficiente" es lo que contesta el aparato cuando la foto que
+       le pedimos abrir no le entra. Dicho asi no se entiende y suena a que el
+       aparato esta roto, cuando la salida es simple: una foto mas chica, o
+       cerrar las otras pestanias. */
+    var txt = String((err && (err.message || err.name)) || '').toLowerCase();
+    if (txt.indexOf('memor') !== -1 || txt.indexOf('memory') !== -1 ||
+        txt.indexOf('allocation') !== -1) {
+      return 'A este aparato no le alcanzó la memoria para abrir esa foto. ' +
+             'Cerrá las otras pestañas y probá de nuevo, o sacá la foto con menos ' +
+             'calidad desde la cámara.';
+    }
     return fallback || 'No pudimos completar la acción. Probá de nuevo en un momento.';
   }
 
@@ -3181,14 +3192,70 @@
   // Las fotos de celular pesan 3-8 MB y el bucket admite 5. Se redimensiona
   // en el navegador antes de subir. 1400px y calidad 0.92 mantienen el QR
   // perfectamente escaneable y dejan el archivo en pocos cientos de KB.
+  var MAX_LADO = 1400;
+
+  /* Achicar una foto cuesta memoria, y ahi es donde una tablet del salon se
+     queda sin aire: una foto de 12 megapixeles ocupa unos 48 MB YA
+     DESCOMPRIMIDA, y el camino viejo la abria entera antes de achicarla.
+     Con dos de esas al mismo tiempo, Chrome corta con "memoria insuficiente"
+     y no es culpa del aparato: es cuanta le pedimos de golpe.
+
+     createImageBitmap con resizeWidth la decodifica YA en el tamanio final,
+     asi que el pico es el de la foto chica y no el de la grande. Lo tienen
+     Chrome y Android desde hace anios; el que no lo tenga cae al camino de
+     siempre, que sigue abajo intacto. */
+  function achicarConBitmap(file) {
+    if (typeof createImageBitmap !== 'function') return Promise.resolve(null);
+    return createImageBitmap(file).then(function (bmp) {
+      var w = bmp.width, h = bmp.height;
+      if (!w || !h) { try { bmp.close(); } catch (e) {} return null; }
+      if (w <= MAX_LADO && h <= MAX_LADO) {
+        /* Ya entra: no se toca. Recomprimir de gratis solo empeora la foto. */
+        try { bmp.close(); } catch (e) {}
+        return null;
+      }
+      var r = Math.min(MAX_LADO / w, MAX_LADO / h);
+      var nw = Math.round(w * r), nh = Math.round(h * r);
+      try { bmp.close(); } catch (e) {}
+      /* Segunda pasada, ahora pidiendo el tamanio final: el navegador
+         decodifica directo a esa medida. */
+      return createImageBitmap(file, { resizeWidth: nw, resizeHeight: nh,
+                                       resizeQuality: 'high' })
+        .then(function (chico) {
+          var c = document.createElement('canvas');
+          c.width = nw; c.height = nh;
+          c.getContext('2d').drawImage(chico, 0, 0, nw, nh);
+          try { chico.close(); } catch (e) {}
+          return new Promise(function (res) {
+            c.toBlob(function (blob) {
+              /* El canvas se suelta a mano: en Android el recolector puede
+                 tardar, y mientras tanto esos megas siguen ocupados. */
+              c.width = c.height = 1;
+              res(blob && blob.size < file.size ? blob : null);
+            }, 'image/jpeg', 0.92);
+          });
+        });
+    }).catch(function () { return null; });
+  }
+
   function prepararImagen(file) {
+    if (!/^image\//.test(file.type || '')) return Promise.resolve(file);
+    return achicarConBitmap(file).then(function (chico) {
+      if (chico) return chico;
+      return prepararConImagen(file);
+    }, function () { return prepararConImagen(file); });
+  }
+
+  /* El camino de siempre, para el navegador que no sabe decodificar
+     achicando. Pide mas memoria, pero es el que anduvo siempre. */
+  function prepararConImagen(file) {
     return new Promise(function (resolve) {
       if (!/^image\//.test(file.type || '')) { resolve(file); return; }
       var url = URL.createObjectURL(file);
       var img = new Image();
       img.onload = function () {
         try {
-          var max = 1400;
+          var max = MAX_LADO;
           var w = img.naturalWidth, h = img.naturalHeight;
           if (!w || !h) { URL.revokeObjectURL(url); resolve(file); return; }
           if (w > max || h > max) {
@@ -3202,6 +3269,7 @@
           ctx.drawImage(img, 0, 0, w, h);
           c.toBlob(function (blob) {
             URL.revokeObjectURL(url);
+            c.width = c.height = 1;      // se suelta la memoria a mano
             // Si comprimir no ayudo, se manda el original.
             resolve(blob && blob.size < file.size ? blob : file);
           }, 'image/jpeg', 0.92);
@@ -3362,9 +3430,19 @@
       falta.humano = true;
       return Promise.reject(falta);
     }
-    // Se lee el archivo original, no el comprimido: mejor definicion.
-    var lectura = decodificarQR(file);
+    /* Leer el QR y achicar la foto abren la imagen por su cuenta. Hacer las
+       dos cosas a la vez sobre una foto de camara era tener DOS copias
+       descomprimidas en memoria al mismo tiempo, y es lo que tiraba "memoria
+       insuficiente" en la tablet.
+
+       Asi que primero se achica y despues se lee, encadenado. Y el original
+       se sigue usando para leer cuando es chico -que es el caso de la
+       captura de pantalla del posnet, donde la definicion importa-; si es
+       una foto pesada, se lee sobre la version achicada, que a 1400 px
+       alcanza de sobra para un QR enfocado. */
+    var GRANDE = 3 * 1024 * 1024;
     return prepararImagen(file).then(function (blob) {
+      var lectura = decodificarQR(file.size > GRANDE ? blob : file);
       if (blob.size > 5 * 1024 * 1024) {
         throw new Error('La imagen sigue pesando más de 5 MB.');
       }
