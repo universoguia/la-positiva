@@ -1664,7 +1664,32 @@ document.addEventListener('DOMContentLoaded', function () {
       conn.set(p === null ? (navigator.onLine ? 'retry' : 'off') : (navigator.onLine ? 'live' : 'off'));
       pintarMesas();
       pintarFalta();
+      if (mesaPedida) aplicarMesaPedida();
     });
+  }
+
+  /* La mesa llego por la direccion, pero recien con el plano se sabe si
+     existe de verdad y cuanta gente hay sentada. Si no existe -una mesa que
+     borraron, un link viejo- se suelta y se lo dice, en vez de mandar la
+     comanda a una mesa que no esta. */
+  function aplicarMesaPedida() {
+    var pedida = mesaPedida;
+    mesaPedida = null;
+    var t = buscarEnPlano(pedida);
+    if (!t) {
+      mesaSel = null;
+      LP.toast('No encontramos ' + pedida + '. Elegila de la lista.', 'err');
+    } else {
+      mesaSel = t.etiqueta;
+      if (t.cuenta && t.cuenta.sesion && t.cuenta.sesion.comensales) {
+        personas = Number(t.cuenta.sesion.comensales) || personas;
+      }
+      if (t.estado !== 'Libre') {
+        LP.toast('Lo que anotes se suma a ' + t.etiqueta + '.', 'ok');
+      }
+    }
+    pintarGente(); pintarMesas(); pintarBarraMesa(); pintarFalta();
+    guardarBorrador();
   }
 
   function avisoDeAgotados() {
@@ -1780,6 +1805,33 @@ document.addEventListener('DOMContentLoaded', function () {
     mesaSel = null; personas = null; notaTexto = '';
     pintarGente(); pintarCarta(); pintarBarraMesa();
   }
+
+  /* --- La mesa que viene puesta en la direccion ---------------------------
+     "Agregar a esta mesa", en la pantalla de los pedidos y en el salon, abre
+     esto con la mesa ya elegida. Es para el comensal que se decide tarde:
+     el mozo vuelve, anota el postre y listo. Antes tenia que buscar la mesa
+     de nuevo en el plano, que es justo el paso que mas cuesta con el salon
+     lleno.
+
+     Va DESPUES del borrador a proposito: la mesa de la direccion pisa a la
+     que hubiera quedado guardada -el mozo acaba de decir a cual va- pero los
+     platos a medio anotar NO se tocan.                                    */
+  var mesaPedida = null;
+  try {
+    var mDir = (new URLSearchParams(location.search).get('mesa') || '').trim().slice(0, 40);
+    if (mDir) {
+      mesaPedida = mDir;
+      mesaSel = mDir;
+      /* Cuanta gente hay sentada lo sabe la sesion, y la sesion llega con el
+         plano. Hasta entonces no se inventa un numero. */
+      personas = null;
+      pintarGente(); pintarBarraMesa(); pintarFalta();
+      /* Se limpia la direccion: si quedara, "Tomar otra comanda" y cualquier
+         recarga volverian a meter la misma mesa cuando el mozo ya paso a
+         otra. */
+      history.replaceState(history.state, '', location.pathname);
+    }
+  } catch (e) { mesaPedida = null; }
 
   pintarPie();
   arrancar();

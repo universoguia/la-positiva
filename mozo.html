@@ -712,7 +712,25 @@ document.addEventListener('DOMContentLoaded', function () {
                                               : rondaCurso(x.p, x.n);
         }).join('') +
       '</ul>' +
+      botonAgregar(caja.mesa) +
     '</li>';
+  }
+
+  /* --- "Agregar a esta mesa" ----------------------------------------------
+     Siempre hay alguien que se decide tarde: el que pide el postre cuando
+     los demas ya terminaron, o el que llego media hora despues. Eso ya
+     funcionaba -una segunda comanda a la misma mesa se suma a la misma
+     cuenta- pero el mozo tenia que ir a "Tomar comanda" y buscar la mesa de
+     nuevo en el plano. Desde aca entra con la mesa puesta.
+
+     Se pregunta por el permiso porque esta pantalla tambien la mira la
+     encargada: ofrecer una puerta que el portero despues rebota es peor que
+     no ofrecerla. */
+  function botonAgregar(mesa) {
+    if (!mesa || !LP.puedeVer('comanda.html')) return '';
+    return '<div class="acciones"><a class="btn btn-secondary" ' +
+      'href="comanda.html?mesa=' + encodeURIComponent(mesa) + '">' +
+      'Agregar a esta mesa</a></div>';
   }
 
   function cabezaRonda(p, n, extra) {
@@ -835,15 +853,27 @@ document.addEventListener('DOMContentLoaded', function () {
          los dos: cobrar.html rebota al inicio y el QR que pidiera la caja no
          se podria mostrar en ningun lado. La mesa se sigue cerrando desde el
          salon, que es el camino que no depende de esto. */
-      (!LP.func('f_qr_pago') ? '' :
-        '<div class="acciones">' +
-          (qr ? '' : '<button type="button" class="btn btn-primary" data-pedirqr="' +
-                     esc(c.sesion.id) + '">' +
-                     (pedido ? 'Volver a pedir el QR' : 'Pedirle el QR a la caja') +
-                     '</button>') +
-          '<a class="btn ' + (qr ? 'btn-primary' : 'btn-secondary') +
-            '" href="cobrar.html?sesion=' + esc(c.sesion.id) + '">Cobrar con QR</a>' +
-        '</div>') +
+      /* Una sola fila de botones: el del QR, el de cobrar y el de agregar a
+         la mesa. Van juntos porque son la misma decision -que hago con esta
+         mesa- y porque con el QR apagado la fila no puede quedar vacia:
+         todavia falta poder anotarle el postre al que se decidio tarde. */
+      (function () {
+        var b = [];
+        if (LP.func('f_qr_pago')) {
+          if (!qr) {
+            b.push('<button type="button" class="btn btn-primary" data-pedirqr="' +
+              esc(c.sesion.id) + '">' +
+              (pedido ? 'Volver a pedir el QR' : 'Pedirle el QR a la caja') + '</button>');
+          }
+          b.push('<a class="btn ' + (qr ? 'btn-primary' : 'btn-secondary') +
+            '" href="cobrar.html?sesion=' + esc(c.sesion.id) + '">Cobrar con QR</a>');
+        }
+        if (c.mesa && LP.puedeVer('comanda.html')) {
+          b.push('<a class="btn btn-secondary" href="comanda.html?mesa=' +
+            encodeURIComponent(c.mesa) + '">Agregar a esta mesa</a>');
+        }
+        return b.length ? '<div class="acciones">' + b.join('') + '</div>' : '';
+      })() +
     '</li>';
   }
 

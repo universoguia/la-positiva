@@ -849,6 +849,13 @@ document.addEventListener('DOMContentLoaded', function () {
         (conQR && debe ? '<a class="btn ' + (qr ? 'btn-primary' : 'btn-secondary') +
                 '" href="cobrar.html?sesion=' + esc(m.sesion.id) +
                 '">Cobrar con QR</a>' : '') +
+        /* Lo mismo que en la pantalla de los pedidos: el que se decide tarde
+           no obliga a volver al plano a buscar la mesa. Se pregunta por el
+           permiso porque aca tambien entra quien no toma comandas. */
+        (LP.puedeVer('comanda.html')
+          ? '<a class="btn btn-secondary" href="comanda.html?mesa=' +
+              encodeURIComponent(m.sesion.mesa) + '">Agregar a esta mesa</a>'
+          : '') +
         '<button type="button" class="btn ' + (debe ? 'btn-secondary' : 'btn-primary') +
           '" data-cerrar="' + esc(m.sesion.id) + '">' + textoCerrar + '</button>' +
       '</div>';
