@@ -1400,7 +1400,11 @@
     var nota = String(yo.nota || '').trim();
     if (nota) {
       var raiz = sinTildes(base.slice(0, Math.max(3, base.length - 1)));
-      if (sinTildes(nota).indexOf(raiz) === 0) return nota.split(' de ')[0];
+      /* Se corta en " de " y tambien en " del ": la nota dice el turno
+         ("Encargada de maniana", "Moza del mediodia") y el turno va en la
+         portada, no arriba de la pantalla. Solo con " de " Betty quedaba
+         bien y Evelyn no, por una letra. */
+      if (sinTildes(nota).indexOf(raiz) === 0) return nota.split(/ de(?:l)? /)[0];
     }
     return base;
   }
