@@ -1118,13 +1118,17 @@
     Caja:          ['cobrar.html', 'caja.html'],
     Cocina:        ['cocina.html', 'carta-fotos.html'],
     Mantenimiento: ['anotaciones.html'],
-    Duenio:        ['admin.html', 'anotaciones.html']
+    Duenio:        ['admin.html', 'anotaciones.html', 'carta-fotos.html', 'tecnico.html']
   };
 
   /* El mismo modulo se llama distinto segun quien entra: el mozo va a cobrar,
      la caja va a mostrar el QR. Es la misma pantalla y dos trabajos. */
   var ROTULO_POR_ROL = {
-    Caja: { 'cobrar.html': 'Mostrar el QR de cobro' }
+    Caja: { 'cobrar.html': 'Mostrar el QR de cobro' },
+    /* La cocina entra a la carta a marcar lo que se acabo y nada mas. La
+       duenia entra a lo mismo MAS los precios y las fotos, asi que el boton
+       no puede prometerle solo una de las tres cosas. */
+    Duenio: { 'carta-fotos.html': 'La carta y lo que se terminó' }
   };
 
   /* Los menus salen de MATRIZ. No hay una segunda lista que mantener. */
@@ -3525,14 +3529,14 @@
      es de la duenia. Por eso una regla por pantalla no alcanza y hay tres
      mas finas para ese pedazo.                                            */
   var PERMISOS_FINOS = {
-    /* Precios y fotos: de nadie por ahora. La carta quedo como pantalla de
-       un solo trabajo -marcar lo que se termino- y ese trabajo es de la
-       cocina. Los formularios de precio y de foto siguen enteros en el
-       codigo: se devuelven poniendo un rol en 'edita'.                  */
-    'carta.precios':  { Duenio: 'no', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
-    'carta.fotos':    { Duenio: 'no', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
+    /* La carta es la unica pantalla con dos trabajos de dos puestos: la
+       cocina entra a marcar lo que se acabo, la duenia a poner precios y
+       fotos. Por eso la regla por pantalla no alcanza y hay tres finas.
+       La encargada NO toca precios: eso quedo de la duenia.            */
+    'carta.precios':  { Duenio: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
+    'carta.fotos':    { Duenio: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'no',    Mantenimiento: 'no' },
     /* Lo unico que se toca ahi adentro, y solo la cocina. */
-    'carta.agotados': { Duenio: 'no', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'edita', Mantenimiento: 'no' }
+    'carta.agotados': { Duenio: 'edita', Encargada: 'no', Mozo: 'no', Caja: 'no', Cocina: 'edita', Mantenimiento: 'no' }
   };
 
   function permisoDe(seccion, rol) {
