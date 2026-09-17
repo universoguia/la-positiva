@@ -69,26 +69,95 @@ self.addEventListener('push', function (event) {
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
+
+/* Que pantalla es una URL, sin el ?mesa=5 ni el #ancla: 'mozo.html'. Comparar
+   la URL entera daria falso justo cuando dos ventanas estan en la misma
+   pantalla con parametros distintos, que es el caso que mas importa acertar. */
+function pantallaDe(url) {
+  try {
+    return new URL(url, self.registration.scope).pathname.split('/').pop() || '';
+  } catch (e) {
+    return String(url || '');
+  }
+}
+
 /* ------------------------------------------------- click en el aviso --- */
 self.addEventListener('notificationclick', function (event) {
   event.notification.close();
   var target = (event.notification.data && event.notification.data.url) ||
                self.registration.scope;
 
+  /* Cual ventana se usa, y en que orden.
+
+     Antes esto agarraba la PRIMERA ventana que colgara del scope y le hacia
+     navigate() sin fijarse cual era. El orden de matchAll no esta garantizado,
+     asi que en un local con dos telefonos pasaba esto: el cocinero tocaba su
+     aviso y la ventana que se llevaba puesta era la del mozo, con media
+     comanda cargada. El mozo perdia el trabajo y no entendia por que.
+
+     Ahora se prueban cuatro caminos, de menos a mas invasivo, y solo se le
+     roba una ventana a alguien cuando no queda otra.                      */
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then(function (list) {
-        // Si ya hay una ventana de la app abierta, se enfoca esa.
-        for (var i = 0; i < list.length; i++) {
-          var c = list[i];
-          if (c.url.indexOf(self.registration.scope) === 0 && 'focus' in c) {
+        var mias = list.filter(function (c) {
+          return c.url.indexOf(self.registration.scope) === 0 && 'focus' in c;
+        });
+        if (!mias.length) {
+          return self.clients.openWindow ? self.clients.openWindow(target) : undefined;
+        }
+
+        var destino = pantallaDe(target);
+
+        /* 1. Ya hay una ventana EN la pantalla del aviso. Se enfoca y listo:
+              no se navega nada, asi que no se pierde nada. */
+        for (var i = 0; i < mias.length; i++) {
+          if (pantallaDe(mias[i].url) === destino) return mias[i].focus();
+        }
+
+        /* 2. Hay una ventana en la portada. Esa no tiene trabajo a medias
+              -es la pantalla de elegir quien sos-, asi que es la unica que se
+              puede navegar sin costo para nadie. */
+        for (var j = 0; j < mias.length; j++) {
+          var enPortada = pantallaDe(mias[j].url);
+          if (enPortada === '' || enPortada === 'index.html') {
+            if ('navigate' in mias[j]) {
+              return mias[j].navigate(target).then(function (nc) {
+                return (nc || mias[j]).focus();
+              });
+            }
+          }
+        }
+
+        /* 3. Todas las ventanas estan ocupadas en otra pantalla. Antes que
+              robarle una a alguien, se abre una nueva. El click en un aviso
+              cuenta como gesto del usuario, asi que openWindow tiene permiso. */
+        if (self.clients.openWindow) {
+          return self.clients.openWindow(target).then(function (w) {
+            /* 4. Ultimo recurso: si el navegador no la dejo abrir -pasa en la
+                  app instalada, donde hay una sola ventana- recien ahi se
+                  navega la que habia. Es el comportamiento viejo, pero ahora
+                  es la excepcion y no la regla. */
+            if (w) return w;
+            var c = mias[0];
             if ('navigate' in c && c.url !== target) {
               return c.navigate(target).then(function (nc) { return (nc || c).focus(); });
             }
             return c.focus();
-          }
+          }, function () {
+            var c = mias[0];
+            if ('navigate' in c && c.url !== target) {
+              return c.navigate(target).then(function (nc) { return (nc || c).focus(); });
+            }
+            return c.focus();
+          });
         }
-        if (self.clients.openWindow) return self.clients.openWindow(target);
+
+        var ultima = mias[0];
+        if ('navigate' in ultima && ultima.url !== target) {
+          return ultima.navigate(target).then(function (nc) { return (nc || ultima).focus(); });
+        }
+        return ultima.focus();
       })
   );
 });
