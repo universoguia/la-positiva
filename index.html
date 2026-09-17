@@ -126,7 +126,10 @@
     .mis-cosas.muchas .ico{width:22px;height:22px}
   }
   .terminar{
-    margin-top:20px;min-height:var(--tap);
+    /* min-width tambien: el alto ya estaba en 44 pero la palabra "Salir" es
+       corta y el boton quedaba en 38 px de ancho. Un blanco de 44x44 es
+       44x44 en los dos lados, no en uno. */
+    margin-top:20px;min-height:var(--tap);min-width:var(--tap);padding:0 14px;
     display:inline-flex;align-items:center;justify-content:center;
     background:none;border:0;cursor:pointer;font-family:inherit;
     color:var(--dark-muted);font-size:14px;text-decoration:underline;

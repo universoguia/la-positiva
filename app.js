@@ -3682,8 +3682,13 @@
     var b = document.createElement('button');
     b.type = 'button';
     b.textContent = 'Salir del taller';
-    b.style.cssText = 'min-height:32px;padding:0 12px;border-radius:999px;border:0;' +
-      'background:#fff;color:#7b2d12;font:600 13px system-ui,sans-serif;cursor:pointer';
+    /* 44px, como todo lo que se toca en esta app. La primera version lo dejo
+       en 32 para que la cinta no ocupe tanto, y era la unica cosa de todo el
+       sistema por debajo del minimo... en TODAS las pantallas a la vez,
+       porque esta cinta es global. */
+    b.style.cssText = 'min-height:var(--tap,44px);padding:0 16px;border-radius:999px;' +
+      'border:0;background:#fff;color:#7b2d12;font:600 13px system-ui,sans-serif;' +
+      'cursor:pointer;flex:none';
     b.addEventListener('click', function () { apagarTaller(); location.reload(); });
     d.appendChild(t); d.appendChild(b);
     document.body.appendChild(d);
