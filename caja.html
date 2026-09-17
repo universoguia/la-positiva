@@ -274,6 +274,9 @@
   /* El label hace de boton del input oculto. Como el label va antes en el
      DOM, el foco se refleja con :has() desde el contenedor. */
   .qr-panel:has(#qrFile:focus-visible) #qrLabel{outline:3px solid var(--accent);outline-offset:2px}
+  .qr-panel:has(#qrFileCam:focus-visible) #qrLabelCam{outline:3px solid var(--accent);outline-offset:2px}
+  /* Los dos botones del QR, uno debajo del otro y separados del mensaje. */
+  #qrLabelCam{margin-bottom:8px}
 
   .offline-bar{
     /* En el flujo (no tapa el titulo) y debajo de la barra de navegacion.
@@ -351,15 +354,27 @@
         <p class="qr-vacio">Elegí primero a qué mesa le vas a cargar el QR.</p>
       </div>
 
-      <label class="btn btn-primary btn-block" for="qrFile" id="qrLabel">
-        Subir o sacar foto del QR
+      <!-- DOS botones, y cada uno con su trabajo.
+
+           Antes habia uno solo y sin capture, por una razon buena: la cajera
+           que ya tiene guardada la captura del QR de su app de cobro no le
+           puede "sacar una foto" a algo que ya es una captura. Pero en
+           Android ese boton abre la galeria de una y deja al que tiene el QR
+           impreso sobre la mesa sin camara, mirando fotos personales.
+
+           Asi que ahora son dos, igual que en la carta: el de la camara
+           lleva capture y va primero, y el de la galeria queda al lado para
+           la captura ya guardada. Ninguno de los dos le quita el camino al
+           otro. -->
+      <label class="btn btn-primary btn-block" for="qrFileCam" id="qrLabelCam">
+        Sacar foto del QR
       </label>
-      <!-- SIN capture, a proposito. Con capture="environment" el celular abria la
-           camara de una y no habia manera de llegar al carrete: la cajera que ya
-           tenia guardada la captura del QR de su app de cobro quedaba trabada,
-           porque no se puede "sacarle una foto" a algo que ya es una captura.
-           Sin el atributo, el celular pregunta camara o galeria. En escritorio
-           abre el explorador igual que antes. -->
+      <input type="file" id="qrFileCam" accept="image/*" capture="environment"
+             class="visually-hidden">
+
+      <label class="btn btn-secondary btn-block" for="qrFile" id="qrLabel">
+        Elegir una imagen del aparato
+      </label>
       <input type="file" id="qrFile" accept="image/*" class="visually-hidden">
       <p class="qr-msg" id="qrMsg" role="status" aria-live="polite"></p>
 
@@ -1491,6 +1506,12 @@ document.addEventListener('DOMContentLoaded', function () {
   var elQrEstado = document.getElementById('qrEstado');
   var elQrMsg = document.getElementById('qrMsg');
   var elQrFile = document.getElementById('qrFile');
+  /* El de la camara. Los dos hacen lo mismo con el archivo: lo unico que
+     cambia es de donde sale. */
+  var elQrFileCam = document.getElementById('qrFileCam');
+  var elQrLabelCam = document.getElementById('qrLabelCam');
+  // Los dos inputs juntos, para prender y apagar de a pares.
+  var qrEntradas = [elQrFile, elQrFileCam];
   var elQrLabel = document.getElementById('qrLabel');
   var elQrDet = document.getElementById('qr');
   var elQrResumen = document.getElementById('qrResumen');
@@ -1641,19 +1662,19 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!sesionQR) {
       elQrEstado.innerHTML = '<p class="qr-vacio">Eleg\u00ed primero a qu\u00e9 mesa ' +
         'le vas a cargar el QR.</p>';
-      elQrLabel.textContent = 'Subir o sacar foto del QR';
-      elQrFile.disabled = true;
+      elQrLabel.textContent = 'Elegir una imagen del aparato';
+      qrEntradas.forEach(function (e) { e.disabled = true; });
       elQrLabel.setAttribute('aria-disabled', 'true');
       return;
     }
-    elQrFile.disabled = false;
+    qrEntradas.forEach(function (e) { e.disabled = false; });
     elQrLabel.removeAttribute('aria-disabled');
 
     if (!qr) {
       elQrEstado.innerHTML = '<p class="qr-vacio">' + esc(nombre) + ' todav\u00eda no tiene QR. ' +
         'Hasta que subas uno, en la pantalla de cobro esa mesa no puede mostrar nada.' +
         (m && m.debe > 0 ? ' Debe ' + money(m.debe) + '.' : '') + '</p>';
-      elQrLabel.textContent = 'Subir el QR de ' + nombre;
+      elQrLabel.textContent = 'Elegir el QR de ' + nombre;
       return;
     }
     /* AJ-005: la miniatura ES el boton de "verlo grande". Antes era una
@@ -1680,7 +1701,8 @@ document.addEventListener('DOMContentLoaded', function () {
           '<span>Es el que ve <b>' + esc(nombre) + '</b>, y solo esa mesa</span>' +
         '</div>' +
       '</div>';
-    elQrLabel.textContent = 'Reemplazar el QR de ' + nombre;
+    elQrLabel.textContent = 'Elegir otra imagen para ' + nombre;
+    elQrLabelCam.textContent = 'Sacar otra foto del QR';
   }
 
   /* ---------------------------------------------- el QR grande (AJ-005) --
@@ -1739,7 +1761,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!sb) {
       elQrMesas.innerHTML = '<p class="qr-vacio">Sin conexi\u00f3n: no podemos traer las mesas.</p>';
       pintarQR(null); pintarLink(null, null);
-      elQrFile.disabled = true; elQrLabel.setAttribute('aria-disabled', 'true');
+      qrEntradas.forEach(function (e) { e.disabled = true; });
+      elQrLabel.setAttribute('aria-disabled', 'true');
+      elQrLabelCam.setAttribute('aria-disabled', 'true');
       return Promise.resolve();
     }
     if (cargandoQR) return Promise.resolve();
@@ -1777,18 +1801,21 @@ document.addEventListener('DOMContentLoaded', function () {
     }, function () { cargandoQR = false; });
   }
 
-  elQrFile.addEventListener('change', function () {
-    var file = elQrFile.files && elQrFile.files[0];
+  /* Un solo camino para el archivo, venga de la camara o de la galeria: si
+     fueran dos copias, maniana se arregla una sola. */
+  function tomarQR(entrada) {
+    var file = entrada.files && entrada.files[0];
     if (!file || subiendo) return;
 
     if (!/^image\//.test(file.type || '')) {
       msg('Eso no es una imagen. Subí una foto o captura del QR.', 'err');
-      elQrFile.value = '';
+      entrada.value = '';
       return;
     }
 
     subiendo = true;
     elQrLabel.setAttribute('aria-disabled', 'true');
+    elQrLabelCam.setAttribute('aria-disabled', 'true');
     elQrLabel.textContent = 'Subiendo...';
     msg('', '');
 
@@ -1797,7 +1824,8 @@ document.addEventListener('DOMContentLoaded', function () {
     LP.subirQR(sb, file, 'QR de ' + nombre, YO, sesionQR).then(function (qr) {
       subiendo = false;
       elQrLabel.removeAttribute('aria-disabled');
-      elQrFile.value = '';
+      elQrLabelCam.removeAttribute('aria-disabled');
+      entrada.value = '';
       qrPorSesion[qr.sesion_id] = qr;
       /* Cargar el QR responde el pedido del salon: lo limpia subirQR() en la
          base, y aca se limpia en la copia que tenemos en pantalla para que
@@ -1813,12 +1841,18 @@ document.addEventListener('DOMContentLoaded', function () {
     }, function (e) {
       subiendo = false;
       elQrLabel.removeAttribute('aria-disabled');
-      elQrLabel.textContent = sesionQR ? 'Subir el QR de ' + nombre : 'Subir o sacar foto del QR';
-      elQrFile.value = '';
+      elQrLabelCam.removeAttribute('aria-disabled');
+      elQrLabel.textContent = sesionQR ? 'Elegir el QR de ' + nombre
+                                       : 'Elegir una imagen del aparato';
+      entrada.value = '';
       // Los mensajes propios (por ejemplo "elegi primero la mesa") van tal cual.
       msg((e && e.humano) ? e.message
                           : LP.humanError(e, 'No se pudo subir el QR. Prob\u00e1 de nuevo.'), 'err');
     });
+  }
+
+  qrEntradas.forEach(function (entrada) {
+    entrada.addEventListener('change', function () { tomarQR(entrada); });
   });
 
   function msg(texto, tipo) {
