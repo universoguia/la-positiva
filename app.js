@@ -838,21 +838,37 @@
       }, function (e) { humanError(e); return []; });
   }
 
-  /* De la A a la Z, y en castellano. Con seis personas el orden a mano
-     alcanzaba; con quince, buscar el nombre propio en una lista sin orden es
-     leerla entera cada vez.
+  /* Primero el PUESTO, despues el nombre de la A a la Z.
 
-     Va en JS y no en la consulta a proposito: la base ordena por bytes, asi
-     que "Alvaro" con tilde caeria despues de la Z y "evelyn" en minuscula
-     antes que "Ana". localeCompare con 'es' pone cada nombre donde una
-     persona lo busca.
+     El nombre solo no alcanzaba: la misma persona no viene todos los dias y
+     los turnos cambian, pero el puesto es fijo. El que agarra el telefono
+     busca "los mozos" y recien ahi el nombre, no al reves.
 
-     Y va ACA, en el unico lugar por el que pasan todas las listas de gente:
-     la portada, los destinos de los avisos y los alias de propinas salen de
-     esta funcion, asi que las tres quedan iguales sin tocarlas.
-     La columna 'orden' no se borra: sigue decidiendo los empates. */
+     El orden de los puestos es el de cuantas veces por noche se toca cada
+     uno: los mozos son siete y entran todo el tiempo; el duenio y el taller,
+     casi nunca. Un puesto que no este en esta lista cae al final y ordenado
+     por nombre, que es mejor que desaparecer.
+
+     El nombre se compara con localeCompare en 'es' y no en la consulta: la
+     base ordena por bytes, asi que un "Alvaro" con tilde caeria despues de
+     la Z y un "evelyn" en minuscula antes que "Ana".
+
+     Va ACA, en el unico lugar por el que pasan todas las listas de gente: la
+     portada, los destinos de los avisos y los alias de propinas salen de esta
+     funcion, asi que las tres quedan iguales sin tocarlas.
+     La columna 'orden' sigue existiendo: decide los empates. */
+  var ORDEN_DE_PUESTO = ['Mozo', 'Barman', 'Cocina', 'Caja', 'Encargada',
+                         'Duenio', 'Mantenimiento', 'Dev'];
+
+  function pesoDePuesto(rol) {
+    var i = ORDEN_DE_PUESTO.indexOf(rol);
+    return i === -1 ? ORDEN_DE_PUESTO.length : i;
+  }
+
   function ordenarPorNombre(lista) {
     return lista.slice().sort(function (a, b) {
+      var r = pesoDePuesto(a.rol) - pesoDePuesto(b.rol);
+      if (r !== 0) return r;
       var n = String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es',
                 { sensitivity: 'base', numeric: true });
       return n !== 0 ? n : (Number(a.orden || 0) - Number(b.orden || 0));
