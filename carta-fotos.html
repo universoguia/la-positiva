@@ -506,15 +506,21 @@ document.addEventListener('DOMContentLoaded', function () {
                  accept se deja igual en los dos: es lo que filtra la lista
                  de archivos y lo que hace que el iPad ofrezca 'Sacar foto'
                  sin que el boton se lo imponga. */
-              '<label class="subir">' +
-                '<input type="file" accept="image/*" capture="environment" ' +
-                  'data-subir="' + esc(p.id) + '">' +
-                '<span class="pill">' + (propia ? 'Sacar otra' : 'Sacar foto') + '</span>' +
-              '</label>' +
+              /* Este NO es un input: abre la camara ADENTRO de la app.
+                 El input con capture le pide la foto a la camara del sistema,
+                 y en la tablet del salon Android mataba Chrome mientras tanto:
+                 se sacaba la foto, se tocaba el tilde y aparecia el escritorio.
+                 Si la camara propia no abre, se cae solo al input escondido de
+                 mas abajo, que es el camino de siempre. */
+              '<button type="button" class="pill" data-camara="' + esc(p.id) + '">' +
+                (propia ? 'Sacar otra' : 'Sacar foto') + '</button>' +
               '<label class="subir">' +
                 '<input type="file" accept="image/*" data-subir="' + esc(p.id) + '">' +
                 '<span class="pill">Elegir una</span>' +
               '</label>' +
+              '<input type="file" accept="image/*" capture="environment" ' +
+                'class="visually-hidden" data-subir="' + esc(p.id) + '" ' +
+                'data-respaldo="' + esc(p.id) + '" tabindex="-1" aria-hidden="true">' +
               (propia ? '<button type="button" class="pill peligro" data-quitar="' + esc(p.id) + '">' +
                         'Quitar la foto</button>' : '')) +
           '</div>' +
@@ -582,7 +588,12 @@ document.addEventListener('DOMContentLoaded', function () {
     var platoId = input.dataset.subir;
     var file = input.files[0];
     input.value = '';                       // permite reintentar el mismo archivo
+    subirFoto(platoId, file);
+  });
 
+  /* La subida, una sola, venga del archivo elegido o de la camara de la app.
+     Antes vivia adentro del listener y por eso no se podia reusar. */
+  function subirFoto(platoId, file) {
     // Mismo candado que en el precio, del lado del guardado.
     var platoF = platoPorId(platoId);
     if (platoF && !LP.puedeTocarCategoria(platoF.cat)) {
@@ -595,18 +606,25 @@ document.addEventListener('DOMContentLoaded', function () {
     /* Los DOS inputs del plato, no solo el que se toco: desde que hay
        'Sacar foto' y 'Elegir una', apagar uno dejaba el otro vivo y se
        podian largar dos subidas del mismo plato, uno pisando al otro. */
-    var fila = input.closest('li') || lista;
-    var hermanos = fila.querySelectorAll('[data-subir="' +
-      (window.CSS && CSS.escape ? CSS.escape(platoId) : platoId) + '"]');
+    /* Todo lo que se toca de ESE plato se apaga junto: los dos inputs, el
+       de respaldo y el boton de la camara. Apagar uno solo dejaba los otros
+       vivos y se podian largar dos subidas del mismo plato, una pisando a la
+       otra. Se busca por el plato y no por el elemento que se toco, porque
+       ahora la subida tambien puede venir de la camara, que no tiene input. */
+    var sel = (window.CSS && CSS.escape ? CSS.escape(platoId) : platoId);
+    var fila = lista.querySelector('[data-camara="' + sel + '"]');
+    fila = (fila && fila.closest('li')) || lista;
+    var hermanos = fila.querySelectorAll('[data-subir="' + sel + '"], [data-camara="' + sel + '"]');
     Array.prototype.forEach.call(hermanos, function (el) { el.disabled = true; });
-    var rotulo = input.nextSibling, textoOriginal = rotulo.textContent;
-    rotulo.textContent = 'Subiendo...';
+    var rotulo = fila.querySelector('.subir .pill');
+    var textoOriginal = rotulo ? rotulo.textContent : '';
+    if (rotulo) rotulo.textContent = 'Subiendo...';
     decir(platoId, 'Preparando la foto...', '');
 
     LP.subirFotoPlato(sb, platoId, file, YO).then(function (r) {
       if (!r.ok) {
         Array.prototype.forEach.call(hermanos, function (el) { el.disabled = false; });
-        rotulo.textContent = textoOriginal;
+        if (rotulo) rotulo.textContent = textoOriginal;
         decir(platoId, r.motivo, 'err'); return;
       }
       propias[platoId] = r.url;
@@ -614,6 +632,28 @@ document.addEventListener('DOMContentLoaded', function () {
       decir(platoId, 'Foto guardada.', 'ok');
       LP.toast('Foto actualizada.', 'ok');
     });
+  }
+
+  /* El boton de la camara. Si la camara de la app no se puede abrir devuelve
+     null y recien ahi se dispara el input escondido: nadie se queda sin poder
+     cargar la foto porque un aparato no soporte algo. */
+  lista.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-camara]');
+    if (!b || b.disabled) return;
+    var id = b.dataset.camara;
+    var platoC = platoPorId(id);
+    if (platoC && !LP.puedeTocarCategoria(platoC.cat)) {
+      decir(id, 'Esa parte de la carta no es de tu puesto.', 'err');
+      return;
+    }
+    b.disabled = true;
+    LP.sacarFotoEnApp({ nombre: id, titulo: 'Sacar la foto del plato' })
+      .then(function (archivo) {
+        b.disabled = false;
+        if (archivo) { subirFoto(id, archivo); return; }
+        var respaldo = lista.querySelector('[data-respaldo="' + id + '"]');
+        if (respaldo) respaldo.click();
+      });
   });
 
   /* ------------------------------------------------------------ precio -- */

@@ -366,11 +366,16 @@
            lleva capture y va primero, y el de la galeria queda al lado para
            la captura ya guardada. Ninguno de los dos le quita el camino al
            otro. -->
-      <label class="btn btn-primary btn-block" for="qrFileCam" id="qrLabelCam">
+      <!-- Abre la camara ADENTRO de la app. El input con capture se la pide
+           a la camara del sistema, y en la tablet del salon Android mataba
+           Chrome mientras esa camara estaba adelante: se sacaba la foto del
+           QR, se tocaba el tilde y aparecia el escritorio. Queda abajo,
+           escondido, como respaldo del aparato que no soporte lo otro. -->
+      <button type="button" class="btn btn-primary btn-block" id="qrCamBtn">
         Sacar foto del QR
-      </label>
+      </button>
       <input type="file" id="qrFileCam" accept="image/*" capture="environment"
-             class="visually-hidden">
+             class="visually-hidden" tabindex="-1" aria-hidden="true">
 
       <label class="btn btn-secondary btn-block" for="qrFile" id="qrLabel">
         Elegir una imagen del aparato
@@ -1509,7 +1514,7 @@ document.addEventListener('DOMContentLoaded', function () {
   /* El de la camara. Los dos hacen lo mismo con el archivo: lo unico que
      cambia es de donde sale. */
   var elQrFileCam = document.getElementById('qrFileCam');
-  var elQrLabelCam = document.getElementById('qrLabelCam');
+  var elQrCamBtn = document.getElementById('qrCamBtn');
   // Los dos inputs juntos, para prender y apagar de a pares.
   var qrEntradas = [elQrFile, elQrFileCam];
   var elQrLabel = document.getElementById('qrLabel');
@@ -1664,10 +1669,12 @@ document.addEventListener('DOMContentLoaded', function () {
         'le vas a cargar el QR.</p>';
       elQrLabel.textContent = 'Elegir una imagen del aparato';
       qrEntradas.forEach(function (e) { e.disabled = true; });
+      elQrCamBtn.disabled = true;
       elQrLabel.setAttribute('aria-disabled', 'true');
       return;
     }
     qrEntradas.forEach(function (e) { e.disabled = false; });
+    elQrCamBtn.disabled = false;
     elQrLabel.removeAttribute('aria-disabled');
 
     if (!qr) {
@@ -1702,7 +1709,7 @@ document.addEventListener('DOMContentLoaded', function () {
         '</div>' +
       '</div>';
     elQrLabel.textContent = 'Elegir otra imagen para ' + nombre;
-    elQrLabelCam.textContent = 'Sacar otra foto del QR';
+    elQrCamBtn.textContent = 'Sacar otra foto del QR';
   }
 
   /* ---------------------------------------------- el QR grande (AJ-005) --
@@ -1763,7 +1770,7 @@ document.addEventListener('DOMContentLoaded', function () {
       pintarQR(null); pintarLink(null, null);
       qrEntradas.forEach(function (e) { e.disabled = true; });
       elQrLabel.setAttribute('aria-disabled', 'true');
-      elQrLabelCam.setAttribute('aria-disabled', 'true');
+      elQrCamBtn.disabled = true;
       return Promise.resolve();
     }
     if (cargandoQR) return Promise.resolve();
@@ -1803,19 +1810,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* Un solo camino para el archivo, venga de la camara o de la galeria: si
      fueran dos copias, maniana se arregla una sola. */
-  function tomarQR(entrada) {
-    var file = entrada.files && entrada.files[0];
+  /* Acepta el input que se uso, o directamente el archivo que devolvio la
+     camara de la app: el resto del camino es exactamente el mismo. */
+  function tomarQR(entrada, archivo) {
+    var file = archivo || (entrada && entrada.files && entrada.files[0]);
     if (!file || subiendo) return;
 
     if (!/^image\//.test(file.type || '')) {
       msg('Eso no es una imagen. Subí una foto o captura del QR.', 'err');
-      entrada.value = '';
+      if (entrada) entrada.value = '';
       return;
     }
 
     subiendo = true;
     elQrLabel.setAttribute('aria-disabled', 'true');
-    elQrLabelCam.setAttribute('aria-disabled', 'true');
+    elQrCamBtn.disabled = true;
     elQrLabel.textContent = 'Subiendo...';
     msg('', '');
 
@@ -1824,8 +1833,8 @@ document.addEventListener('DOMContentLoaded', function () {
     LP.subirQR(sb, file, 'QR de ' + nombre, YO, sesionQR).then(function (qr) {
       subiendo = false;
       elQrLabel.removeAttribute('aria-disabled');
-      elQrLabelCam.removeAttribute('aria-disabled');
-      entrada.value = '';
+      elQrCamBtn.disabled = false;
+      if (entrada) entrada.value = '';
       qrPorSesion[qr.sesion_id] = qr;
       /* Cargar el QR responde el pedido del salon: lo limpia subirQR() en la
          base, y aca se limpia en la copia que tenemos en pantalla para que
@@ -1841,10 +1850,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }, function (e) {
       subiendo = false;
       elQrLabel.removeAttribute('aria-disabled');
-      elQrLabelCam.removeAttribute('aria-disabled');
+      elQrCamBtn.disabled = false;
       elQrLabel.textContent = sesionQR ? 'Elegir el QR de ' + nombre
                                        : 'Elegir una imagen del aparato';
-      entrada.value = '';
+      if (entrada) entrada.value = '';
       // Los mensajes propios (por ejemplo "elegi primero la mesa") van tal cual.
       msg((e && e.humano) ? e.message
                           : LP.humanError(e, 'No se pudo subir el QR. Prob\u00e1 de nuevo.'), 'err');
@@ -1853,6 +1862,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
   qrEntradas.forEach(function (entrada) {
     entrada.addEventListener('change', function () { tomarQR(entrada); });
+  });
+
+  elQrCamBtn.addEventListener('click', function () {
+    if (elQrCamBtn.disabled || subiendo) return;
+    elQrCamBtn.disabled = true;
+    LP.sacarFotoEnApp({ nombre: 'qr', titulo: 'Sacar la foto del QR' })
+      .then(function (archivo) {
+        elQrCamBtn.disabled = false;
+        if (archivo) { tomarQR(null, archivo); return; }
+        // No se pudo abrir la camara de la app: el camino de siempre.
+        elQrFileCam.click();
+      });
   });
 
   function msg(texto, tipo) {

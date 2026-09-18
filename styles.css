@@ -670,3 +670,39 @@ body.dark .cinta-mirar{
 }
 .voz-fila audio{flex:1 1 210px;min-width:0;min-height:40px}
 .voz-fila .seg{color:var(--muted);font-size:13px;flex:none}
+
+/* --- La camara adentro de la app -----------------------------------------
+   Pantalla completa y fondo negro: mientras se apunta, lo unico que importa
+   es lo que se ve. Los botones abajo, del tamanio de un pulgar, porque esto
+   se usa con una mano y la otra sosteniendo el plato. */
+body.cam-abierta{overflow:hidden}
+.cam-capa{
+  position:fixed;inset:0;z-index:9999;
+  display:flex;flex-direction:column;background:#000;
+  padding-bottom:var(--sa-b,0px);
+}
+.cam-visor{position:relative;flex:1;min-height:0;display:flex}
+.cam-visor video{width:100%;height:100%;object-fit:contain;background:#000}
+.cam-aviso{
+  position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);
+  margin:0;text-align:center;color:#fff;font-size:16px;line-height:1.5;
+}
+.cam-aviso:empty{display:none}
+.cam-barra{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 20px 18px;background:#000;
+}
+.cam-barra button{
+  min-height:var(--tap);min-width:var(--tap);padding:0 18px;
+  border-radius:var(--r-pill);border:1px solid rgba(255,255,255,.4);
+  background:transparent;color:#fff;font-family:inherit;font-size:15px;
+  cursor:pointer;
+}
+.cam-barra button[hidden]{display:none}
+/* El disparador: un circulo grande, como el de la camara del telefono. Se
+   reconoce sin leer nada. */
+.cam-disparo{
+  width:74px;height:74px;min-width:74px;padding:0;border-radius:50%;
+  background:#fff;border:4px solid rgba(255,255,255,.55);
+}
+.cam-disparo:disabled{opacity:.5}

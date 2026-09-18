@@ -3281,6 +3281,152 @@
     });
   }
 
+  /* --- La camara adentro de la app ----------------------------------------
+     El boton con capture le pide la foto a la camara del SISTEMA: Android
+     manda la app de camara al frente y a Chrome atras. En una tablet ajustada
+     -y con MIUI, que es de las mas duras cerrando lo que queda atras- el
+     sistema mata Chrome mientras tanto, y al confirmar la foto no hay a donde
+     volver: la persona aparece en el escritorio y perdio lo que estaba
+     haciendo. No es la foto ni el peso: es que la app dejo de estar viva.
+
+     Esto saca la foto SIN salir de la pagina: el video de la camara se
+     muestra adentro de la app, se congela un cuadro y se arma el archivo ahi
+     mismo. Chrome nunca pasa a segundo plano, asi que no hay nada que matar.
+
+     Devuelve una promesa con el File, o null si no se pudo (y entonces la
+     pantalla cae al boton de siempre). Nunca rechaza: quien la llama no tiene
+     que manejar errores para ofrecer el camino de respaldo.               */
+  function sacarFotoEnApp(opciones) {
+    var op = opciones || {};
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia ||
+        window.isSecureContext === false) {
+      return Promise.resolve(null);
+    }
+
+    return new Promise(function (resolve) {
+      var stream = null, cerrado = false, camaras = [], cual = 0;
+
+      var capa = document.createElement('div');
+      capa.className = 'cam-capa';
+      capa.setAttribute('role', 'dialog');
+      capa.setAttribute('aria-modal', 'true');
+      capa.setAttribute('aria-label', op.titulo || 'Sacar una foto');
+      capa.innerHTML =
+        '<div class="cam-visor">' +
+          '<video playsinline autoplay muted></video>' +
+          '<p class="cam-aviso" role="status"></p>' +
+        '</div>' +
+        '<div class="cam-barra">' +
+          '<button type="button" class="cam-salir">Cancelar</button>' +
+          '<button type="button" class="cam-disparo" aria-label="Sacar la foto"></button>' +
+          '<button type="button" class="cam-girar" hidden>Girar</button>' +
+        '</div>';
+      document.body.appendChild(capa);
+      document.body.classList.add('cam-abierta');
+
+      var video = capa.querySelector('video');
+      var aviso = capa.querySelector('.cam-aviso');
+      var btnFoto = capa.querySelector('.cam-disparo');
+      var btnSalir = capa.querySelector('.cam-salir');
+      var btnGirar = capa.querySelector('.cam-girar');
+
+      function apagar() {
+        if (stream) {
+          /* Siempre, y por cada pista: una camara que queda prendida deja la
+             luz del aparato encendida y le come la bateria al turno entero. */
+          stream.getTracks().forEach(function (t) { try { t.stop(); } catch (e) {} });
+          stream = null;
+        }
+      }
+
+      function cerrar(valor) {
+        if (cerrado) return;
+        cerrado = true;
+        apagar();
+        document.removeEventListener('keydown', porTecla);
+        document.body.classList.remove('cam-abierta');
+        if (capa.parentNode) capa.parentNode.removeChild(capa);
+        resolve(valor);
+      }
+
+      function porTecla(ev) { if (ev.key === 'Escape') cerrar(null); }
+      document.addEventListener('keydown', porTecla);
+      btnSalir.addEventListener('click', function () { cerrar(null); });
+
+      function prender(indice) {
+        apagar();
+        var pedido = camaras.length
+          ? { video: { deviceId: { exact: camaras[indice].deviceId } } }
+          : { video: { facingMode: { ideal: 'environment' } } };
+        return navigator.mediaDevices.getUserMedia(pedido).then(function (st) {
+          stream = st;
+          video.srcObject = st;
+          return video.play().catch(function () {});
+        });
+      }
+
+      prender(0).then(function () {
+        /* La lista de camaras recien tiene nombres DESPUES del permiso, asi
+           que se pide aca y no antes. Si hay una sola, el boton de girar no
+           aparece: un boton que no hace nada es peor que no tenerlo. */
+        if (navigator.mediaDevices.enumerateDevices) {
+          navigator.mediaDevices.enumerateDevices().then(function (ds) {
+            camaras = ds.filter(function (d) { return d.kind === 'videoinput'; });
+            btnGirar.hidden = camaras.length < 2;
+          }, function () {});
+        }
+      }, function (err) {
+        var no = err && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
+        aviso.textContent = no
+          ? 'Este aparato no nos dio permiso para usar la cámara.'
+          : 'No pudimos abrir la cámara de este aparato.';
+        /* Se cierra sola y devuelve null: la pantalla que llamo ofrece
+           enseguida el camino de siempre, en vez de dejar a la persona
+           mirando un cartel sin salida. */
+        setTimeout(function () { cerrar(null); }, 1600);
+      });
+
+      btnGirar.addEventListener('click', function () {
+        if (camaras.length < 2) return;
+        cual = (cual + 1) % camaras.length;
+        prender(cual).catch(function () {});
+      });
+
+      btnFoto.addEventListener('click', function () {
+        if (!stream || cerrado) return;
+        btnFoto.disabled = true;
+        var w = video.videoWidth, h = video.videoHeight;
+        if (!w || !h) { btnFoto.disabled = false; return; }
+
+        /* Se guarda a 1400 como todo lo demas de la app: es lo que entra en
+           el deposito y lo que se ve bien en un celular. */
+        var max = 1400;
+        if (w > max || h > max) {
+          var r = Math.min(max / w, max / h);
+          w = Math.round(w * r); h = Math.round(h * r);
+        }
+        var c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(video, 0, 0, w, h);
+        c.toBlob(function (blob) {
+          c.width = c.height = 1;        // se suelta la memoria a mano
+          if (!blob) { btnFoto.disabled = false; return; }
+          var nombre = (op.nombre || 'foto') + '-' + Date.now() + '.jpg';
+          var archivo;
+          try {
+            archivo = new File([blob], nombre, { type: 'image/jpeg' });
+          } catch (e) {
+            /* Navegador sin constructor de File: el blob alcanza, porque lo
+               unico que se hace despues es subirlo. */
+            blob.name = nombre;
+            archivo = blob;
+          }
+          cerrar(archivo);
+        }, 'image/jpeg', 0.92);
+      });
+    });
+  }
+
   /* --- Decodificar el QR ---------------------------------------------------
      Usa BarcodeDetector, que es nativo del navegador: cero dependencias.
      Ojo con lo que devuelve. Un QR interoperable (EMVCo) NO es una URL:
@@ -4524,6 +4670,7 @@
     permisoDe: permisoDe,
     puedeEditar: puedeEditar,
     puedeVer: puedeVer,
+    sacarFotoEnApp: sacarFotoEnApp,
     puedeTocarCategoria: puedeTocarCategoria,
     CATEGORIAS_DE_ROL: CATEGORIAS_DE_ROL,
     MI_PARTE: MI_PARTE,
