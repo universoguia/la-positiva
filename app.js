@@ -834,8 +834,29 @@
       .eq('activo', true).order('orden', { ascending: true })
       .then(function (res) {
         if (res.error) { humanError(res.error); return []; }
-        return res.data || [];
+        return ordenarPorNombre(res.data || []);
       }, function (e) { humanError(e); return []; });
+  }
+
+  /* De la A a la Z, y en castellano. Con seis personas el orden a mano
+     alcanzaba; con quince, buscar el nombre propio en una lista sin orden es
+     leerla entera cada vez.
+
+     Va en JS y no en la consulta a proposito: la base ordena por bytes, asi
+     que "Alvaro" con tilde caeria despues de la Z y "evelyn" en minuscula
+     antes que "Ana". localeCompare con 'es' pone cada nombre donde una
+     persona lo busca.
+
+     Y va ACA, en el unico lugar por el que pasan todas las listas de gente:
+     la portada, los destinos de los avisos y los alias de propinas salen de
+     esta funcion, asi que las tres quedan iguales sin tocarlas.
+     La columna 'orden' no se borra: sigue decidiendo los empates. */
+  function ordenarPorNombre(lista) {
+    return lista.slice().sort(function (a, b) {
+      var n = String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es',
+                { sensitivity: 'base', numeric: true });
+      return n !== 0 ? n : (Number(a.orden || 0) - Number(b.orden || 0));
+    });
   }
 
   /* --- Propinas -------------------------------------------------------
